@@ -4,7 +4,7 @@ go: go1.6
 install:
   - go get -u github.com/golang/lint/golint
 script:
-  - test -z "$(gofmt -s -l -w . | tee /dev/stderr)"
+  - test -z "$(gofmt -s -l -w $(find . -type f -name '*.go' -not -path './vendor/*') | tee /dev/stderr)"
   - test -z "$(golint . | tee /dev/stderr)"
-  - go vet -v .
-  - go test -v -cover  ./...
+  - test -z "$(go vet -v $(go list ./... | grep -v '/vendor/') | tee /dev/stderr)"
+  - go list ./... | grep -v '/vendor/' | xargs go test -v -cover
