@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/ahmetalpbalkan/custom-script-extension-linux/blobutil"
+	"github.com/Azure/custom-script-extension-linux/blobutil"
 	"github.com/stretchr/testify/require"
 )
 
