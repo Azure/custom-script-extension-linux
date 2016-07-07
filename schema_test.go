@@ -107,7 +107,7 @@ func TestValidateProtectedSettings_storageAccountKey(t *testing.T) {
 	// bad string
 	chkPatternMismatch(validateProtectedSettings(`{"storageAccountKey": "NotABase64Really!"}`), "not b64")
 
-	// missing '=' at the end
+	// for a base64 string ending with '==', removing one of the '=' is not valid b64, the schema validation should catch that
 	chkPatternMismatch(validateProtectedSettings(`{"storageAccountKey": "OllwYfXmC0mSMhWg4x+lUdLg6Eoa/d44+PxPTXBaadO5l87L4JzgkyyVvQr8r60WIzG2X8r6LLxkhNBQaHa3XQ="}`), "bad b64")
 
 	// spacing

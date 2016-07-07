@@ -11,52 +11,54 @@ import (
 
 const (
 	publicSettingsSchema = `{
-    "$schema": "http://json-schema.org/draft-04/schema#",
-    "title": "Custom Script - Public Settings",
-    "type": "object",
-    "properties": {
-        "commandToExecute": {
-            "description": "Command to be executed",
-            "type": "string"
-        },
-        "fileUris": {
-            "description": "List of files to be downloaded",
-            "type": "array",
-            "items": {
-                "type": "string",
-				"format": "uri"
-            }
-        },
-		"timestamp": {
-			"description": "An integer, intended to trigger re-execution of the script when changed",
-			"type":"integer" 
-		}
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Custom Script - Public Settings",
+  "type": "object",
+  "properties": {
+    "commandToExecute": {
+      "description": "Command to be executed",
+      "type": "string"
     },
-	"additionalProperties": false,
-    "required": ["commandToExecute"]
+    "fileUris": {
+      "description": "List of files to be downloaded",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uri"
+      }
+    },
+    "timestamp": {
+      "description": "An integer, intended to trigger re-execution of the script when changed",
+      "type": "integer"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "commandToExecute"
+  ]
 }`
 
 	protectedSettingsSchema = `{
-    "$schema": "http://json-schema.org/draft-04/schema#",
-    "title": "Custom Script - Protected Settings",
-    "type": "object",
-    "properties": {
-        "commandToExecute": {
-            "description": "Command to be executed",
-            "type": "string"
-        },
-        "storageAccountName": {
-            "description": "Name of the Azure Storage Account (3-24 characters of lowercase letters or digits)",
-            "type": "string",
-			"pattern": "^[a-z0-9]{3,24}$"
-        },
-		"storageAccountKey": {
-            "description": "Key for the Azure Storage Account (a base64 encoded string)",
-            "type": "string",
-			"pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$"
-        }
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Custom Script - Protected Settings",
+  "type": "object",
+  "properties": {
+    "commandToExecute": {
+      "description": "Command to be executed",
+      "type": "string"
     },
-	"additionalProperties": false
+    "storageAccountName": {
+      "description": "Name of the Azure Storage Account (3-24 characters of lowercase letters or digits)",
+      "type": "string",
+      "pattern": "^[a-z0-9]{3,24}$"
+    },
+    "storageAccountKey": {
+      "description": "Key for the Azure Storage Account (a base64 encoded string)",
+      "type": "string",
+      "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$"
+    }
+  },
+  "additionalProperties": false
 }`
 )
 
