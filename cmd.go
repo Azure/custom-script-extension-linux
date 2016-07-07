@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/flynn-archive/go-shlex"
+	"github.com/google/shlex"
 	"github.com/pkg/errors"
 )
 
