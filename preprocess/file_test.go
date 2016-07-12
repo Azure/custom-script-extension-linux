@@ -21,12 +21,9 @@ func TestHasShebang(t *testing.T) {
 	require.True(t, hasShebang([]byte("#! foo")), "shebang")
 
 	script := "\r\n  \t#!foo"
-	require.True(t, hasShebang([]byte(script)), "whitespace")
+	require.False(t, hasShebang([]byte(script)), "whitespace")
 
-	noscript := "    !$"
-	require.False(t, hasShebang([]byte(noscript)), "not shebang")
-
-	bomdata := append(bomSequences[0], []byte("    \t \n#!booyah")...)
+	bomdata := append(bomSequences[0], []byte("#!booyah")...)
 	require.True(t, hasShebang(bomdata), "data=%v", bomdata)
 }
 
