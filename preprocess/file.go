@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"unicode"
 
 	"github.com/pkg/errors"
 )
@@ -46,7 +45,6 @@ func IsTextFile(path string) (bool, error) {
 // once the BOM and space characters are trimmed from the beginning.
 func hasShebang(b []byte) bool {
 	b = RemoveBOM(b)
-	b = bytes.TrimLeftFunc(b, unicode.IsSpace)
 	return bytes.HasPrefix(b, []byte{'#', '!'})
 }
 
