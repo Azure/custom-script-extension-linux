@@ -23,7 +23,7 @@ func TestDownload_wrapsGetRequestError(t *testing.T) {
 	var bd badDownloader
 	_, err := download.Download(bd)
 	require.NotNil(t, err)
-	require.Equal(t, err.Error(), "failed to create the request: expected error")
+	require.EqualError(t, err, "failed to create the request: expected error")
 }
 
 func TestDownload_wrapsHTTPError(t *testing.T) {
