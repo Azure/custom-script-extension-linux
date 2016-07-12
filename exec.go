@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 
 	"github.com/pkg/errors"
@@ -32,4 +34,27 @@ func Exec(cmd, workdir string, stdout, stderr io.WriteCloser) (int, error) {
 		}
 	}
 	return 0, errors.Wrapf(err, "failed to execute command")
+}
+
+// ExecCmdInDir executes the given command in given directory and saves output
+// to ./stdout and ./stderr files (truncates files if exists, creates them if not
+// with 0600/-rw------- permissions).
+//
+// Ideally, we execute commands only once per sequence number in custom-script-extension,
+// and save their output under /var/lib/waagent/<dir>/download/<seqnum>/*.
+func ExecCmdInDir(cmd, workdir string) error {
+	outFn := filepath.Join(workdir, "stdout")
+	errFn := filepath.Join(workdir, "stderr")
+
+	outF, err := os.OpenFile(outFn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	if err != nil {
+		return errors.Wrapf(err, "failed to open stdout file")
+	}
+	errF, err := os.OpenFile(errFn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	if err != nil {
+		return errors.Wrapf(err, "failed to open stderr file")
+	}
+
+	_, err = Exec(cmd, workdir, outF, errF)
+	return err
 }
