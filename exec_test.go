@@ -41,6 +41,15 @@ func TestExec_failure_genericError(t *testing.T) {
 	require.Contains(t, err.Error(), "failed to execute command:") // error is wrapped
 }
 
+func TestExec_failure_fdClosed(t *testing.T) {
+	out := new(mockFile)
+	require.Nil(t, out.Close())
+
+	_, err := Exec("date", "/", out, out)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "file closed") // error is wrapped
+}
+
 func TestExec_failure_redirectsStdStreams_closesFds(t *testing.T) {
 	o, e := new(mockFile), new(mockFile)
 	require.False(t, o.closed, "stdout open")
