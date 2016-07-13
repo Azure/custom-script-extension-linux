@@ -13,15 +13,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type badDownloader struct{}
+type badDownloader struct{ calls int }
 
-func (b badDownloader) GetRequest() (*http.Request, error) {
+func (b *badDownloader) GetRequest() (*http.Request, error) {
+	b.calls++
 	return nil, errors.New("expected error")
 }
 
 func TestDownload_wrapsGetRequestError(t *testing.T) {
-	var bd badDownloader
-	_, err := download.Download(bd)
+	_, err := download.Download(new(badDownloader))
 	require.NotNil(t, err)
 	require.EqualError(t, err, "failed to create the request: expected error")
 }

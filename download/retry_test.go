@@ -1,0 +1,101 @@
+package download_test
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+
+	"github.com/Azure/custom-script-extension-linux/download"
+	"github.com/ahmetalpbalkan/go-httpbin"
+	"github.com/stretchr/testify/require"
+)
+
+var (
+	// how much we sleep between retries
+	sleepSchedule = []time.Duration{
+		5 * time.Second,
+		10 * time.Second,
+		20 * time.Second,
+		40 * time.Second,
+		80 * time.Second,
+		160 * time.Second}
+)
+
+func TestActualSleep_actuallySleeps(t *testing.T) {
+	s := time.Now()
+	download.ActualSleep(time.Second)
+	e := time.Since(s)
+	require.InEpsilon(t, 1.0, e.Seconds(), 0.01, "took=%fs", e.Seconds())
+}
+
+func TestWithRetries_noRetries(t *testing.T) {
+	srv := httptest.NewServer(httpbin.GetMux())
+	defer srv.Close()
+
+	d := download.NewURLDownload(srv.URL + "/status/200")
+
+	sr := new(sleepRecorder)
+	resp, err := download.WithRetries(d, sr.Sleep)
+	require.Nil(t, err, "should not fail")
+	require.NotNil(t, resp, "response body exists")
+	require.Equal(t, []time.Duration(nil), []time.Duration(*sr), "sleep should not be called")
+}
+
+func TestWithRetries_failing_validateNumberOfCalls(t *testing.T) {
+	srv := httptest.NewServer(httpbin.GetMux())
+	defer srv.Close()
+
+	bd := new(badDownloader)
+	_, err := download.WithRetries(bd, new(sleepRecorder).Sleep)
+	require.Contains(t, err.Error(), "expected error", "error is preserved")
+	require.EqualValues(t, 7, bd.calls, "calls exactly expRetryN times")
+}
+
+func TestWithRetries_failingBadStatusCode_validateSleeps(t *testing.T) {
+	srv := httptest.NewServer(httpbin.GetMux())
+	defer srv.Close()
+
+	d := download.NewURLDownload(srv.URL + "/status/404")
+
+	sr := new(sleepRecorder)
+	_, err := download.WithRetries(d, sr.Sleep)
+	require.EqualError(t, err, "unexpected status code: got=404 expected=200")
+
+	require.Equal(t, sleepSchedule, []time.Duration(*sr))
+}
+
+func TestWithRetries_healingServer(t *testing.T) {
+	srv := httptest.NewServer(new(healingServer))
+	defer srv.Close()
+
+	d := download.NewURLDownload(srv.URL)
+	sr := new(sleepRecorder)
+	resp, err := download.WithRetries(d, sr.Sleep)
+	require.Nil(t, err, "should eventually succeed")
+	require.NotNil(t, resp, "response body exists")
+
+	require.Equal(t, sleepSchedule[:3], []time.Duration(*sr))
+}
+
+// Test Utilities:
+
+// sleepRecorder keeps track of the durations of Sleep calls
+type sleepRecorder []time.Duration
+
+// Sleep does not actually sleep. It records the duration and returns.
+func (s *sleepRecorder) Sleep(d time.Duration) {
+	*s = append(*s, d)
+}
+
+// healingServer returns HTTP 500 until 4th call, then HTTP 200 afterwards
+type healingServer int
+
+func (h *healingServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	*h++
+	if *h < 4 {
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		w.WriteHeader(http.StatusOK)
+	}
+}
