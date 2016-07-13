@@ -3,6 +3,9 @@ package main
 import (
 	"bytes"
 	"errors"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -63,6 +66,47 @@ func TestExec_failure_redirectsStdStreams_closesFds(t *testing.T) {
 	require.True(t, e.closed, "stderr closed")
 }
 
+func TestExecCmdInDir(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	err = ExecCmdInDir("/bin/echo 'Hello world'", dir)
+	require.Nil(t, err)
+	require.True(t, fileExists(t, filepath.Join(dir, "stdout")), "stdout file should be created")
+	require.True(t, fileExists(t, filepath.Join(dir, "stderr")), "stderr file should be created")
+
+	b, err := ioutil.ReadFile(filepath.Join(dir, "stdout"))
+	require.Nil(t, err)
+	require.Equal(t, "Hello world\n", string(b))
+
+	b, err = ioutil.ReadFile(filepath.Join(dir, "stderr"))
+	require.Nil(t, err)
+	require.EqualValues(t, 0, len(b), "stderr file must be empty")
+}
+
+func TestExecCmdInDir_cantOpenError(t *testing.T) {
+	err := ExecCmdInDir("/bin/echo 'Hello world'", "/non-existing-dir")
+	require.Contains(t, err.Error(), "failed to open stdout file")
+}
+
+func TestExecCmdInDir_truncates(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	require.Nil(t, ExecCmdInDir("/bin/echo '1:out'; /bin/echo '1:err'>&2", dir))
+	require.Nil(t, ExecCmdInDir("/bin/echo '2:out'; /bin/echo '2:err'>&2", dir))
+
+	b, err := ioutil.ReadFile(filepath.Join(dir, "stdout"))
+	require.Nil(t, err)
+	require.Equal(t, "2:out\n", string(b), "stdout did not truncate")
+
+	b, err = ioutil.ReadFile(filepath.Join(dir, "stderr"))
+	require.Nil(t, err)
+	require.Equal(t, "2:err\n", string(b), "stderr did not truncate")
+}
+
 // Test utilities
 
 type mockFile struct {
@@ -80,4 +124,16 @@ func (m *mockFile) Write(p []byte) (n int, err error) {
 func (m *mockFile) Close() error {
 	m.closed = true
 	return nil
+}
+
+func fileExists(t *testing.T, path string) bool {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	}
+	if os.IsNotExist(err) {
+		return false
+	}
+	t.Fatalf("failed to check if %s exists: %v", path, err)
+	return false
 }
