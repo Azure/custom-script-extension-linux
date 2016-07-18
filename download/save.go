@@ -1,11 +1,14 @@
 package download
 
-import "os"
-import "github.com/pkg/errors"
-import "io"
+import (
+	"io"
+	"os"
+
+	"github.com/pkg/errors"
+)
 
 const (
-	writeBufSize = 1024 * 2014
+	writeBufSize = 1024 * 8
 )
 
 // SaveTo uses given downloader to fetch the resource with retries and saves the
