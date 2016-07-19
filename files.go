@@ -22,10 +22,7 @@ func downloadAndProcessURL(url, downloadDir, storageAccountName, storageAccountK
 		return err
 	}
 
-	dl, err := getDownloader(
-		url,
-		storageAccountName,
-		storageAccountKey)
+	dl, err := getDownloader(url, storageAccountName, storageAccountKey)
 	if err != nil {
 		return err
 	}
@@ -44,17 +41,17 @@ func downloadAndProcessURL(url, downloadDir, storageAccountName, storageAccountK
 // storage credentials are empty or not.
 func getDownloader(fileURL string, storageAccountName, storageAccountKey string) (
 	download.Downloader, error) {
-	if storageAccountName != "" && storageAccountKey != "" {
-		blob, err := blobutil.ParseBlobURL(fileURL)
-		if err != nil {
-			return nil, err
-		}
-		return download.NewBlobDownload(
-			storageAccountName,
-			storageAccountKey,
-			blob), nil
+	if storageAccountName == "" || storageAccountKey == "" {
+		return download.NewURLDownload(fileURL), nil
 	}
-	return download.NewURLDownload(fileURL), nil
+
+	blob, err := blobutil.ParseBlobURL(fileURL)
+	if err != nil {
+		return nil, err
+	}
+	return download.NewBlobDownload(
+		storageAccountName, storageAccountKey,
+		blob), nil
 }
 
 // urlToFileName parses given URL and returns the section after the last slash

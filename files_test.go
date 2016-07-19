@@ -26,6 +26,16 @@ func Test_getDownloader_externalUrl(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, d)
 	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d), "got wrong type")
+
+	d, err = getDownloader("http://acct.blob.core.windows.net/", "foo", "")
+	require.Nil(t, err)
+	require.NotNil(t, d)
+	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d), "got wrong type")
+
+	d, err = getDownloader("http://acct.blob.core.windows.net/", "", "bar")
+	require.Nil(t, err)
+	require.NotNil(t, d)
+	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d), "got wrong type")
 }
 
 func Test_urlToFileName_badURL(t *testing.T) {
