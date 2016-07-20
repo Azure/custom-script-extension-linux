@@ -6,9 +6,9 @@ type cmdFunc func(vmextension.HandlerEnvironment) error
 
 var (
 	cmds = map[string]struct {
-		f             cmdFunc // associated function
-		name          string  // human readable string
-		reportsStatus bool    // determines if running this should log to a .status file
+		f                  cmdFunc // associated function
+		name               string  // human readable string
+		shouldReportStatus bool    // determines if running this should log to a .status file
 	}{
 		"install":   {install, "Install", false},
 		"uninstall": {uninstall, "Uninstall", false},
