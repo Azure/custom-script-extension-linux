@@ -7,6 +7,16 @@
 	],
 	"Deps": [
 		{
+			"ImportPath": "github.com/Azure/azure-docker-extension/pkg/executil",
+			"Comment": "1.1.1606092330-4-gbd96e18",
+			"Rev": "bd96e1834b13a7f7d86a21692d97c87b35d196a3"
+		},
+		{
+			"ImportPath": "github.com/Azure/azure-docker-extension/pkg/vmextension",
+			"Comment": "1.1.1606092330-4-gbd96e18",
+			"Rev": "bd96e1834b13a7f7d86a21692d97c87b35d196a3"
+		},
+		{
 			"ImportPath": "github.com/Azure/azure-sdk-for-go/storage",
 			"Comment": "v3.0.0-beta-2-g58a13e3",
 			"Rev": "58a13e378daf3b06e65925397185684b16321111"
