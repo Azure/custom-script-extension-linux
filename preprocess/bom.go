@@ -35,10 +35,10 @@ func encodeToUTF8(b []byte) []byte {
 	utf16Encoding := unicode.UTF16(e, unicode.ExpectBOM)
 	utf8Bytes, err := utf16Encoding.NewDecoder().Bytes(b)
 	if err != nil {
-		if err == unicode.ErrMissingBOM {
-			return b // already utf8
-		}
-		return b // return given slice
+		// if we got err == unicode.ErrMissingBOM input is already utf8 but in
+		// case of other errors, we return the given slice anyway as this is
+		// best-effort.
+		return b
 	}
 	return utf8Bytes // decoded from utf16
 }

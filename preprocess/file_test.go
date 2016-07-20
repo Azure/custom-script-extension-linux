@@ -27,6 +27,12 @@ func TestHasShebang(t *testing.T) {
 	require.True(t, hasShebang(bomdata), "data=%v", bomdata)
 }
 
+func TestIsTextFile_openError(t *testing.T) {
+	_, err := IsTextFile("/non/existing/path")
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "failed to open file")
+}
+
 func TestIsTextFile(t *testing.T) {
 	files := map[string]bool{
 		"script_noshebang.py": true,  // file extension, no shebang
