@@ -18,7 +18,7 @@ const (
 	// time to sleep between retries is an exponential backoff formula:
 	//   t(n) = k * m^n
 	expRetryN = 7 // how many times we retry the Download
-	expRetryK = time.Second * 5
+	expRetryK = time.Second * 3
 	expRetryM = 2
 )
 
