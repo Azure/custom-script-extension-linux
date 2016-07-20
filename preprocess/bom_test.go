@@ -58,3 +58,17 @@ func TestRemoveBOM(t *testing.T) {
 		require.True(t, bytes.HasPrefix(n, []byte("#!")), "%s does not start with shebang: %#v", fn, n)
 	}
 }
+
+func Test_encodeToUTF8(t *testing.T) {
+	// a utf16 string with little endian BOM
+	s := []byte("\xff\xfe\x68\x00\x65\x00\x6c\x00\x6c\x00\x6f\x00")
+	b := encodeToUTF8(s)
+	require.Equal(t, []byte("hello"), b)
+}
+
+func Test_encodeToUTF8_returnsSameSliceOnFailure(t *testing.T) {
+	// a utf16 string with no BOM
+	s := []byte("\x68\x00\x65\x00\x6c\x00\x6c\x00\x6f\x00")
+	b := encodeToUTF8(s)
+	require.Equal(t, s, b)
+}
