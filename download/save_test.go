@@ -40,7 +40,7 @@ func TestSave(t *testing.T) {
 	fi, err := os.Stat(path)
 	require.Nil(t, err)
 	require.EqualValues(t, 65536, fi.Size())
-	require.Equal(t, os.FileMode(0600), fi.Mode().Perm(), "not chmod'ed")
+	require.Equal(t, os.FileMode(0600).String(), fi.Mode().String(), "not chmod'ed")
 }
 
 func TestSave_truncates(t *testing.T) {
@@ -60,7 +60,7 @@ func TestSave_truncates(t *testing.T) {
 	fi, err := os.Stat(path)
 	require.Nil(t, err)
 	require.EqualValues(t, 128, fi.Size())
-	require.Equal(t, os.FileMode(0600), fi.Mode().Perm(), "mode should not be changed")
+	require.Equal(t, os.FileMode(0600).String(), fi.Mode().String(), "mode should not be changed")
 }
 
 func TestSave_largeFile(t *testing.T) {
