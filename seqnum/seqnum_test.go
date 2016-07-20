@@ -24,7 +24,7 @@ func TestSet_writeFail(t *testing.T) {
 	require.Contains(t, err.Error(), "seqnum: failed to write")
 }
 
-func TestSet(t *testing.T) {
+func TestSet_newFile(t *testing.T) {
 	f, err := ioutil.TempFile("", "")
 	require.Nil(t, err)
 	f.Close()
@@ -32,6 +32,31 @@ func TestSet(t *testing.T) {
 	defer os.RemoveAll(fp)
 
 	require.Nil(t, seqnum.Set(fp, 1))
+
+	// validate contents
+	b, err := ioutil.ReadFile(fp)
+	require.Nil(t, err)
+	require.Equal(t, "1", string(b))
+
+	// validate chmod
+	fi, err := os.Stat(fp)
+	require.Nil(t, err)
+	require.EqualValues(t, os.FileMode(0600).String(), fi.Mode().String())
+}
+
+func TestSet_truncates(t *testing.T) {
+	f, err := ioutil.TempFile("", "")
+	require.Nil(t, err)
+	f.Close()
+	fp := f.Name()
+	defer os.RemoveAll(fp)
+
+	require.Nil(t, seqnum.Set(fp, 1))
+	require.Nil(t, seqnum.Set(fp, 2))
+
+	b, err := ioutil.ReadFile(fp)
+	require.Nil(t, err)
+	require.Equal(t, "2", string(b))
 }
 
 func TestSetGet(t *testing.T) {
