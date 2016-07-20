@@ -3,9 +3,12 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/ahmetalpbalkan/go-httpbin"
 	"github.com/stretchr/testify/require"
 )
 
@@ -96,4 +99,22 @@ func Test_postProcessFile(t *testing.T) {
 	b, err := ioutil.ReadFile(f.Name())
 	require.Nil(t, err)
 	require.Equal(t, []byte("#!/bin/sh\necho 'Hello, world!'\n"), b)
+}
+
+func Test_downloadAndProcessURL(t *testing.T) {
+	srv := httptest.NewServer(httpbin.GetMux())
+	defer srv.Close()
+
+	tmpDir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	err = downloadAndProcessURL(srv.URL+"/bytes/256", tmpDir, "", "")
+	require.Nil(t, err)
+
+	fp := filepath.Join(tmpDir, "256")
+	fi, err := os.Stat(fp)
+	require.Nil(t, err)
+	require.EqualValues(t, 256, fi.Size())
+	require.Equal(t, os.FileMode(0500).String(), fi.Mode().String())
 }
