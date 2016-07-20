@@ -6,8 +6,8 @@ import (
 )
 
 var (
-	errStoragePartialCredentials = errors.New("'storageAccountName' and 'storageAccountKey' must be both specified")
-	errCmdTooMany                = errors.New("'commandToExecute' was specified both in public and protected settings; it should be specified only once")
+	errStoragePartialCredentials = errors.New("both 'storageAccountName' and 'storageAccountKey' must be specified")
+	errCmdTooMany                = errors.New("'commandToExecute' was specified both in public and protected settings; it must be specified only once")
 )
 
 // handlerSettings holds the configuration of the extension handler.
