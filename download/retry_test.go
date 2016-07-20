@@ -14,12 +14,12 @@ import (
 var (
 	// how much we sleep between retries
 	sleepSchedule = []time.Duration{
-		5 * time.Second,
-		10 * time.Second,
-		20 * time.Second,
-		40 * time.Second,
-		80 * time.Second,
-		160 * time.Second}
+		3 * time.Second,
+		6 * time.Second,
+		12 * time.Second,
+		24 * time.Second,
+		48 * time.Second,
+		96 * time.Second}
 )
 
 func TestActualSleep_actuallySleeps(t *testing.T) {
