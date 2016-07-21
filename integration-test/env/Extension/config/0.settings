@@ -1,0 +1,11 @@
+{
+  "runtimeSettings": [
+    {
+      "handlerSettings": {
+        "protectedSettingsCertThumbprint": "D6608DD84293F393E2206151B84A4426A5C04B06",
+        "protectedSettings": "MIIB8AYJKoZIhvcNAQcDoIIB4TCCAd0CAQAxggFpMIIBZQIBADBNMDkxNzA1BgoJkiaJk/IsZAEZFidXaW5kb3dzIEF6dXJlIENSUCBDZXJ0aWZpY2F0ZSBHZW5lcmF0b3ICEGNb7ZqReJa+TzLJGZugkaowDQYJKoZIhvcNAQEBBQAEggEAiNPOj6WGb8SOFE1IZW+Zp2FCfN/nZjCw/NjZZLb2tSXmRp+viIUU6WmOl+TpHLkm0y3llWQRS7KTgIsSHjCaxAdOazcGf8x9QBkaNKU6peQ7cM6t6Bau5Qi7dTojGhrNkEn2P6BwGIc8ttcmqETpQmB37y8dtjv6xPsEexRG4YiAq2hZsJ7Qi7h+FniShOIuNxsBwkpuEvyh/7Hg1NgToycQSfBhgaMewSxqq3B+zW6VdCAfqaXwL1yykc3vHQb+PkRLvz56WVsZikRtHhNEcD2/NQ/KPBAslqS9rRqKNuwVsyEyR2dL1afe8pKPYwMO5OeEB7RbBcqK/EvfjELlMDBrBgkqhkiG9w0BBwEwFAYIKoZIhvcNAwcECGL5D/vOUP9ugEj86TCkoK0GisT0fxrmfPY4kWwF6ogIuTGkyDHUGXbv8+2bTae19LKV5OrzlibaP1k0h6oOYfNqwfIz/B6tR1zyrIzWQil29jE=",
+        "publicSettings": {}
+      }
+    }
+  ]
+}
