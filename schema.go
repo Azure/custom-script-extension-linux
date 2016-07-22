@@ -32,10 +32,7 @@ const (
       "type": "integer"
     }
   },
-  "additionalProperties": false,
-  "required": [
-    "commandToExecute"
-  ]
+  "additionalProperties": false
 }`
 
 	protectedSettingsSchema = `{
@@ -84,7 +81,7 @@ func validateObjectJSON(schema *gojsonschema.Schema, json string) error {
 	return nil
 }
 
-func validateSettings(settingsType, schemaJSON, docJSON string) error {
+func validateSettingsObject(settingsType, schemaJSON, docJSON string) error {
 	schema, err := gojsonschema.NewSchema(gojsonschema.NewStringLoader(schemaJSON))
 	if err != nil {
 		return errors.Wrapf(err, "failed to load %s settings schema", settingsType)
@@ -96,9 +93,9 @@ func validateSettings(settingsType, schemaJSON, docJSON string) error {
 }
 
 func validatePublicSettings(json string) error {
-	return validateSettings("public", publicSettingsSchema, json)
+	return validateSettingsObject("public", publicSettingsSchema, json)
 }
 
 func validateProtectedSettings(json string) error {
-	return validateSettings("protected", protectedSettingsSchema, json)
+	return validateSettingsObject("protected", protectedSettingsSchema, json)
 }
