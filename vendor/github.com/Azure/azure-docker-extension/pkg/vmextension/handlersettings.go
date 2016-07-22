@@ -9,7 +9,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/Azure/azure-docker-extension/pkg/executil"
+	"os/exec"
 )
 
 const (
@@ -70,17 +70,17 @@ func readSettings(configFolder string) ([]byte, error) {
 
 // parseHandlerSettings parses a handler settings file (e.g. 0.settings)
 // and returns as an object.
-func parseHandlerSettingsFile(b []byte) (handlerSettings, error) {
+func parseHandlerSettingsFile(b []byte) (h handlerSettings, _ error) {
 	if len(b) == 0 { // apparently if no config is specified, we get an empty file
-		return handlerSettings{}, nil
+		return h, nil
 	}
 
 	var f handlerSettingsFile
 	if err := json.Unmarshal(b, &f); err != nil {
-		return handlerSettings{}, fmt.Errorf("error parsing json: %v", err)
+		return h, fmt.Errorf("error parsing json: %v", err)
 	}
 	if len(f.RuntimeSettings) != 1 {
-		return handlerSettings{}, fmt.Errorf("wrong runtimeSettings count. expected:1, got:%d", f.RuntimeSettings)
+		return h, fmt.Errorf("wrong runtimeSettings count. expected:1, got:%d", len(f.RuntimeSettings))
 	}
 	return f.RuntimeSettings[0].HandlerSettings, nil
 }
@@ -119,14 +119,22 @@ func unmarshalProtectedSettings(configFolder string, hs handlerSettings, v inter
 	crt := filepath.Join(configFolder, "..", "..", fmt.Sprintf("%s.crt", hs.SettingsCertThumbprint))
 	prv := filepath.Join(configFolder, "..", "..", fmt.Sprintf("%s.prv", hs.SettingsCertThumbprint))
 
-	decrypted, err := executil.ExecWithStdin(ioutil.NopCloser(bytes.NewReader(decoded)), "openssl", "smime", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
-	if err != nil {
-		return fmt.Errorf("failed to decrypt: %v", err)
+	// we use os/exec instead of azure-docker-extension/pkg/executil here as
+	// other extension handlers depend on this package for parsing handler
+	// settings.
+	cmd := exec.Command("openssl", "smime", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
+	var bOut, bErr bytes.Buffer
+	cmd.Stdin = bytes.NewReader(decoded)
+	cmd.Stdout = &bOut
+	cmd.Stderr = &bErr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("decrypting protected settings failed: error=%v stderr=%v", err, bErr.Bytes())
 	}
 
 	// decrypted: json object for protected settings
-	if err = json.Unmarshal(decrypted, &v); err != nil {
-		return fmt.Errorf("failed to parse decrypted settings: %v", err)
+	if err := json.Unmarshal(bOut.Bytes(), &v); err != nil {
+		return fmt.Errorf("failed to unmarshal decrypted settings json: %v", err)
 	}
 	return nil
 }
