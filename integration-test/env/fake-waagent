@@ -21,7 +21,7 @@ cmd="$1"
 
 hCmd=$(cat $manifest_path | jq -r ".[].handlerManifest.$cmd")
 if [[ -z "$hCmd" ]] || [[ "$hCmd" == "null" ]]; then
-    echo "'$cmd' found in $manifest_path." >&2
+    echo "'$cmd' not found in $manifest_path." >&2
     exit 1
 fi
 

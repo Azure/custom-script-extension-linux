@@ -1,24 +1,16 @@
-# Test files
+# Integration Test Environment
 
-This read-only directory is what is normally under the `/var/lib/waagent`
-directory on an Azure Linux VM running the `waagent`.
-
-It only has the files required for extension handler to parse its
-configuration and run.
-
-The extension handler binary should be placed at `./Extension/bin/`
-directory.
-
-## Files
+This directory holds a skeleton of what we copy to `/var/lib/waagent` in the
+integration testing Docker image.
 
 ```
 .
-├── {THUMBPRINT}.crt            <-- certificate comes from the wire server
-├── {THUMBPRINT}.prv            <-- private key comes from the wire server
-└── Extension/                  <-- the 'HandlerManifest.json' should go here
-    ├── HandlerEnvironment.json <-- handler binary reads this
-    ├── bin/                    <-- the 'handler binary' should go here
-    ├── config/
-    │   └── 0.settings          <-- handler binary reads this
-    └── status/                 <-- handler binary should write here
+├── {THUMBPRINT}.crt            <-- tests generate and push this certificate
+├── {THUMBPRINT}.prv            <-- tests generate and push this private key
+└── Extension/                  
+    ├── HandlerManifest.json    <-- docker image build pushes it here
+    ├── HandlerEnvironment.json <-- the extension reads this
+    ├── bin/                    <-- docker image build pushes the extension binary here
+    ├── config/                 <-- tests push 0.settings file here
+    └── status/                 <-- extension should write here
 ```
