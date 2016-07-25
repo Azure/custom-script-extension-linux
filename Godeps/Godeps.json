@@ -30,6 +30,21 @@
 			"Rev": "5215b55f46b2b919f50a1df0eaa5886afe4e3b3d"
 		},
 		{
+			"ImportPath": "github.com/go-kit/kit/log",
+			"Comment": "v0.1.0-64-gb076b44",
+			"Rev": "b076b44dbec2aa943b52c9efaa5e8b46fd52b061"
+		},
+		{
+			"ImportPath": "github.com/go-logfmt/logfmt",
+			"Comment": "v0.2.0-9-gd432719",
+			"Rev": "d4327190ff838312623b09bfeb50d7c93c8d9c1d"
+		},
+		{
+			"ImportPath": "github.com/go-stack/stack",
+			"Comment": "v1.5.2",
+			"Rev": "100eb0c0a9c5b306ca2fb4f165df21d80ada4b82"
+		},
+		{
 			"ImportPath": "github.com/gorilla/context",
 			"Comment": "v1.1-4-gaed02d1",
 			"Rev": "aed02d124ae4a0e94fea4541c8effd05bf0c8296"
@@ -38,6 +53,10 @@
 			"ImportPath": "github.com/gorilla/mux",
 			"Comment": "v1.1-13-g9fa818a",
 			"Rev": "9fa818a44c2bf1396a17f9d5a3c0f6dd39d2ff8e"
+		},
+		{
+			"ImportPath": "github.com/kr/logfmt",
+			"Rev": "b84e30acd515aadc4b783ad4ff83aff3299bdfe0"
 		},
 		{
 			"ImportPath": "github.com/pkg/errors",
