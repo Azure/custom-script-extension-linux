@@ -24,7 +24,7 @@ func Set(path string, num int) error {
 	return errors.Wrap(ioutil.WriteFile(path, b, chmod), "seqnum: failed to write")
 }
 
-// IsSmallerOrEqualThan returns if the sequence number stored at path is smaller
+// IsSmallerOrEqualThan returns true if the sequence number stored at path is smaller
 // or equal than the provided num. If no number is stored, returns false and no
 // error.
 func IsSmallerOrEqualThan(path string, num int) (bool, error) {
