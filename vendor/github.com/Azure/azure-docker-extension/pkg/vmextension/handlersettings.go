@@ -9,7 +9,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/Azure/azure-docker-extension/pkg/executil"
+	"os/exec"
 )
 
 const (
@@ -23,85 +23,91 @@ type handlerSettingsFile struct {
 }
 
 type handlerSettings struct {
-	PublicSettings          interface{} `json:"publicSettings"`
-	ProtectedSettingsBase64 string      `json:"protectedSettings"`
-	SettingsCertThumbprint  string      `json:"protectedSettingsCertThumbprint"`
+	PublicSettings          map[string]interface{} `json:"publicSettings"`
+	ProtectedSettingsBase64 string                 `json:"protectedSettings"`
+	SettingsCertThumbprint  string                 `json:"protectedSettingsCertThumbprint"`
 }
 
-// UnmarshalHandlerSettings locates the latest configuration that should
-// be picked up, parses and decodes it by locating the relevant certs
-// and returns public and protected settings into the specified instances.
-func UnmarshalHandlerSettings(configFolder string, publicSettings, protectedSettings interface{}) error {
-	b, err := readSettings(configFolder)
+// settingsPath returns the full path to the .settings file with the
+// highest sequence number found in configFolder.
+func settingsPath(configFolder string) (string, error) {
+	seq, err := FindSeqNum(configFolder)
 	if err != nil {
-		return err
+		return "", fmt.Errorf("Cannot find seqnum: %v", err)
 	}
-	hs, err := parseHandlerSettingsFile(b)
+	return filepath.Join(configFolder, fmt.Sprintf("%d%s", seq, settingsFileSuffix)), nil
+}
+
+// ReadSettings locates the .settings file and returns public settings
+// JSON, and protected settings JSON (by decrypting it with the keys in
+// configFolder).
+func ReadSettings(configFolder string) (public, protected map[string]interface{}, _ error) {
+	cf, err := settingsPath(configFolder)
 	if err != nil {
-		return err
+		return nil, nil, fmt.Errorf("canot locate settings file: %v", err)
+	}
+	hs, err := parseHandlerSettingsFile(cf)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error parsing settings file: %v", err)
 	}
 
-	// Parse public settings
-	if err := unmarshalPublicSettings(hs.PublicSettings, &publicSettings); err != nil {
-		return err
+	public = hs.PublicSettings
+	if err := unmarshalProtectedSettings(configFolder, hs, &protected); err != nil {
+		return nil, nil, fmt.Errorf("failed to parse protected settings: %v", err)
 	}
+	return public, protected, nil
+}
 
-	// Parse protected settings
-	if err := unmarshalProtectedSettings(configFolder, hs, &protectedSettings); err != nil {
-		return err
+// UnmarshalHandlerSettings unmarshals given publicSettings/protectedSettings types
+// assumed underlying values are JSON into references publicV/protectedV respectively
+// (of struct types that contain structured fields for settings).
+func UnmarshalHandlerSettings(publicSettings, protectedSettings map[string]interface{}, publicV, protectedV interface{}) error {
+	if err := unmarshalSettings(publicSettings, &publicV); err != nil {
+		return fmt.Errorf("failed to unmarshal public settings: %v", err)
+	}
+	if err := unmarshalSettings(protectedSettings, &protectedV); err != nil {
+		return fmt.Errorf("failed to unmarshal protected settings: %v", err)
 	}
 	return nil
 }
 
-// readSettings returns the runtime configuration JSON file with
-// the highest sequence number.
-func readSettings(configFolder string) ([]byte, error) {
-	seq, err := FindSeqNum(configFolder)
+// unmarshalSettings makes a round-trip JSON marshaling and unmarshaling
+// from in (assumed map[interface]{}) to v (actual settings type).
+func unmarshalSettings(in interface{}, v interface{}) error {
+	s, err := json.Marshal(in)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot find seqnum: %v", err)
+		return fmt.Errorf("failed to marshal into json: %v", err)
 	}
-	cf := filepath.Join(configFolder, fmt.Sprintf("%d%s", seq, settingsFileSuffix))
-	b, err := ioutil.ReadFile(cf)
-	if err != nil {
-		return nil, fmt.Errorf("Error reading %s: %v", cf, err)
+	if err := json.Unmarshal(s, &v); err != nil {
+		return fmt.Errorf("failed to unmarshal json: %v", err)
 	}
-	return b, nil
+	return nil
 }
 
-// parseHandlerSettings parses a handler settings file (e.g. 0.settings)
-// and returns as an object.
-func parseHandlerSettingsFile(b []byte) (handlerSettings, error) {
-	if len(b) == 0 { // apparently if no config is specified, we get an empty file
-		return handlerSettings{}, nil
+// parseHandlerSettings parses a handler settings file (e.g. 0.settings) and
+// returns it as a structured object.
+func parseHandlerSettingsFile(path string) (h handlerSettings, _ error) {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return h, fmt.Errorf("Error reading %s: %v", path, err)
+	}
+	if len(b) == 0 { // if no config is specified, we get an empty file
+		return h, nil
 	}
 
 	var f handlerSettingsFile
 	if err := json.Unmarshal(b, &f); err != nil {
-		return handlerSettings{}, fmt.Errorf("error parsing json: %v", err)
+		return h, fmt.Errorf("error parsing json: %v", err)
 	}
 	if len(f.RuntimeSettings) != 1 {
-		return handlerSettings{}, fmt.Errorf("wrong runtimeSettings count. expected:1, got:%d", f.RuntimeSettings)
+		return h, fmt.Errorf("wrong runtimeSettings count. expected:1, got:%d", len(f.RuntimeSettings))
 	}
 	return f.RuntimeSettings[0].HandlerSettings, nil
 }
 
-// unmarshalPublicSettings parses public settings object serialized
-// from handler runtime settings JSON before into the given struct v.
-func unmarshalPublicSettings(in interface{}, v interface{}) error {
-	s, err := json.Marshal(in)
-	if err != nil {
-		return err
-	}
-
-	if err := json.Unmarshal(s, &v); err != nil {
-		return fmt.Errorf("error deserializing public settings for handler: %v", err)
-	}
-	return nil
-}
-
-// unmarshalProtectedSettings decodes the protected settings from
-// handler runtime settings JSON file, decrypts it using the certificates
-// and unmarshals into the given struct v.
+// unmarshalProtectedSettings decodes the protected settings from handler
+// runtime settings JSON file, decrypts it using the certificates and unmarshals
+// into the given struct v.
 func unmarshalProtectedSettings(configFolder string, hs handlerSettings, v interface{}) error {
 	if hs.ProtectedSettingsBase64 == "" {
 		return nil
@@ -119,14 +125,22 @@ func unmarshalProtectedSettings(configFolder string, hs handlerSettings, v inter
 	crt := filepath.Join(configFolder, "..", "..", fmt.Sprintf("%s.crt", hs.SettingsCertThumbprint))
 	prv := filepath.Join(configFolder, "..", "..", fmt.Sprintf("%s.prv", hs.SettingsCertThumbprint))
 
-	decrypted, err := executil.ExecWithStdin(ioutil.NopCloser(bytes.NewReader(decoded)), "openssl", "smime", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
-	if err != nil {
-		return fmt.Errorf("failed to decrypt: %v", err)
+	// we use os/exec instead of azure-docker-extension/pkg/executil here as
+	// other extension handlers depend on this package for parsing handler
+	// settings.
+	cmd := exec.Command("openssl", "smime", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
+	var bOut, bErr bytes.Buffer
+	cmd.Stdin = bytes.NewReader(decoded)
+	cmd.Stdout = &bOut
+	cmd.Stderr = &bErr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("decrypting protected settings failed: error=%v stderr=%s", err, string(bErr.Bytes()))
 	}
 
 	// decrypted: json object for protected settings
-	if err = json.Unmarshal(decrypted, &v); err != nil {
-		return fmt.Errorf("failed to parse decrypted settings: %v", err)
+	if err := json.Unmarshal(bOut.Bytes(), &v); err != nil {
+		return fmt.Errorf("failed to unmarshal decrypted settings json: %v", err)
 	}
 	return nil
 }
