@@ -1,10 +1,19 @@
-sudo: false
+sudo: true
+services:
+ - docker
 language: go
 go: go1.6
 install:
+  - sudo add-apt-repository ppa:duggan/bats --yes
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq bats
   - go get -u github.com/golang/lint/golint
+before_script:
+  - docker version
+  - docker info
 script:
   - test -z "$(gofmt -s -l -w $(find . -type f -name '*.go' -not -path './vendor/*') | tee /dev/stderr)"
   - test -z "$(golint . | tee /dev/stderr)"
   - test -z "$(go vet -v $(go list ./... | grep -v '/vendor/') | tee /dev/stderr)"
   - go list ./... | grep -v '/vendor/' | xargs go test -v -cover
+  - bats integration-test/test
