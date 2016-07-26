@@ -6,18 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestValidatePublicSettings_empty(t *testing.T) {
-	require.NotNil(t, validatePublicSettings(""))
-	require.NotNil(t, validatePublicSettings("{}"))
-}
-
-func TestValidatePublicSettings_missingArgument(t *testing.T) {
-	err := validatePublicSettings(`{"fileUris": ["http://a.b/c.txt"]}`)
-	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "commandToExecute is required")
-}
-
-func TestValidatePublicSettings_hasRequiredArgument_butWrongType(t *testing.T) {
+func TestValidatePublicSettings_fieldHasWrongType(t *testing.T) {
 	err := validatePublicSettings(`{"commandToExecute": ["foo"]}`)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "Invalid type. Expected: string, given: array")
