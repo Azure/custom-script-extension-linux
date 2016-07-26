@@ -10,13 +10,14 @@ import (
 	"github.com/Azure/custom-script-extension-linux/blobutil"
 	"github.com/Azure/custom-script-extension-linux/download"
 	"github.com/Azure/custom-script-extension-linux/preprocess"
+	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 )
 
 // downloadAndProcessURL downloads using the specified downloader and saves it to the
 // specified existing directory, which must be the path to the saved file. Then
 // it post-processes file based on heuristics.
-func downloadAndProcessURL(url, downloadDir, storageAccountName, storageAccountKey string) error {
+func downloadAndProcessURL(ctx *log.Context, url, downloadDir, storageAccountName, storageAccountKey string) error {
 	fn, err := urlToFileName(url)
 	if err != nil {
 		return err
@@ -29,7 +30,7 @@ func downloadAndProcessURL(url, downloadDir, storageAccountName, storageAccountK
 
 	fp := filepath.Join(downloadDir, fn)
 	const mode = 0500 // we assume users download scripts to execute
-	if _, err := download.SaveTo(dl, fp, mode); err != nil {
+	if _, err := download.SaveTo(ctx, dl, fp, mode); err != nil {
 		return err
 	}
 

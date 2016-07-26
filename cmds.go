@@ -132,7 +132,7 @@ func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) error {
 	for i, f := range cfg.FileURLs {
 		ctx := ctx.With("file", i)
 		ctx.Log("event", "download start")
-		if err := downloadAndProcessURL(f, dir, cfg.StorageAccountName, cfg.StorageAccountKey); err != nil {
+		if err := downloadAndProcessURL(ctx, f, dir, cfg.StorageAccountName, cfg.StorageAccountKey); err != nil {
 			ctx.Log("event", "download failed", "error", err)
 			return errors.Wrapf(err, "failed to download file[%d]", i)
 		}
