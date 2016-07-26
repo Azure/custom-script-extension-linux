@@ -25,12 +25,8 @@ func TestSet_writeFail(t *testing.T) {
 }
 
 func TestSet_newFile(t *testing.T) {
-	f, err := ioutil.TempFile("", "")
-	require.Nil(t, err)
-	f.Close()
-	fp := f.Name()
-	require.Nil(t, os.Remove(fp)) // delete file on purpose
-	defer os.RemoveAll(fp)
+	fp := testFile(t, 0600)
+	require.Nil(t, os.RemoveAll(fp)) // remove test file first
 
 	require.Nil(t, seqnum.Set(fp, 1))
 
@@ -46,10 +42,7 @@ func TestSet_newFile(t *testing.T) {
 }
 
 func TestSet_truncates(t *testing.T) {
-	f, err := ioutil.TempFile("", "")
-	require.Nil(t, err)
-	f.Close()
-	fp := f.Name()
+	fp := testFile(t, 0600)
 	defer os.RemoveAll(fp)
 
 	require.Nil(t, seqnum.Set(fp, 1))
@@ -60,59 +53,59 @@ func TestSet_truncates(t *testing.T) {
 	require.Equal(t, "2", string(b))
 }
 
-func TestIsSmallerOrEqualThan(t *testing.T) {
-	fp := testFile(t, 0600)
-	defer os.RemoveAll(fp)
-
-	require.Nil(t, seqnum.Set(fp, 0)) // SET 0
-
-	b, err := seqnum.IsSmallerOrEqualThan(fp, 0)
+func TestIsSmallerThan_nonExistingFile(t *testing.T) {
+	b, err := seqnum.IsSmallerThan("/non/existing/path", -1)
 	require.Nil(t, err)
-	require.True(t, b, "0≤0")
-
-	b, err = seqnum.IsSmallerOrEqualThan(fp, 1)
-	require.Nil(t, err)
-	require.True(t, b, "0≤1")
-
-	require.Nil(t, seqnum.Set(fp, 1)) // SET 1
-
-	b, err = seqnum.IsSmallerOrEqualThan(fp, 0)
-	require.Nil(t, err)
-	require.False(t, b, "1≰0")
-
-	b, err = seqnum.IsSmallerOrEqualThan(fp, 1)
-	require.Nil(t, err)
-	require.True(t, b, "1≤1")
-
-	b, err = seqnum.IsSmallerOrEqualThan(fp, 2)
-	require.Nil(t, err)
-	require.True(t, b, "1≤2")
+	require.True(t, b, "non-existing file is always smaller than specified seqnum")
 }
 
-func TestIsSmallerOrEqualThan_nonExistingFile(t *testing.T) {
-	b, err := seqnum.IsSmallerOrEqualThan("/non/existing/path", 0)
-	require.Nil(t, err)
-	require.False(t, b, "non-existing file is always smaller than specified seqnum")
-}
-
-func TestIsSmallerOrEqualThan_readFailure(t *testing.T) {
+func TestIsSmallerThan_readFailure(t *testing.T) {
 	fp := testFile(t, 0100) // remove read permissions
 	defer os.RemoveAll(fp)
 
-	_, err := seqnum.IsSmallerOrEqualThan(fp, 0)
+	_, err := seqnum.IsSmallerThan(fp, 0)
 	require.NotNil(t, err, "read should have failed")
 	require.Contains(t, err.Error(), "seqnum: failed to read")
 }
 
-func TestIsSmallerOrEqualThan_parseError(t *testing.T) {
+func TestIsSmallerThan_parseError(t *testing.T) {
 	fp := testFile(t, 0600)
 	defer os.RemoveAll(fp)
 
 	require.Nil(t, ioutil.WriteFile(fp, []byte{'a'}, 0700))
 
-	_, err := seqnum.IsSmallerOrEqualThan(fp, 0)
+	_, err := seqnum.IsSmallerThan(fp, 0)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "seqnum: cannot parse number \"a\"")
+}
+
+func TestIsSmallerThan(t *testing.T) {
+	fp := testFile(t, 0600)
+	defer os.RemoveAll(fp)
+
+	require.Nil(t, seqnum.Set(fp, 0)) // SET 0
+
+	b, err := seqnum.IsSmallerThan(fp, 0)
+	require.Nil(t, err)
+	require.False(t, b, "stored=0 ≮ given=0")
+
+	b, err = seqnum.IsSmallerThan(fp, 1)
+	require.Nil(t, err)
+	require.True(t, b, "stored=0 < given=1")
+
+	require.Nil(t, seqnum.Set(fp, 1)) // SET 1
+
+	b, err = seqnum.IsSmallerThan(fp, 0)
+	require.Nil(t, err)
+	require.False(t, b, "stored=1 ≮ given=0")
+
+	b, err = seqnum.IsSmallerThan(fp, 1)
+	require.Nil(t, err)
+	require.False(t, b, "stored=1 ≮ given=1")
+
+	b, err = seqnum.IsSmallerThan(fp, 2)
+	require.Nil(t, err)
+	require.True(t, b, "stored=1 < given=2")
 }
 
 func testFile(t *testing.T, mode os.FileMode) string {
