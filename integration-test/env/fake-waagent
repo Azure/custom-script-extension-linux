@@ -1,0 +1,31 @@
+#!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
+readonly SCRIPT_DIR=$(realpath $(dirname $(readlink -f $0)))
+
+if [ "$#" -ne 1 ]; then
+	echo "Usage: $0 <handlerCommand>" >&2
+	exit 1
+fi
+
+echo "== fake-waagent ==" >&2
+manifest_path="${SCRIPT_DIR}/Extension/HandlerManifest.json"
+
+if [[ ! -f "$manifest_path" ]]; then
+    echo "$manifest_path not found." >&2
+    exit 1
+fi
+
+cmd="$1"
+[[ $cmd == *Command ]] || cmd+=Command # add suffix install-->installCommand
+
+hCmd=$(cat $manifest_path | jq -r ".[].handlerManifest.$cmd")
+if [[ -z "$hCmd" ]] || [[ "$hCmd" == "null" ]]; then
+    echo "'$cmd' not found in $manifest_path." >&2
+    exit 1
+fi
+
+hCmd="./Extension/$hCmd"
+echo "Invoking: $hCmd" >&2
+echo "=================" >&2
+eval "$hCmd"

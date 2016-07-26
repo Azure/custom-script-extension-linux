@@ -1,0 +1,7 @@
+.git
+*Dockerfile
+*.go
+README.md
+LICENSE
+vendor
+Godeps
