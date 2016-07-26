@@ -1,11 +1,11 @@
 [{
   "version": 1.0,
   "handlerManifest": {
-    "installCommand": "bin/custom-script-extension install",
-    "uninstallCommand": "bin/custom-script-extension uninstall",
-    "updateCommand": "bin/custom-script-extension update",
-    "enableCommand": "bin/custom-script-extension enable",
-    "disableCommand": "bin/custom-script-extension disable",
+    "installCommand": "bin/custom-script-shim install",
+    "uninstallCommand": "bin/custom-script-shim uninstall",
+    "updateCommand": "bin/custom-script-shim update",
+    "enableCommand": "bin/custom-script-shim enable",
+    "disableCommand": "bin/custom-script-shim disable",
     "rebootAfterInstall": false,
     "reportHeartbeat": false,
     "updateMode": "UpdateWithoutInstall"
