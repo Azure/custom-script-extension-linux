@@ -39,7 +39,7 @@ func Test_commands_shouldReportStatus(t *testing.T) {
 func Test_checkAndSaveSeqNum_fails(t *testing.T) {
 	// pass in invalid seqnum format
 	_, err := checkAndSaveSeqNum(log.NewNopLogger(), "not-an-int", "/un/used")
-	require.Nil(t, err)
+	require.NotNil(t, err)
 	require.Contains(t, err.Error(), `failed to parse seqnum: "not-an-int"`)
 }
 

@@ -100,10 +100,13 @@ func checkAndSaveSeqNum(ctx log.Logger, seqNum, seqNumFile string) (shouldExit b
 		return false, errors.Wrapf(err, "failed to parse seqnum: %q", seqNum)
 	}
 
-	if b, err := seqnum.IsSmallerOrEqualThan(seqNumFile, seq); err != nil {
+	smaller, err := seqnum.IsSmallerThan(seqNumFile, seq)
+	if err != nil {
 		return false, errors.Wrap(err, "failed to check sequence number")
-	} else if b {
-		ctx.Log("message", "saved seqnum <= current seqnum")
+	}
+	if !smaller {
+		// stored sequence number is equals or greater than the current
+		// sequence number.
 		return true, nil
 	}
 	if err := seqnum.Set(seqNumFile, seq); err != nil {
