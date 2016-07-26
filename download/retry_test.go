@@ -8,6 +8,7 @@ import (
 
 	"github.com/Azure/custom-script-extension-linux/download"
 	"github.com/ahmetalpbalkan/go-httpbin"
+	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,7 +37,7 @@ func TestWithRetries_noRetries(t *testing.T) {
 	d := download.NewURLDownload(srv.URL + "/status/200")
 
 	sr := new(sleepRecorder)
-	resp, err := download.WithRetries(d, sr.Sleep)
+	resp, err := download.WithRetries(nopLog(), d, sr.Sleep)
 	require.Nil(t, err, "should not fail")
 	require.NotNil(t, resp, "response body exists")
 	require.Equal(t, []time.Duration(nil), []time.Duration(*sr), "sleep should not be called")
@@ -47,7 +48,7 @@ func TestWithRetries_failing_validateNumberOfCalls(t *testing.T) {
 	defer srv.Close()
 
 	bd := new(badDownloader)
-	_, err := download.WithRetries(bd, new(sleepRecorder).Sleep)
+	_, err := download.WithRetries(nopLog(), bd, new(sleepRecorder).Sleep)
 	require.Contains(t, err.Error(), "expected error", "error is preserved")
 	require.EqualValues(t, 7, bd.calls, "calls exactly expRetryN times")
 }
@@ -59,7 +60,7 @@ func TestWithRetries_failingBadStatusCode_validateSleeps(t *testing.T) {
 	d := download.NewURLDownload(srv.URL + "/status/404")
 
 	sr := new(sleepRecorder)
-	_, err := download.WithRetries(d, sr.Sleep)
+	_, err := download.WithRetries(nopLog(), d, sr.Sleep)
 	require.EqualError(t, err, "unexpected status code: got=404 expected=200")
 
 	require.Equal(t, sleepSchedule, []time.Duration(*sr))
@@ -71,7 +72,7 @@ func TestWithRetries_healingServer(t *testing.T) {
 
 	d := download.NewURLDownload(srv.URL)
 	sr := new(sleepRecorder)
-	resp, err := download.WithRetries(d, sr.Sleep)
+	resp, err := download.WithRetries(nopLog(), d, sr.Sleep)
 	require.Nil(t, err, "should eventually succeed")
 	require.NotNil(t, resp, "response body exists")
 
@@ -98,4 +99,8 @@ func (h *healingServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.WriteHeader(http.StatusOK)
 	}
+}
+
+func nopLog() *log.Context {
+	return log.NewContext(log.NewNopLogger())
 }

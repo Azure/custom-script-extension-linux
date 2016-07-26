@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/ahmetalpbalkan/go-httpbin"
+	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/require"
 )
 
@@ -109,7 +110,8 @@ func Test_downloadAndProcessURL(t *testing.T) {
 	require.Nil(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	err = downloadAndProcessURL(srv.URL+"/bytes/256", tmpDir, "", "")
+	err = downloadAndProcessURL(log.NewContext(log.NewNopLogger()),
+		srv.URL+"/bytes/256", tmpDir, "", "")
 	require.Nil(t, err)
 
 	fp := filepath.Join(tmpDir, "256")
