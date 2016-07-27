@@ -152,7 +152,7 @@ teardown(){
     [[ "$diff" == *"A /var/lib/azure/custom-script/download/0/$blob2"* ]] # file downloaded
 
     # compare checksum
-    existing=$(cat "$tmp" | md5 -q)
+    existing=$(md5 -q "$tmp")
     echo "Local file checksum: $existing"
     got=$(container_read_file "/var/lib/azure/custom-script/download/0/$blob1" | md5 -q)
     echo "Downloaded file checksum: $got"
