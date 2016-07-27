@@ -89,9 +89,9 @@ func Test_blobDownload_fails_urlNotFound(t *testing.T) {
 
 func Test_blobDownload_actualBlob(t *testing.T) {
 	acct := os.Getenv("AZURE_STORAGE_ACCOUNT")
-	key := os.Getenv("AZURE_STORAGE_KEY")
+	key := os.Getenv("AZURE_STORAGE_ACCESS_KEY")
 	if acct == "" || key == "" {
-		t.Skipf("Skipping: AZURE_STORAGE_ACCOUNT or AZURE_STORAGE_KEY not specified to run this test")
+		t.Skipf("Skipping: AZURE_STORAGE_ACCOUNT or AZURE_STORAGE_ACCESS_KEY not specified to run this test")
 	}
 	base := storage.DefaultBaseURL
 
