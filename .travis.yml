@@ -16,4 +16,5 @@ script:
   - test -z "$(golint . | tee /dev/stderr)"
   - test -z "$(go vet -v $(go list ./... | grep -v '/vendor/') | tee /dev/stderr)"
   - go list ./... | grep -v '/vendor/' | xargs go test -v -cover
+  - make binary
   - bats integration-test/test
