@@ -8,6 +8,12 @@ load test_helper
     [ "$status" -eq 0 ]
 }
 
+@test "meta: azure cli is installed" {
+    run azure -v
+    echo "$output">&2
+    [ "$status" -eq 0 ]
+}
+
 @test "meta: can build the test container image" {
     run build_docker_image
     echo "$output"

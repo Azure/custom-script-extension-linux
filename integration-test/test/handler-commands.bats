@@ -108,6 +108,57 @@ teardown(){
     [[ "$diff" == *"A /b.txt"* ]] # created by script.sh
 }
 
+@test "handler command: enable - download files from storage account" {
+    if [[ -z  "$AZURE_STORAGE_ACCOUNT" ]] || [[ -z  "$AZURE_STORAGE_ACCESS_KEY" ]]; then
+        skip "AZURE_STORAGE_ACCOUNT or AZURE_STORAGE_ACCESS_KEY not specified"
+    fi
+
+    # make random file
+    tmp="$(mktemp)"
+    dd if=/dev/urandom of="$tmp" bs=1k count=512
+
+    # upload files to a storage container
+    cnt="testcontainer"
+    blob1="blob1-$RANDOM"
+    blob2="blob2-$RANDOM"
+    azure storage container show  "$cnt" 1>/dev/null ||
+        azure storage container create "$cnt" 1>/dev/null && echo "Azure Storage container created">&2
+    azure storage blob upload -f "$tmp" "$cnt" "$blob1" 1>/dev/null  # upload blob1
+    azure storage blob upload -f "$tmp" "$cnt" "$blob2" 1>/dev/null # upload blob2
+
+    blob1_url="http://$AZURE_STORAGE_ACCOUNT.blob.core.windows.net/$cnt/$blob1" # over http
+    blob2_url="https://$AZURE_STORAGE_ACCOUNT.blob.core.windows.net/$cnt/$blob2" # over https
+
+    mk_container sh -c "fake-waagent install && fake-waagent enable && wait-for-enable" # add sleep for enable to finish in the background
+    # download an external script and run it
+    push_settings "{
+        \"fileUris\": [
+                \"$blob1_url\",
+                \"$blob2_url\"
+        ],
+        \"commandToExecute\":\"date\"
+        }" "{
+            \"storageAccountName\": \"$AZURE_STORAGE_ACCOUNT\",
+            \"storageAccountKey\": \"$AZURE_STORAGE_ACCESS_KEY\"
+        }"
+    run start_container
+    echo "$output"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'file=0 event="download complete"'* ]]
+    [[ "$output" == *'file=1 event="download complete"'* ]]
+
+    diff="$(container_diff)"; echo "$diff"
+    [[ "$diff" == *"A /var/lib/azure/custom-script/download/0/$blob1"* ]] # file downloaded
+    [[ "$diff" == *"A /var/lib/azure/custom-script/download/0/$blob2"* ]] # file downloaded
+
+    # compare checksum
+    existing=$(md5 -q "$tmp")
+    echo "Local file checksum: $existing"
+    got=$(container_read_file "/var/lib/azure/custom-script/download/0/$blob1" | md5 -q)
+    echo "Downloaded file checksum: $got"
+    [[ "$existing" == "$got" ]]
+}
+
 @test "handler command: uninstall - deletes the data dir" {
     run in_container sh -c \
         "fake-waagent install && fake-waagent uninstall"
