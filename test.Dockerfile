@@ -15,7 +15,8 @@ RUN mkdir -p /var/lib/waagent && \
 # Copy the test environment
 WORKDIR /var/lib/waagent
 COPY integration-test/env/ .
-RUN ln -s /var/lib/waagent/fake-waagent /sbin/fake-waagent
+RUN ln -s /var/lib/waagent/fake-waagent /sbin/fake-waagent && \
+        ln -s /var/lib/waagent/wait-for-enable /sbin/wait-for-enable
 
 # Copy the handler files
 COPY HandlerManifest.json ./Extension/
