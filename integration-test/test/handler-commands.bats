@@ -22,12 +22,11 @@ teardown(){
 }
 
 @test "handler command: enable - can process empty settings, but fails" {
-    mk_container sh -c "fake-waagent install && fake-waagent enable"
+    mk_container sh -c "fake-waagent install && fake-waagent enable && wait-for-enable"
     push_settings '' ''
 
     run start_container
     echo "$output"
-    [ "$status" -eq 1 ]
     [[ "$output" == *"invalid configuration: 'commandToExecute' is not specified"* ]]
 
      # Validate .status file says enable failed
@@ -38,25 +37,23 @@ teardown(){
 }
 
 @test "handler command: enable - validates json schema" {
-    mk_container sh -c "fake-waagent install && fake-waagent enable"
+    mk_container sh -c "fake-waagent install && fake-waagent enable && wait-for-enable"
     push_settings '{"badElement":null, "commandToExecute":"date"}' ''
    
     run start_container
     echo "$output"
-    [ "$status" -eq 1 ]
     [[ "$output" == *"json validation error: invalid public settings JSON: badElement"* ]]
 }
 
 
 @test "handler command: enable - captures stdout/stderr into file" {
-    mk_container sh -c "fake-waagent install && fake-waagent enable"
+    mk_container sh -c "fake-waagent install && fake-waagent enable && wait-for-enable"
     push_settings '
     {
         "commandToExecute": "echo HelloStdout>&1; echo HelloStderr>&2"
     }' ''
     run start_container
     echo "$output"
-    [ "$status" -eq 0 ]
 
     # Validate contents of stdout/stderr files
     stdout="$(container_read_file /var/lib/azure/custom-script/download/0/stdout)"
@@ -67,12 +64,11 @@ teardown(){
 
 @test "handler command: enable - doesn't process the same sequence number again" {
     mk_container sh -c \
-        "fake-waagent install && fake-waagent enable && fake-waagent enable"
+        "fake-waagent install && fake-waagent enable && wait-for-enable && fake-waagent enable && wait-for-enable"
     push_settings '{"commandToExecute": "date"}' ''
    
     run start_container
     echo "$output"
-    [ "$status" -eq 0 ]
     enable_count="$(echo "$output" | grep -c 'event=enabled')"
     echo "Enable count=$enable_count"
     [ "$enable_count" -eq 1 ]
@@ -80,18 +76,17 @@ teardown(){
 }
 
 @test "handler command: enable - parses protected settings" {
-    mk_container sh -c "fake-waagent install && fake-waagent enable"
+    mk_container sh -c "fake-waagent install && fake-waagent enable && wait-for-enable"
     push_settings ''  '{"commandToExecute":"touch /a.txt"}'
     run start_container
     echo "$output"
-    [ "$status" -eq 0 ]
 
     diff="$(container_diff)"; echo "$diff"
     [[ "$diff" == *"A /a.txt"* ]]
 }
 
 @test "handler command: enable - downloads files" {
-    mk_container sh -c "fake-waagent install && fake-waagent enable"
+    mk_container sh -c "fake-waagent install && fake-waagent enable && wait-for-enable"
     # download an external script and run it
     push_settings '{
         "fileUris": [
@@ -101,7 +96,6 @@ teardown(){
         }'
     run start_container
     echo "$output"
-    [ "$status" -eq 0 ]
 
     diff="$(container_diff)"; echo "$diff"
     [[ "$diff" == *"A /var/lib/azure/custom-script/download/0/script.sh"* ]] # file downloaded
@@ -114,7 +108,6 @@ teardown(){
     echo "$output"
     [ "$status" -eq 0 ]
 
-    echo "$output"; [ "$status" -eq 0 ]
     diff="$(container_diff)" && echo "$diff"
     [[ "$diff" != */var/lib/azure/custom-script* ]]
 }
