@@ -1,0 +1,74 @@
+#!/bin/bash
+
+set -euo pipefail
+readonly SCRIPT_DIR=$(dirname "$0")
+readonly LOG_DIR="/var/log/azure/custom-script"
+readonly LOG_FILE=handler.log
+readonly HANDLER_BIN="custom-script-extension"
+
+
+# status_file returns the .status file path we are supposed to write
+# by determining the highest sequence number from ./config/*.settings files.
+status_file_path() {
+        # normally we would need to find this config_dir by parsing the
+        # HandlerEnvironment.json, but we are in a bash script here,
+        # so assume it's at ../config/.
+        config_dir=$(readlink -f "${SCRIPT_DIR}/../config")
+        status_dir=$(readlink -f "${SCRIPT_DIR}/../status")
+        config_file=$(ls $config_dir | grep -E ^[0-9]+.settings$ | sort -n | tail -n 1)
+        if [ -f "$config_file" ]; then
+            echo "Cannot locate the config file.">&2
+            exit 1
+        fi
+        status_file=$(echo $config_file | sed s/settings/status/)
+        readlink -f "$status_dir/$status_file"
+}
+
+write_status() {
+	timestamp="$(date --utc --iso-8601=seconds)"
+	status_file="$(status_file_path)"
+	echo "Writing status to $status_file."
+	cat > "$status_file" <<- EOF
+		[
+			{
+				"version": 1,
+				"timestampUTC": "$timestamp",
+				"status": {
+					"operation": "Enable",
+					"status": "transitioning",
+					"formattedMessage": {
+						"lang": "en",
+						"message": "Enable in progress"
+					}
+				}
+			}
+		]
+	EOF
+}
+
+if [ "$#" -ne 1 ]; then
+    echo "Incorrect usage."
+    echo "Usage: $0 <command>"
+    exit 1
+fi
+
+# Redirect logs of the handler process
+mkdir -p "$LOG_DIR"
+exec &> >(tee -ia "$LOG_DIR/$LOG_FILE")
+
+# Start handling the process in the background
+bin="$(readlink -f "$SCRIPT_DIR/$HANDLER_BIN")"
+cmd="$1"
+
+if [[ "$cmd" == "enable" ]]; then
+    # for 'enable' command, write a .status file first, then double fork
+    # to detach from the  handler process tree to avoid getting terminated 
+    # after the 15-minute extension enabling timeout.
+    write_status
+    set -x
+    nohup "$bin" $@ &
+else
+    # execute the handler process as a child process
+    set -x
+    "$bin" $@
+fi
