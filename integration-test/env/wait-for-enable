@@ -7,6 +7,7 @@
 
 log(){ echo "[wait] time=$(date --rfc-3339=s | sed 's/ /T/') $@">&2; }
 
+sleep 1
 bin="bin/custom-script-extension"
 while true; do
     out="$(ps aux)"
