@@ -7,10 +7,15 @@ install:
   - sudo add-apt-repository ppa:duggan/bats --yes
   - sudo apt-get update -qq
   - sudo apt-get install -qq bats
+  - curl -sL https://deb.nodesource.com/setup_6.x | sudo bash -
+  - sudo apt-get install -qqy nodejs
+  - sudo npm install -g npm
+  - sudo npm install -g azure-cli
   - go get -u github.com/golang/lint/golint
 before_script:
   - docker version
   - docker info
+  - azure -v
 script:
   - test -z "$(gofmt -s -l -w $(find . -type f -name '*.go' -not -path './vendor/*') | tee /dev/stderr)"
   - test -z "$(golint . | tee /dev/stderr)"
