@@ -3,6 +3,11 @@ BIN=custom-script-extension
 BUNDLEDIR=bundle
 BUNDLE=custom-script-extension.zip
 
+bundle: clean binary
+	@mkdir -p $(BUNDLEDIR)
+	zip ./$(BUNDLEDIR)/$(BUNDLE) ./$(BINDIR)/$(BIN)
+	zip ./$(BUNDLEDIR)/$(BUNDLE) ./$(BINDIR)/custom-script-shim
+	zip -j ./$(BUNDLEDIR)/$(BUNDLE) ./HandlerManifest.json
 binary: clean
 	if [ -z "$$GOPATH" ]; then \
 	  echo "GOPATH is not set"; \
@@ -15,11 +20,6 @@ binary: clean
 	  -X main.State=`if [[ -n $$(git status --porcelain) ]]; then echo 'dirty'; fi`" \
 	  -o $(BINDIR)/$(BIN) . 
 	cp ./misc/custom-script-shim ./$(BINDIR)
-bundle: clean binary
-	@mkdir -p $(BUNDLEDIR)
-	zip ./$(BUNDLEDIR)/$(BUNDLE) ./$(BINDIR)/$(BIN)
-	zip ./$(BUNDLEDIR)/$(BUNDLE) ./$(BINDIR)/custom-script-shim
-	zip -j ./$(BUNDLEDIR)/$(BUNDLE) ./HandlerManifest.json
 clean:
 	rm -rf "$(BINDIR)" "$(BUNDLEDIR)"
 
