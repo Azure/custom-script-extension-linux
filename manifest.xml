@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<ExtensionImage xmlns="http://schemas.microsoft.com/windowsazure">
+  <ProviderNameSpace>Microsoft.Azure.Extensions</ProviderNameSpace>
+  <Type>CustomScriptForLinux</Type>
+  <Version>2.0.0</Version>
+  <Label>Microsoft Azure Custom Script Extension for Linux Virtual Machines</Label>
+  <HostingResources>VmRole</HostingResources>
+  <MediaLink></MediaLink>
+  <Description>Microsoft Azure Custom Script Extension for Linux Virtual Machines</Description>
+  <IsInternalExtension>true</IsInternalExtension>
+  <Eula>https://github.com/Azure/custom-script-extension-linux/blob/master/LICENSE</Eula>
+  <PrivacyUri>http://www.microsoft.com/privacystatement/en-us/OnlineServices/Default.aspx</PrivacyUri>
+  <HomepageUri>https://github.com/Azure/custom-script-extension-linux</HomepageUri>
+  <IsJsonExtension>true</IsJsonExtension>
+  <SupportedOS>Linux</SupportedOS>
+  <CompanyName>Microsoft</CompanyName>
+  <!--%REGIONS%-->
+</ExtensionImage>
