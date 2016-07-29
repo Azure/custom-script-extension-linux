@@ -90,7 +90,7 @@ teardown(){
     # download an external script and run it
     push_settings '{
         "fileUris": [
-                "https://gist.github.com/anonymous/8c83af2923ec8dd4a92309594a6c90d7/raw/f26c2cbf68e22d42f703b78f8a4562c5c8e43ba7/script.sh"
+                "https://github.com/Azure/custom-script-extension-linux/raw/master/integration-test/testdata/script.sh"
         ],
         "commandToExecute":"./script.sh"
         }'
