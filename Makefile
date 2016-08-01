@@ -7,7 +7,7 @@ bundle: clean binary
 	@mkdir -p $(BUNDLEDIR)
 	zip ./$(BUNDLEDIR)/$(BUNDLE) ./$(BINDIR)/$(BIN)
 	zip ./$(BUNDLEDIR)/$(BUNDLE) ./$(BINDIR)/custom-script-shim
-	zip -j ./$(BUNDLEDIR)/$(BUNDLE) ./HandlerManifest.json
+	zip -j ./$(BUNDLEDIR)/$(BUNDLE) ./misc/HandlerManifest.json
 binary: clean
 	if [ -z "$$GOPATH" ]; then \
 	  echo "GOPATH is not set"; \
