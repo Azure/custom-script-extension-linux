@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/Azure/azure-docker-extension/pkg/vmextension"
-	"github.com/Azure/custom-script-extension-linux/seqnum"
+	"github.com/Azure/custom-script-extension-linux/pkg/seqnum"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 )
