@@ -19,6 +19,6 @@ RUN ln -s /var/lib/waagent/fake-waagent /sbin/fake-waagent && \
         ln -s /var/lib/waagent/wait-for-enable /sbin/wait-for-enable
 
 # Copy the handler files
-COPY HandlerManifest.json ./Extension/
+COPY misc/HandlerManifest.json ./Extension/
 COPY misc/custom-script-shim ./Extension/bin/
 COPY bin/custom-script-extension ./Extension/bin/
