@@ -18,7 +18,7 @@ binary: clean
 	  -X main.Version=`<./VERSION` \
 	  -X main.GitCommit=`git rev-parse --short HEAD` \
 	  -X main.State=`if [ -n "$$(git status --porcelain)" ]; then echo 'dirty'; fi`" \
-	  -o $(BINDIR)/$(BIN) . 
+	  -o $(BINDIR)/$(BIN) ./main 
 	cp ./misc/custom-script-shim ./$(BINDIR)
 clean:
 	rm -rf "$(BINDIR)" "$(BUNDLEDIR)"

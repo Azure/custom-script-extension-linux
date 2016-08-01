@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Azure/custom-script-extension-linux/download"
+	"github.com/Azure/custom-script-extension-linux/pkg/download"
 	"github.com/ahmetalpbalkan/go-httpbin"
 	"github.com/stretchr/testify/require"
 )

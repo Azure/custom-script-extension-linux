@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/Azure/custom-script-extension-linux/blobutil"
+	"github.com/Azure/custom-script-extension-linux/pkg/blobutil"
 	"github.com/pkg/errors"
 )
 
