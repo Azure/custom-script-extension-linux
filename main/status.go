@@ -1,8 +1,6 @@
 package main
 
 import (
-	"strconv"
-
 	"github.com/Azure/azure-docker-extension/pkg/vmextension"
 	"github.com/Azure/azure-docker-extension/pkg/vmextension/status"
 	"github.com/go-kit/kit/log"
@@ -14,14 +12,13 @@ import (
 // status.
 //
 // If an error occurs reporting the status, it will be logged and returned.
-func reportStatus(ctx *log.Context, hEnv vmextension.HandlerEnvironment, t status.Type, c cmd, msg string) error {
+func reportStatus(ctx *log.Context, hEnv vmextension.HandlerEnvironment, seqNum int, t status.Type, c cmd, msg string) error {
 	if !c.shouldReportStatus {
 		ctx.Log("status", "not reported for operation (by design)")
 		return nil
 	}
 	s := status.NewStatus(t, c.name, statusMsg(c, t, msg))
-	seq, _ := strconv.Atoi(hEnv.SeqNo)
-	if err := s.Save(hEnv.HandlerEnvironment.StatusFolder, seq); err != nil {
+	if err := s.Save(hEnv.HandlerEnvironment.StatusFolder, seqNum); err != nil {
 		ctx.Log("event", "failed to save handler status", "error", err)
 		return errors.Wrap(err, "failed to save handler status")
 	}

@@ -1,9 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"github.com/Azure/azure-docker-extension/pkg/vmextension"
 	"github.com/Azure/custom-script-extension-linux/pkg/seqnum"
@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type cmdFunc func(*log.Context, vmextension.HandlerEnvironment) error
+type cmdFunc func(ctx *log.Context, hEnv vmextension.HandlerEnvironment, seqNum int) error
 
 type cmd struct {
 	f                  cmdFunc // associated function
@@ -33,12 +33,12 @@ var (
 	}
 )
 
-func noop(ctx *log.Context, h vmextension.HandlerEnvironment) error {
+func noop(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) error {
 	ctx.Log("event", "noop")
 	return nil
 }
 
-func install(ctx *log.Context, h vmextension.HandlerEnvironment) error {
+func install(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) error {
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
 		return errors.Wrap(err, "failed to create data dir")
 	}
@@ -47,7 +47,7 @@ func install(ctx *log.Context, h vmextension.HandlerEnvironment) error {
 	return nil
 }
 
-func uninstall(ctx *log.Context, h vmextension.HandlerEnvironment) error {
+func uninstall(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) error {
 	{ // a new context scope with path
 		ctx = ctx.With("path", dataDir)
 		ctx.Log("event", "removing data dir", "path", dataDir)
@@ -60,7 +60,7 @@ func uninstall(ctx *log.Context, h vmextension.HandlerEnvironment) error {
 	return nil
 }
 
-func enable(ctx *log.Context, h vmextension.HandlerEnvironment) error {
+func enable(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) error {
 	// parse the extension handler settings (not available prior to 'enable')
 	cfg, err := parseAndValidateSettings(ctx, h.HandlerEnvironment.ConfigFolder)
 	if err != nil {
@@ -70,14 +70,14 @@ func enable(ctx *log.Context, h vmextension.HandlerEnvironment) error {
 	// exit if this sequence number (a snapshot of the configuration) is alrady
 	// processed. if not, save this sequence number before proceeding.
 	seqNumPath := filepath.Join(dataDir, seqNumFile)
-	if shouldExit, err := checkAndSaveSeqNum(ctx, h.SeqNo, seqNumPath); err != nil {
+	if shouldExit, err := checkAndSaveSeqNum(ctx, seqNum, seqNumPath); err != nil {
 		return errors.Wrap(err, "failed to process ")
 	} else if shouldExit {
 		ctx.Log("event", "exit", "message", "this script configuration is already processed, will not run again")
 		os.Exit(0) // exit immediately to prevent reporting '.status'
 	}
 
-	dir := filepath.Join(dataDir, downloadDir, h.SeqNo)
+	dir := filepath.Join(dataDir, downloadDir, fmt.Sprintf("%d", seqNum))
 	if err := downloadFiles(ctx, dir, cfg); err != nil {
 		return errors.Wrap(err, "processing file downloads failed")
 	}
@@ -93,13 +93,8 @@ func enable(ctx *log.Context, h vmextension.HandlerEnvironment) error {
 // checkAndSaveSeqNum checks if the given seqNum is already processed
 // according to the specified seqNumFile and if so, returns true,
 // otherwise saves the given seqNum into seqNumFile returns false.
-func checkAndSaveSeqNum(ctx log.Logger, seqNum, seqNumFile string) (shouldExit bool, _ error) {
+func checkAndSaveSeqNum(ctx log.Logger, seq int, seqNumFile string) (shouldExit bool, _ error) {
 	ctx.Log("event", "comparing seqnum", "path", seqNumFile)
-	seq, err := strconv.Atoi(seqNum)
-	if err != nil {
-		return false, errors.Wrapf(err, "failed to parse seqnum: %q", seqNum)
-	}
-
 	smaller, err := seqnum.IsSmallerThan(seqNumFile, seq)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to check sequence number")
