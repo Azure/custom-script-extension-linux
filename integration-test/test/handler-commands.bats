@@ -114,7 +114,7 @@ teardown(){
     # upload files to a storage container
     cnt="testcontainer"
     blob1="blob1-$RANDOM"
-    blob2="blob2-$RANDOM"
+    blob2="blob2 with spaces-$RANDOM"
     azure storage container show  "$cnt" 1>/dev/null ||
         azure storage container create "$cnt" 1>/dev/null && echo "Azure Storage container created">&2
     azure storage blob upload -f "$tmp" "$cnt" "$blob1" 1>/dev/null  # upload blob1
