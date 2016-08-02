@@ -18,8 +18,8 @@
 		},
 		{
 			"ImportPath": "github.com/Azure/azure-sdk-for-go/storage",
-			"Comment": "v3.0.0-beta-2-g58a13e3",
-			"Rev": "58a13e378daf3b06e65925397185684b16321111"
+			"Comment": "v3.1.0-beta-18-g87de771",
+			"Rev": "87de771fcdf5ec4341f3842f74b5bb98652b10f7"
 		},
 		{
 			"ImportPath": "github.com/ahmetalpbalkan/go-httpbin",
