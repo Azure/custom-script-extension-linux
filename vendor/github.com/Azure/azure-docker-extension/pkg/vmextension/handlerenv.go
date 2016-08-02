@@ -17,7 +17,6 @@ const HandlerEnvFileName = "HandlerEnvironment.json"
 // to the extension handler by the Azure Linux Guest Agent.
 type HandlerEnvironment struct {
 	Version            float64 `json:"version"`
-	SeqNo              string  `json:"seqNo"`
 	Name               string  `json:"name"`
 	HandlerEnvironment struct {
 		HeartbeatFile string `json:"heartbeatFile"`
