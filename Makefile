@@ -8,6 +8,8 @@ bundle: clean binary
 	zip ./$(BUNDLEDIR)/$(BUNDLE) ./$(BINDIR)/$(BIN)
 	zip ./$(BUNDLEDIR)/$(BUNDLE) ./$(BINDIR)/custom-script-shim
 	zip -j ./$(BUNDLEDIR)/$(BUNDLE) ./misc/HandlerManifest.json
+	zip -j ./$(BUNDLEDIR)/$(BUNDLE) ./misc/manifest.xml
+
 binary: clean
 	if [ -z "$$GOPATH" ]; then \
 	  echo "GOPATH is not set"; \
