@@ -38,9 +38,9 @@ func Test_commands_shouldReportStatus(t *testing.T) {
 
 func Test_checkAndSaveSeqNum_fails(t *testing.T) {
 	// pass in invalid seqnum format
-	_, err := checkAndSaveSeqNum(log.NewNopLogger(), "not-an-int", "/un/used")
+	_, err := checkAndSaveSeqNum(log.NewNopLogger(), 0, "/non/existing/dir")
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), `failed to parse seqnum: "not-an-int"`)
+	require.Contains(t, err.Error(), `failed to save the sequence number`)
 }
 
 func Test_checkAndSaveSeqNum(t *testing.T) {
@@ -52,27 +52,27 @@ func Test_checkAndSaveSeqNum(t *testing.T) {
 	nop := log.NewNopLogger()
 
 	// no sequence number, 0 comes in.
-	shouldExit, err := checkAndSaveSeqNum(nop, "0", fp)
+	shouldExit, err := checkAndSaveSeqNum(nop, 0, fp)
 	require.Nil(t, err)
 	require.False(t, shouldExit)
 
 	// file=0, seq=0 comes in. (should exit)
-	shouldExit, err = checkAndSaveSeqNum(nop, "0", fp)
+	shouldExit, err = checkAndSaveSeqNum(nop, 0, fp)
 	require.Nil(t, err)
 	require.True(t, shouldExit)
 
 	// file=0, seq=1 comes in.
-	shouldExit, err = checkAndSaveSeqNum(nop, "1", fp)
+	shouldExit, err = checkAndSaveSeqNum(nop, 1, fp)
 	require.Nil(t, err)
 	require.False(t, shouldExit)
 
 	// file=1, seq=1 comes in. (should exit)
-	shouldExit, err = checkAndSaveSeqNum(nop, "1", fp)
+	shouldExit, err = checkAndSaveSeqNum(nop, 1, fp)
 	require.Nil(t, err)
 	require.True(t, shouldExit)
 
 	// file=1, seq=0 comes in. (should exit)
-	shouldExit, err = checkAndSaveSeqNum(nop, "1", fp)
+	shouldExit, err = checkAndSaveSeqNum(nop, 1, fp)
 	require.Nil(t, err)
 	require.True(t, shouldExit)
 }

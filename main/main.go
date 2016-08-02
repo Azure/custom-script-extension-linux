@@ -39,17 +39,21 @@ func main() {
 		ctx.Log("message", "failed to parse handlerenv", "error", err)
 		os.Exit(1)
 	}
-	ctx = ctx.With("seq", hEnv.SeqNo)
+	seqNum, err := vmextension.FindSeqNum(hEnv.HandlerEnvironment.ConfigFolder)
+	if err != nil {
+		ctx.Log("messsage", "failed to find sequence number", "error", err)
+	}
+	ctx = ctx.With("seq", seqNum)
 
 	// execute the subcommand
 	ctx.Log("event", "start")
-	reportStatus(ctx, hEnv, status.StatusTransitioning, cmd, "")
-	if err := cmd.f(ctx, hEnv); err != nil {
+	reportStatus(ctx, hEnv, seqNum, status.StatusTransitioning, cmd, "")
+	if err := cmd.f(ctx, hEnv, seqNum); err != nil {
 		ctx.Log("event", "failed to handle", "error", err)
-		reportStatus(ctx, hEnv, status.StatusError, cmd, err.Error())
+		reportStatus(ctx, hEnv, seqNum, status.StatusError, cmd, err.Error())
 		os.Exit(1)
 	}
-	reportStatus(ctx, hEnv, status.StatusSuccess, cmd, "")
+	reportStatus(ctx, hEnv, seqNum, status.StatusSuccess, cmd, "")
 	ctx.Log("event", "end")
 }
 
