@@ -12,6 +12,7 @@ install:
   - sudo npm install -g npm
   - sudo npm install -g azure-cli
   - go get -u github.com/golang/lint/golint
+  - go get -u github.com/ahmetalpbalkan/govvv
 before_script:
   - docker version
   - docker info
