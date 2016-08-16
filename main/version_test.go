@@ -20,13 +20,10 @@ func TestDetailedVersionString(t *testing.T) {
 	defer resetStrings()
 
 	Version = "1.0.0"
-	GitState = ""
+	GitState = "dirty"
 	GitCommit = "03669cef"
 	BuildDate = "DATE"
 	goVersion := runtime.Version()
-	require.Equal(t, "v1.0.0 git:03669cef-clean build:DATE "+goVersion, DetailedVersionString())
-
-	GitState = "dirty"
 	require.Equal(t, "v1.0.0 git:03669cef-dirty build:DATE "+goVersion, DetailedVersionString())
 }
 
