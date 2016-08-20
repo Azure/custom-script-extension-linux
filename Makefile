@@ -15,11 +15,8 @@ binary: clean
 	  echo "GOPATH is not set"; \
 	  exit 1; \
 	fi
-	GOOS=linux GOARCH=amd64 go build -v \
-	  -ldflags "-X main.BuildDate=`date -u --rfc-3339=seconds 2> /dev/null | sed -e 's/ /T/'` \
-	  -X main.Version=`<./VERSION` \
-	  -X main.GitCommit=`git rev-parse --short HEAD` \
-	  -X main.State=`if [ -n "$$(git status --porcelain)" ]; then echo 'dirty'; fi`" \
+	GOOS=linux GOARCH=amd64 govvv build -v \
+	  -ldflags "-X main.Version=`grep -E -m 1 -o  '<Version>(.*)</Version>' misc/manifest.xml | awk -F">" '{print $$2}' | awk -F"<" '{print $$1}'`" \
 	  -o $(BINDIR)/$(BIN) ./main 
 	cp ./misc/custom-script-shim ./$(BINDIR)
 clean:
