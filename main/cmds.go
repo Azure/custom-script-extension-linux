@@ -39,6 +39,11 @@ func noop(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) error 
 }
 
 func install(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) error {
+	// remove dataDir first if exists to cleanup remnants of previous
+	// installations of the handler and captured images.
+	if err := os.RemoveAll(dataDir); err != nil {
+		return errors.Wrap(err, "failed to cleanup data dir prior to installation")
+	}
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
 		return errors.Wrap(err, "failed to create data dir")
 	}
