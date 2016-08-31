@@ -18,7 +18,7 @@ teardown(){
 
     diff="$(container_diff)"
     echo "$diff"
-    [[ "$diff" = *"A /var/lib/azure/custom-script"* ]]
+    [[ "$diff" = *"A /var/lib/waagent/custom-script"* ]]
 }
 
 @test "handler command: enable - can process empty settings, but fails" {
@@ -56,9 +56,9 @@ teardown(){
     echo "$output"
 
     # Validate contents of stdout/stderr files
-    stdout="$(container_read_file /var/lib/azure/custom-script/download/0/stdout)"
+    stdout="$(container_read_file /var/lib/waagent/custom-script/download/0/stdout)"
     echo "stdout=$stdout" && [[ "$stdout" = "HelloStdout" ]]
-    stderr="$(container_read_file /var/lib/azure/custom-script/download/0/stderr)"
+    stderr="$(container_read_file /var/lib/waagent/custom-script/download/0/stderr)"
     echo "stderr=$stderr" && [[ "$stderr" = "HelloStderr" ]]
 }
 
@@ -98,8 +98,24 @@ teardown(){
     echo "$output"
 
     diff="$(container_diff)"; echo "$diff"
-    [[ "$diff" == *"A /var/lib/azure/custom-script/download/0/script.sh"* ]] # file downloaded
+    [[ "$diff" == *"A /var/lib/waagent/custom-script/download/0/script.sh"* ]] # file downloaded
     [[ "$diff" == *"A /b.txt"* ]] # created by script.sh
+}
+
+@test "handler command: enable - migrates the old data directory" {
+    mk_container sh -c "OLD=/var/lib/azure/custom-script; \
+		mkdir -p \$OLD && \
+		touch \$OLD/sentinel.txt && \
+		fake-waagent install && \
+		fake-waagent enable && wait-for-enable"
+    # download an external script and run it
+    push_settings '{"commandToExecute":"date"}'
+    run start_container
+    echo "$output"
+
+    diff="$(container_diff)"; echo "$diff"
+    [[ "$diff" != *"A /var/lib/azure/custom-script"* ]] # should have gone
+    [[ "$diff" == *"A /var/lib/waagent/custom-script/sentinel.txt"* ]] # should be migrated
 }
 
 @test "handler command: enable - download files from storage account" {
@@ -142,13 +158,13 @@ teardown(){
     [[ "$output" == *'file=1 event="download complete"'* ]]
 
     diff="$(container_diff)"; echo "$diff"
-    [[ "$diff" == *"A /var/lib/azure/custom-script/download/0/$blob1"* ]] # file downloaded
-    [[ "$diff" == *"A /var/lib/azure/custom-script/download/0/$blob2"* ]] # file downloaded
+    [[ "$diff" == *"A /var/lib/waagent/custom-script/download/0/$blob1"* ]] # file downloaded
+    [[ "$diff" == *"A /var/lib/waagent/custom-script/download/0/$blob2"* ]] # file downloaded
 
     # compare checksum
     existing=$(md5 -q "$tmp")
     echo "Local file checksum: $existing"
-    got=$(container_read_file "/var/lib/azure/custom-script/download/0/$blob1" | md5 -q)
+    got=$(container_read_file "/var/lib/waagent/custom-script/download/0/$blob1" | md5 -q)
     echo "Downloaded file checksum: $got"
     [[ "$existing" == "$got" ]]
 }
@@ -160,5 +176,5 @@ teardown(){
     [ "$status" -eq 0 ]
 
     diff="$(container_diff)" && echo "$diff"
-    [[ "$diff" != */var/lib/azure/custom-script* ]]
+    [[ "$diff" != */var/lib/waagent/custom-script* ]]
 }

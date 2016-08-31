@@ -13,7 +13,8 @@ import (
 var (
 	// dataDir is where we store the downloaded files, logs and state for
 	// the extension handler
-	dataDir = "/var/lib/azure/custom-script"
+	dataDir    = "/var/lib/waagent/custom-script"
+	dataDirOld = "/var/lib/azure/custom-script" // used for migration, if present
 
 	// seqNumFile holds the processed highest sequence number to make
 	// sure we do not run the command more than once for the same sequence
