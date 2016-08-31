@@ -61,6 +61,13 @@ func uninstall(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) e
 }
 
 func enable(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) error {
+	// for a few versions we need to migrate dataDirOld (introduced in v2.0.0) to
+	// dataDir (introduced in v2.0.1).
+	ctx.Log("message", "checking for state migration")
+	if err := migrateDataDir(ctx, dataDirOld, dataDir); err != nil {
+		return errors.Wrap(err, "state directory could not be migrated")
+	}
+
 	// parse the extension handler settings (not available prior to 'enable')
 	cfg, err := parseAndValidateSettings(ctx, h.HandlerEnvironment.ConfigFolder)
 	if err != nil {
