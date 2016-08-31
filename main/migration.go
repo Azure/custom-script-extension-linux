@@ -10,7 +10,7 @@ import (
 )
 
 // migrateDataDir moves oldDir to newDir, if oldDir exists by shelling out to
-// 'mv -rf'.
+// 'mv -f'.
 func migrateDataDir(ctx log.Logger, oldDir, newDir string) error {
 	ok, err := dirExists(oldDir)
 	if err != nil {
