@@ -43,7 +43,7 @@ Schema for the public configuration file looks like this:
 >
 > ```
 > {
->   "fileUris": "https://gist.github.com/ahmetalpbalkan/b5d4a856fe15464015ae87d5587a4439/raw/466f5c30507c990a4d5a2f5c79f901fa89a80841/hello.sh",
+>   "fileUris": ["https://gist.github.com/ahmetalpbalkan/b5d4a856fe15464015ae87d5587a4439/raw/466f5c30507c990a4d5a2f5c79f901fa89a80841/hello.sh"],
 >   "commandToExecute": "./hello.sh"
 > }
 > ```
@@ -96,7 +96,7 @@ For **Azure CLI**, create a `public.json` (and optionally `protected.json`) and 
 Your files are downloaded to a path like: `/var/lib/azure/custom-script/download/0/` and
 the command output is saved to `stdout` and `stderr` files in this directory.
 
-You can find the logs for the extension at `/var/log/azure/customscript/handler.log`.
+You can find the logs for the extension at `/var/log/azure/custom-script/handler.log`.
 
 Please open an issue on this GitHub repository if you encounter problems that
 you could not debug with these log files.  
