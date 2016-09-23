@@ -93,8 +93,9 @@ For **Azure CLI**, create a `public.json` (and optionally `protected.json`) and 
 
 # 3. Troubleshooting
 
-Your files are downloaded to a path like: `/var/lib/azure/custom-script/download/0/` and
-the command output is saved to `stdout` and `stderr` files in this directory.
+Your files are downloaded to a path like: `/var/lib/waagent/custom-script/download/0/` and
+the command output is saved to `stdout` and `stderr` files in this directory. Please read
+these files to find out output from your script.
 
 You can find the logs for the extension at `/var/log/azure/custom-script/handler.log`.
 
