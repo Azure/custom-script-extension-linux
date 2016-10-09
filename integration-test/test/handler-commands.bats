@@ -21,6 +21,16 @@ teardown(){
     [[ "$diff" = *"A /var/lib/waagent/custom-script"* ]]
 }
 
+@test "handler command: install - cleans up data from the previous installation" {
+    mk_container sh -c "DIR=/var/lib/azure/custom-script; mkdir -p \$DIR && \
+        touch \$DIR/LEFTOVER && \
+        fake-waagent install"
+    run start_container
+    diff="$(container_diff)" && echo "$diff"
+    [[ "$diff" != *LEFTOVER* ]]
+}
+
+
 @test "handler command: enable - can process empty settings, but fails" {
     mk_container sh -c "fake-waagent install && fake-waagent enable && wait-for-enable"
     push_settings '' ''
