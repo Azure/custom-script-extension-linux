@@ -16,7 +16,7 @@ install:
 before_script:
   - docker version
   - docker info
-  - azure -v
+  - azure telemetry --disable && azure -v
 script:
   - test -z "$(gofmt -s -l -w $(find . -type f -name '*.go' -not -path './vendor/*') | tee /dev/stderr)"
   - test -z "$(golint . | tee /dev/stderr)"
