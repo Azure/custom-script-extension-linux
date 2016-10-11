@@ -12,24 +12,26 @@ import (
 )
 
 type cmdFunc func(ctx *log.Context, hEnv vmextension.HandlerEnvironment, seqNum int) error
+type preFunc func(ctx *log.Context, seqNum int) error
 
 type cmd struct {
 	f                  cmdFunc // associated function
 	name               string  // human readable string
 	shouldReportStatus bool    // determines if running this should log to a .status file
+	pre                preFunc // executed before any status is reported
 }
 
 var (
-	cmdInstall   = cmd{install, "Install", false}
-	cmdEnable    = cmd{enable, "Enable", true}
-	cmdUninstall = cmd{uninstall, "Uninstall", false}
+	cmdInstall   = cmd{install, "Install", false, nil}
+	cmdEnable    = cmd{enable, "Enable", true, enablePre}
+	cmdUninstall = cmd{uninstall, "Uninstall", false, nil}
 
 	cmds = map[string]cmd{
 		"install":   cmdInstall,
 		"uninstall": cmdUninstall,
 		"enable":    cmdEnable,
-		"update":    {noop, "Update", true},
-		"disable":   {noop, "Disable", true},
+		"update":    {noop, "Update", true, nil},
+		"disable":   {noop, "Disable", true, nil},
 	}
 )
 
@@ -60,7 +62,7 @@ func uninstall(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) e
 	return nil
 }
 
-func enable(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) error {
+func enablePre(ctx *log.Context, seqNum int) error {
 	// for a few versions we need to migrate dataDirOld (introduced in v2.0.0) to
 	// dataDir (introduced in v2.0.1).
 	ctx.Log("message", "checking for state migration")
@@ -68,20 +70,23 @@ func enable(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) erro
 		return errors.Wrap(err, "state directory could not be migrated")
 	}
 
-	// parse the extension handler settings (not available prior to 'enable')
-	cfg, err := parseAndValidateSettings(ctx, h.HandlerEnvironment.ConfigFolder)
-	if err != nil {
-		return errors.Wrap(err, "failed to get configuration")
-	}
-
 	// exit if this sequence number (a snapshot of the configuration) is alrady
 	// processed. if not, save this sequence number before proceeding.
 	seqNumPath := filepath.Join(dataDir, seqNumFile)
 	if shouldExit, err := checkAndSaveSeqNum(ctx, seqNum, seqNumPath); err != nil {
-		return errors.Wrap(err, "failed to process ")
+		return errors.Wrap(err, "failed to process seqnum")
 	} else if shouldExit {
 		ctx.Log("event", "exit", "message", "this script configuration is already processed, will not run again")
-		os.Exit(0) // exit immediately to prevent reporting '.status'
+		os.Exit(0)
+	}
+	return nil
+}
+
+func enable(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) error {
+	// parse the extension handler settings (not available prior to 'enable')
+	cfg, err := parseAndValidateSettings(ctx, h.HandlerEnvironment.ConfigFolder)
+	if err != nil {
+		return errors.Wrap(err, "failed to get configuration")
 	}
 
 	dir := filepath.Join(dataDir, downloadDir, fmt.Sprintf("%d", seqNum))

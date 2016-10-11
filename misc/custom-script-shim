@@ -25,25 +25,29 @@ status_file_path() {
 }
 
 write_status() {
-	timestamp="$(date --utc --iso-8601=seconds)"
 	status_file="$(status_file_path)"
-	echo "Writing status to $status_file."
-	cat > "$status_file" <<- EOF
-		[
-			{
-				"version": 1,
-				"timestampUTC": "$timestamp",
-				"status": {
-					"operation": "Enable",
-					"status": "transitioning",
-					"formattedMessage": {
-						"lang": "en",
-						"message": "Enable in progress"
+	if [ -f "$status_file" ]; then
+		echo "Not writing a placeholder status file, already exists: $status_file"
+	else
+		echo "Writing a placeholder status file indicating progress before forking: $status_file"
+		timestamp="$(date --utc --iso-8601=seconds)"
+		cat > "$status_file" <<- EOF
+			[
+				{
+					"version": 1,
+					"timestampUTC": "$timestamp",
+					"status": {
+						"operation": "Enable",
+						"status": "transitioning",
+						"formattedMessage": {
+							"lang": "en",
+							"message": "Enable in progress"
+						}
 					}
 				}
-			}
-		]
-	EOF
+			]
+		EOF
+	fi
 }
 
 if [ "$#" -ne 1 ]; then
