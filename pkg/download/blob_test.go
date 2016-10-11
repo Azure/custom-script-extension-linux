@@ -64,7 +64,7 @@ func Test_blobDownload_getURL(t *testing.T) {
 }
 
 func Test_blobDownload_fails_badCreds(t *testing.T) {
-	d := NewBlobDownload("accountname", "Zm9vCg==", blobutil.AzureBlobRef{
+	d := NewBlobDownload("example", "Zm9vCg==", blobutil.AzureBlobRef{
 		StorageBase: storage.DefaultBaseURL,
 		Blob:        "fooBlob.txt",
 		Container:   "foocontainer",
