@@ -46,8 +46,16 @@ func main() {
 	}
 	ctx = ctx.With("seq", seqNum)
 
-	// execute the subcommand
+	// check sub-command preconditions, if any, before executing
 	ctx.Log("event", "start")
+	if cmd.pre != nil {
+		ctx.Log("event", "pre-check")
+		if err := cmd.pre(ctx, seqNum); err != nil {
+			ctx.Log("event", "pre-check failed", "error", err)
+			os.Exit(1)
+		}
+	}
+	// execute the subcommand
 	reportStatus(ctx, hEnv, seqNum, status.StatusTransitioning, cmd, "")
 	if err := cmd.f(ctx, hEnv, seqNum); err != nil {
 		ctx.Log("event", "failed to handle", "error", err)

@@ -169,6 +169,18 @@ teardown(){
     [[ "$existing" == "$got" ]]
 }
 
+
+@test "handler command: enable - forking into background does not overwrite existing status" {
+    mk_container sh -c "fake-waagent install && fake-waagent enable && wait-for-enable && fake-waagent enable && wait-for-enable"
+    push_settings '{"commandToExecute": "date"}' ''
+    run start_container
+    echo "$output"
+
+    # validate .status file still reads "Enable succeeded"
+    status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
+    echo "$status_file"; [[ "$status_file" = *'Enable succeeded'* ]]
+}
+
 @test "handler command: uninstall - deletes the data dir" {
     run in_container sh -c \
         "fake-waagent install && fake-waagent uninstall"
