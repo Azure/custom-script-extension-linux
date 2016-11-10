@@ -113,27 +113,23 @@ For **Azure CLI**, create a `public.json` (and optionally `protected.json`) and 
 	    --private-config-path protected.json
 
 
-``` 
-For PowerShell with variables
 
-PowerShell Variable Help...
-``` 
-	 #You can find values for your variables using various calls such as: 
-	 #Find VmName : Get-AzureRmVm -ResourceGroupName $rgName
-	 #Find StorageAccount : Get-AzureRMStorageAccount  -ResourceGroupName $rgName
-	 # Find StorageAccountKey:	 
-	 #   $StorageAccount = Get-AzureRmStorageAccount -StorageAccountName $StorageAccountName  -ResourceGroupName $rgName # Get the Storage Account 
-	 #   $StorageAccountKey = (Get-AzureRmStorageAccountKey -ResourceGroupName $rgName -StorageAccountName $StorageAccountName).Value[0] # Get the primary Key 
-     #   $StorageAccountContext = New-AzureStorageContext -StorageAccountKey $StorageAccountKey -StorageAccountName $StorageAccountName # Get the Context 
-	 #   $UriEndpoint = $StorageAccountContext.BlobEndPoint  # EndPoint URL
-	 # Grab the endpoint URL
-	 #   $filename = "hello.sh"
-	 #   $ConfigScriptUri = $StorageAccountContext.BlobEndPoint + "<container>/"+$fileName
-     #   $ConfigScriptFileName =  $fileName
+_For PowerShell with variables_
 
-``` 
+ *You can find values for your variables using various calls such as: 
+ *Find VmName : `Get-AzureRmVm -ResourceGroupName $rgName`
+ *Find StorageAccount : `Get-AzureRMStorageAccount  -ResourceGroupName $rgName`
+ *Find StorageAccountKey:	 
+	 +   `$StorageAccount = Get-AzureRmStorageAccount -StorageAccountName $StorageAccountName  -ResourceGroupName $rgName` # Get the Storage Account 
+	 +   `$StorageAccountKey = (Get-AzureRmStorageAccountKey -ResourceGroupName $rgName -StorageAccountName $StorageAccountName).Value[0]` # Get the primary Key 
+	 +   `$StorageAccountContext = New-AzureStorageContext -StorageAccountKey $StorageAccountKey -StorageAccountName $StorageAccountName` # Get the Context 
+	 +   `$UriEndpoint = $StorageAccountContext.BlobEndPoint`  # EndPoint URL
+	 + Grab the endpoint URL
+	 - `$filename = "hello.sh"`
+	 - `$ConfigScriptUri = $StorageAccountContext.BlobEndPoint + "<container>/"+$fileName
+	 - `$ConfigScriptFileName =  $fileName`
 
-PowerShell Using Variables
+
 ```
 $Location = "centralus"
 $rgName = "<ResourceGroupName>"
@@ -179,7 +175,7 @@ Write-Host "     /var/log/azure/$Publisher.$ExtensionName/$version/extension.log
 Your files are downloaded to a path like: 
    `/var/lib/waagent/<Publisher>.<ExtensionName>-<version>/#/ScriptName.ext` 
     Example: 
-	  /var/lib/waagent/Microsoft.OSTCExtensions.CustomScriptForLinux-1.5.2.1/download/0/hello.sh 
+	  `/var/lib/waagent/Microsoft.OSTCExtensions.CustomScriptForLinux-1.5.2.1/download/0/hello.sh` 
 the command output is saved to `stdout` and `stderr` files in this directory. Please read
 these files to determine output from your script.
 
@@ -190,7 +186,7 @@ You can find the logs for the extension at:
     /var/log/azure/Microsoft.OSTCExtensions.CustomScriptForLinux/1.5.2.1/extension.log
     /var/log/azure/Microsoft.OSTCExtensions.CustomScriptForLinux/1.5.2.1/CommandExecution
 
-PowerShell Write the locations and examples out to users
+_PowerShell Write the locations and examples out to users_
 ``` 
 # Tell the users where the files are located...
 Write-Host "Your Execution Script files are downloaded to: /var/lib/waagent/$Publisher.$ExtensionName-$version.?.?/#/" -ForegroundColor Yellow
