@@ -52,8 +52,9 @@ Schema for the public configuration file looks like this:
 > {
 >   "commandToExecute": "apt-get -y update && apt-get install -y apache2"
 > }
->
-> ```PowerShell
+> ```
+> 
+> ```
 > Example (PowerShell with Variables):
 >
 > $ConfigScriptURI="https://gist.github.com/ahmetalpbalkan/b5d4a856fe15464015ae87d5587a4439/raw/466f5c30507c990a4d5a2f5c79f901fa89a80841/hello.sh"
@@ -84,15 +85,16 @@ decrypted inside your Virtual Machine:
 }
 ```
  
- ```PowerShell
-   $Command2Exec = "<command-to-execute>"
-   $StorageAccountName = "<storage-account-name>"
-   $StorageAccountKey = "<storage-account-key>"
-   $PrivateConf = '{
-        "commandToExecute": "'+$Command2Exec+'",
-        "storageAccountName": "'+$StorageAccountName+'",
-        "storageAccountKey": "'+$StorageAccountKey+'"
-    }' 
+```
+ PowerShell
+>   $Command2Exec = "<command-to-execute>"
+>   $StorageAccountName = "<storage-account-name>"
+>   $StorageAccountKey = "<storage-account-key>"
+>   $PrivateConf = '{
+>        "commandToExecute": "'+$Command2Exec+'",
+>        "storageAccountName": "'+$StorageAccountName+'",
+>        "storageAccountKey": "'+$StorageAccountKey+'"
+>    }' 
 ```
  
 # 2. Deployment to a Virtual Machine
@@ -112,9 +114,10 @@ For **Azure CLI**, create a `public.json` (and optionally `protected.json`) and 
 
 
 ``` 
-For PowerShell
- 
-  ``` Help Using PowerShell with variables...
+For PowerShell with variables
+
+PowerShell Variable Help...
+``` 
 	 #You can find values for your variables using various calls such as: 
 	 #Find VmName : Get-AzureRmVm -ResourceGroupName $rgName
 	 #Find StorageAccount : Get-AzureRMStorageAccount  -ResourceGroupName $rgName
@@ -128,8 +131,10 @@ For PowerShell
 	 #   $ConfigScriptUri = $StorageAccountContext.BlobEndPoint + "<container>/"+$fileName
      #   $ConfigScriptFileName =  $fileName
 
-	 ``` 
+``` 
 
+PowerShell Using Variables
+```
 $Location = "centralus"
 $rgName = "<ResourceGroupName>"
 $VmName = "<vm-name>"
@@ -171,18 +176,23 @@ Write-Host "     /var/log/azure/$Publisher.$ExtensionName/$version/extension.log
 
 # 3. Troubleshooting
 
-Your files are downloaded to a path like: `/var/lib/waagent/<Publisher>.<ExtensionName>-<version>/#/` 
- example: /var/lib/waagent/Microsoft.OSTCExtensions.CustomScriptForLinux-1.5.2.1/download/0/hello.sh 
+Your files are downloaded to a path like: 
+   `/var/lib/waagent/<Publisher>.<ExtensionName>-<version>/#/ScriptName.ext` 
+    Example: 
+	  /var/lib/waagent/Microsoft.OSTCExtensions.CustomScriptForLinux-1.5.2.1/download/0/hello.sh 
 the command output is saved to `stdout` and `stderr` files in this directory. Please read
-these files to find out output from your script.
+these files to determine output from your script.
 
 You can find the logs for the extension at: 
    `/var/log/azure/<Publisher>.<Extension>/<version>/CommandExecution.log`.
    `/var/log/azure/<Publisher>.<Extension>/<version>/extension.log`.
+   Examples:   
+    /var/log/azure/Microsoft.OSTCExtensions.CustomScriptForLinux/1.5.2.1/extension.log
+    /var/log/azure/Microsoft.OSTCExtensions.CustomScriptForLinux/1.5.2.1/CommandExecution
 
-``` 
 PowerShell Write the locations and examples out to users
-  # Now tell the users where the files are located...
+``` 
+# Tell the users where the files are located...
 Write-Host "Your Execution Script files are downloaded to: /var/lib/waagent/$Publisher.$ExtensionName-$version.?.?/#/" -ForegroundColor Yellow
 Write-Host "    command output is saved to stdout and stderr files in this directory" 
 Write-host "From command prompt# use cat to display contents of files examples:" -ForegroundColor Green 
