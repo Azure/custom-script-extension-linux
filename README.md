@@ -54,17 +54,17 @@ Schema for the public configuration file looks like this:
 > }
 > ```
 > 
-> ```
-> Example (PowerShell with Variables):
->
-> $ConfigScriptURI="https://gist.github.com/ahmetalpbalkan/b5d4a856fe15464015ae87d5587a4439/raw/466f5c30507c990a4d5a2f5c79f901fa89a80841/hello.sh"
-> $ConfigScriptFileName = "hello.sh"
-> $Command2Exec = "sh $ConfigScriptFileName"
-> $PublicConf = '{
->    "fileUris": ['+$ConfigScriptUri+'],
->    "commandToExecute": "'+$Command2Exec+'"
-> }'
-> ```
+
+Example (PowerShell with Variables):
+```
+$ConfigScriptURI="https://gist.github.com/ahmetalpbalkan/b5d4a856fe15464015ae87d5587a4439/raw/466f5c30507c990a4d5a2f5c79f901fa89a80841/hello.sh"
+$ConfigScriptFileName = "hello.sh"
+$Command2Exec = "sh $ConfigScriptFileName"
+$PublicConf = '{
+   "fileUris": ['+$ConfigScriptUri+'],
+   "commandToExecute": "'+$Command2Exec+'"
+}'
+```
 
 ### 1.2. Protected Configuration
 
@@ -116,6 +116,8 @@ For **Azure CLI**, create a `public.json` (and optionally `protected.json`) and 
 
 
 _For PowerShell with variables_
+ All PowerShell examples assume you are successfully connected to an Azure subscription. 
+   For more information see: http://itproguru.com/expert/2016/04/powershell-working-with-azure-resource-manager-rm-step-by-step-changing-rm-subscriptions/ 
  *You can find values for your variables using various calls such as: 
  *Find VmName : `Get-AzureRmVm -ResourceGroupName $rgName`
  *Find StorageAccount : `Get-AzureRMStorageAccount  -ResourceGroupName $rgName`
