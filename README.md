@@ -52,8 +52,18 @@ Schema for the public configuration file looks like this:
 > {
 >   "commandToExecute": "apt-get -y update && apt-get install -y apache2"
 > }
+>
+> ```PowerShell
+> Example (PowerShell with Variables):
+>
+> $ConfigScriptURI="https://gist.github.com/ahmetalpbalkan/b5d4a856fe15464015ae87d5587a4439/raw/466f5c30507c990a4d5a2f5c79f901fa89a80841/hello.sh"
+> $ConfigScriptFileName = "hello.sh"
+> $Command2Exec = "sh $ConfigScriptFileName"
+> $PublicConf = '{
+>    "fileUris": ['+$ConfigScriptUri+'],
+>    "commandToExecute": "'+$Command2Exec+'"
+> }'
 > ```
-
 
 ### 1.2. Protected Configuration
 
@@ -74,6 +84,17 @@ decrypted inside your Virtual Machine:
 }
 ```
  
+ ```PowerShell
+   $Command2Exec = "<command-to-execute>"
+   $StorageAccountName = "<storage-account-name>"
+   $StorageAccountKey = "<storage-account-key>"
+   $PrivateConf = '{
+        "commandToExecute": "'+$Command2Exec+'",
+        "storageAccountName": "'+$StorageAccountName+'",
+        "storageAccountKey": "'+$StorageAccountKey+'"
+    }' 
+```
+ 
 # 2. Deployment to a Virtual Machine
 
 For **ARM templates**, see [this documentation][doc] to create an extension
@@ -90,15 +111,95 @@ For **Azure CLI**, create a `public.json` (and optionally `protected.json`) and 
 	    --private-config-path protected.json
 
 
+``` 
+For PowerShell
+ 
+  ``` Help Using PowerShell with variables...
+	 #You can find values for your variables using various calls such as: 
+	 #Find VmName : Get-AzureRmVm -ResourceGroupName $rgName
+	 #Find StorageAccount : Get-AzureRMStorageAccount  -ResourceGroupName $rgName
+	 # Find StorageAccountKey:	 
+	 #   $StorageAccount = Get-AzureRmStorageAccount -StorageAccountName $StorageAccountName  -ResourceGroupName $rgName # Get the Storage Account 
+	 #   $StorageAccountKey = (Get-AzureRmStorageAccountKey -ResourceGroupName $rgName -StorageAccountName $StorageAccountName).Value[0] # Get the primary Key 
+     #   $StorageAccountContext = New-AzureStorageContext -StorageAccountKey $StorageAccountKey -StorageAccountName $StorageAccountName # Get the Context 
+	 #   $UriEndpoint = $StorageAccountContext.BlobEndPoint  # EndPoint URL
+	 # Grab the endpoint URL
+	 #   $filename = "hello.sh"
+	 #   $ConfigScriptUri = $StorageAccountContext.BlobEndPoint + "<container>/"+$fileName
+     #   $ConfigScriptFileName =  $fileName
+
+	 ``` 
+
+$Location = "centralus"
+$rgName = "<ResourceGroupName>"
+$VmName = "<vm-name>"
+$ExtensionName = "CustomScriptForLinux"
+$Publisher = 'Microsoft.OSTCExtensions'
+$Version = "1.5"  # Latest version https://github.com/Azure/custom-script-extension-linux
+
+# Public Configuration ... from above
+$ConfigScriptURI="https://gist.github.com/ahmetalpbalkan/b5d4a856fe15464015ae87d5587a4439/raw/466f5c30507c990a4d5a2f5c79f901fa89a80841/hello.sh"
+$ConfigScriptFileName = "hello.sh"
+$Command2Exec = "sh $ConfigScriptFileName"
+$PublicConf = '{
+   "fileUris": ["'+$ConfigScriptUri+'"],
+   "commandToExecute": "'+$Command2Exec+'"
+}'
+$StorageAccountName = "<storage-account-name>"
+$StorageAccountKey = "<storage-account-key>"
+$PrivateConf = '{
+     "storageAccountName": "'+$StorageAccountName+'",
+     "storageAccountKey": "'+$StorageAccountKey+'"
+}' 
+
+# Backtick is the character being used below to continue on next line, uaually left of the 1 on QWERTY keyboard)
+# We have all the variables set, let's execute....
+
+Set-AzureRmVMExtension -ResourceGroupName $rgName -VMName $VmName -Location $Location `
+  -Name $ExtensionName -Publisher $Publisher `
+  -ExtensionType $ExtensionName -TypeHandlerVersion $Version `
+  -Settingstring $PublicConf -ProtectedSettingString $PrivateConf
+
+  # Now tell the users where the files are located...
+Write-Host "Your Execution Script files are downloaded to: /var/lib/waagent/$Publisher.$ExtensionName-$version.?.?/#/" -ForegroundColor Yellow
+Write-Host "    command output is saved to stdout and stderr files in this directory" 
+Write-Host "You can find the logs for the extension: "
+Write-Host "     /var/log/azure/$Publisher.$ExtensionName/$version/CommandExecution.log " -ForegroundColor Green
+Write-Host "     /var/log/azure/$Publisher.$ExtensionName/$version/extension.log" -ForegroundColor Green
+  
+```
 
 # 3. Troubleshooting
 
-Your files are downloaded to a path like: `/var/lib/waagent/custom-script/download/0/` and
+Your files are downloaded to a path like: `/var/lib/waagent/<Publisher>.<ExtensionName>-<version>/#/` 
+ example: /var/lib/waagent/Microsoft.OSTCExtensions.CustomScriptForLinux-1.5.2.1/download/0/hello.sh 
 the command output is saved to `stdout` and `stderr` files in this directory. Please read
 these files to find out output from your script.
 
-You can find the logs for the extension at `/var/log/azure/custom-script/handler.log`.
+You can find the logs for the extension at: 
+   `/var/log/azure/<Publisher>.<Extension>/<version>/CommandExecution.log`.
+   `/var/log/azure/<Publisher>.<Extension>/<version>/extension.log`.
 
+``` 
+PowerShell Write the locations and examples out to users
+  # Now tell the users where the files are located...
+Write-Host "Your Execution Script files are downloaded to: /var/lib/waagent/$Publisher.$ExtensionName-$version.?.?/#/" -ForegroundColor Yellow
+Write-Host "    command output is saved to stdout and stderr files in this directory" 
+Write-host "From command prompt# use cat to display contents of files examples:" -ForegroundColor Green 
+Write-host "   sudo cat /var/lib/waagent/Microsoft.OSTCExtensions.CustomScriptForLinux-1.5.2.1/download/0/errout"
+Write-host "   sudo cat /var/lib/waagent/Microsoft.OSTCExtensions.CustomScriptForLinux-1.5.2.1/download/0/stdout"
+Write-host "   sudo cat /var/lib/waagent/Microsoft.OSTCExtensions.CustomScriptForLinux-1.5.2.1/download/0/hello.sh"
+
+Write-Host "You can find the logs for the extension: "
+Write-Host "     /var/log/azure/$Publisher.$ExtensionName/$version/CommandExecution.log " -ForegroundColor Green
+Write-Host "     /var/log/azure/$Publisher.$ExtensionName/$version/extension.log" -ForegroundColor Green
+Write-host "From command prompt# use cat to display contents of files examples:" -ForegroundColor Green
+Write-host "   sudo cat /var/log/azure/Microsoft.OSTCExtensions.CustomScriptForLinux/1.5.2.1/extension.log"
+Write-host "   sudo cat /var/log/azure/Microsoft.OSTCExtensions.CustomScriptForLinux/1.5.2.1/CommandExecution.log"
+
+```
+
+   
 Please open an issue on this GitHub repository if you encounter problems that
 you could not debug with these log files.  
 
