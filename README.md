@@ -118,19 +118,19 @@ For **Azure CLI**, create a `public.json` (and optionally `protected.json`) and 
 _For PowerShell with variables_
  All PowerShell examples assume you are successfully connected to an Azure subscription. 
    For more information see: http://itproguru.com/expert/2016/04/powershell-working-with-azure-resource-manager-rm-step-by-step-changing-rm-subscriptions/ 
- *You can find values for your variables using various calls such as: 
- *Find VmName : `Get-AzureRmVm -ResourceGroupName $rgName`
- *Find StorageAccount : `Get-AzureRMStorageAccount  -ResourceGroupName $rgName`
- *Find StorageAccountKey:	 
-	 +   `$StorageAccount = Get-AzureRmStorageAccount -StorageAccountName $StorageAccountName  -ResourceGroupName $rgName` # Get the Storage Account 
-	 +   `$StorageAccountKey = (Get-AzureRmStorageAccountKey -ResourceGroupName $rgName -StorageAccountName $StorageAccountName).Value[0]` # Get the primary Key 
-	 +   `$StorageAccountContext = New-AzureStorageContext -StorageAccountKey $StorageAccountKey -StorageAccountName $StorageAccountName` # Get the Context 
-	 +   `$UriEndpoint = $StorageAccountContext.BlobEndPoint`  # EndPoint URL
-	 + Grab the endpoint URL
-	 - `$filename = "hello.sh"`
-	 - `$ConfigScriptUri = $StorageAccountContext.BlobEndPoint + "<container>/"+$fileName`
-	 - `$ConfigScriptFileName =  $fileName`
-
+ 
+ * You can find values for your variables using various calls such as: 
+ * Find VmName : `Get-AzureRmVm -ResourceGroupName $rgName`
+ * Find StorageAccount : `Get-AzureRMStorageAccount  -ResourceGroupName $rgName`
+ * Find StorageAccountKey:	 
+  * `$StorageAccount = Get-AzureRmStorageAccount -StorageAccountName $StorageAccountName  -ResourceGroupName $rgName` # Get the Storage Account 
+  * `$StorageAccountKey = (Get-AzureRmStorageAccountKey -ResourceGroupName $rgName -StorageAccountName $StorageAccountName).Value[0]` # Get the primary Key
+  * `$StorageAccountContext = New-AzureStorageContext -StorageAccountKey $StorageAccountKey -StorageAccountName $StorageAccountName` # Get the Context
+  * `$UriEndpoint = $StorageAccountContext.BlobEndPoint`  # EndPoint URL
+  * Grab the endpoint URL
+  - `$filename = "hello.sh"`
+  - `$ConfigScriptUri = $StorageAccountContext.BlobEndPoint + "<container>/"+$fileName`
+  - `$ConfigScriptFileName =  $fileName`
 
 ```
 $Location = "centralus"
