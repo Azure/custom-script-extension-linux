@@ -77,6 +77,7 @@ decrypted inside your Virtual Machine:
   specify storage credentials, all `fileUris` must be URLs for Azure Blobs.
 * `storageAccountKey`: (optional, string) the access key of storage account
 
+json
 ```json
 {
   "commandToExecute": "<command-to-execute>",
@@ -84,17 +85,17 @@ decrypted inside your Virtual Machine:
   "storageAccountKey": "<storage-account-key>"
 }
 ```
- 
+
+PowerShell
 ```
- PowerShell
->   $Command2Exec = "<command-to-execute>"
->   $StorageAccountName = "<storage-account-name>"
->   $StorageAccountKey = "<storage-account-key>"
->   $PrivateConf = '{
->        "commandToExecute": "'+$Command2Exec+'",
->        "storageAccountName": "'+$StorageAccountName+'",
->        "storageAccountKey": "'+$StorageAccountKey+'"
->    }' 
+   $Command2Exec = "<command-to-execute>"
+   $StorageAccountName = "<storage-account-name>"
+   $StorageAccountKey = "<storage-account-key>"
+   $PrivateConf = '{
+        "commandToExecute": "'+$Command2Exec+'",
+        "storageAccountName": "'+$StorageAccountName+'",
+        "storageAccountKey": "'+$StorageAccountKey+'"
+    }' 
 ```
  
 # 2. Deployment to a Virtual Machine
@@ -115,7 +116,6 @@ For **Azure CLI**, create a `public.json` (and optionally `protected.json`) and 
 
 
 _For PowerShell with variables_
-
  *You can find values for your variables using various calls such as: 
  *Find VmName : `Get-AzureRmVm -ResourceGroupName $rgName`
  *Find StorageAccount : `Get-AzureRMStorageAccount  -ResourceGroupName $rgName`
@@ -126,7 +126,7 @@ _For PowerShell with variables_
 	 +   `$UriEndpoint = $StorageAccountContext.BlobEndPoint`  # EndPoint URL
 	 + Grab the endpoint URL
 	 - `$filename = "hello.sh"`
-	 - `$ConfigScriptUri = $StorageAccountContext.BlobEndPoint + "<container>/"+$fileName
+	 - `$ConfigScriptUri = $StorageAccountContext.BlobEndPoint + "<container>/"+$fileName`
 	 - `$ConfigScriptFileName =  $fileName`
 
 
@@ -153,7 +153,7 @@ $PrivateConf = '{
      "storageAccountKey": "'+$StorageAccountKey+'"
 }' 
 
-# Backtick is the character being used below to continue on next line, uaually left of the 1 on QWERTY keyboard)
+# Backtick is the character being used below to continue on next line (uaually left of the 1 on QWERTY keyboard)
 # We have all the variables set, let's execute....
 
 Set-AzureRmVMExtension -ResourceGroupName $rgName -VMName $VmName -Location $Location `
@@ -183,8 +183,8 @@ You can find the logs for the extension at:
    `/var/log/azure/<Publisher>.<Extension>/<version>/CommandExecution.log`.
    `/var/log/azure/<Publisher>.<Extension>/<version>/extension.log`.
    Examples:   
-    /var/log/azure/Microsoft.OSTCExtensions.CustomScriptForLinux/1.5.2.1/extension.log
-    /var/log/azure/Microsoft.OSTCExtensions.CustomScriptForLinux/1.5.2.1/CommandExecution
+    `/var/log/azure/Microsoft.OSTCExtensions.CustomScriptForLinux/1.5.2.1/extension.log`
+    `/var/log/azure/Microsoft.OSTCExtensions.CustomScriptForLinux/1.5.2.1/CommandExecution`
 
 _PowerShell Write the locations and examples out to users_
 ``` 
