@@ -29,7 +29,7 @@ Schema for the public configuration file looks like this:
 
 * `commandToExecute`: (**required**, string) the entrypoint script to execute
 * `fileUris`: (optional, string array) the URLs for file(s) to be downloaded.
-* `timestamp` (optional, integer) use this field only to trigger a re-run of the
+* `timestamp` (optional, 32-bit integer) use this field only to trigger a re-run of the
   script by changing value of this field.
  
 ```json
