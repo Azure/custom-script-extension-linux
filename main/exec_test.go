@@ -107,6 +107,12 @@ func TestExecCmdInDir_truncates(t *testing.T) {
 	require.Equal(t, "2:err\n", string(b), "stderr did not truncate")
 }
 
+func Test_logPaths(t *testing.T) {
+	stdout, stderr := logPaths("/tmp")
+	require.Equal(t, "/tmp/stdout", stdout)
+	require.Equal(t, "/tmp/stderr", stderr)
+}
+
 // Test utilities
 
 type mockFile struct {

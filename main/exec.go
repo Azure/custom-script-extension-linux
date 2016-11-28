@@ -43,8 +43,7 @@ func Exec(cmd, workdir string, stdout, stderr io.WriteCloser) (int, error) {
 // Ideally, we execute commands only once per sequence number in custom-script-extension,
 // and save their output under /var/lib/waagent/<dir>/download/<seqnum>/*.
 func ExecCmdInDir(cmd, workdir string) error {
-	outFn := filepath.Join(workdir, "stdout")
-	errFn := filepath.Join(workdir, "stderr")
+	outFn, errFn := logPaths(workdir)
 
 	outF, err := os.OpenFile(outFn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if err != nil {
@@ -57,4 +56,10 @@ func ExecCmdInDir(cmd, workdir string) error {
 
 	_, err = Exec(cmd, workdir, outF, errF)
 	return err
+}
+
+// logPaths returns stdout and stderr file paths for the specified output
+// directory. It does not create the files.
+func logPaths(dir string) (stdout string, stderr string) {
+	return filepath.Join(dir, "stdout"), filepath.Join(dir, "stderr")
 }
