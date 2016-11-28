@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type cmdFunc func(ctx *log.Context, hEnv vmextension.HandlerEnvironment, seqNum int) error
+type cmdFunc func(ctx *log.Context, hEnv vmextension.HandlerEnvironment, seqNum int) (msg string, err error)
 type preFunc func(ctx *log.Context, seqNum int) error
 
 type cmd struct {
@@ -20,6 +20,10 @@ type cmd struct {
 	shouldReportStatus bool    // determines if running this should log to a .status file
 	pre                preFunc // executed before any status is reported
 }
+
+const (
+	maxTailLen = 4 * 1024 // length of max stdout/stderr to be transmitted in .status file
+)
 
 var (
 	cmdInstall   = cmd{install, "Install", false, nil}
@@ -35,31 +39,31 @@ var (
 	}
 )
 
-func noop(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) error {
+func noop(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (string, error) {
 	ctx.Log("event", "noop")
-	return nil
+	return "", nil
 }
 
-func install(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) error {
+func install(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (string, error) {
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		return errors.Wrap(err, "failed to create data dir")
+		return "", errors.Wrap(err, "failed to create data dir")
 	}
 	ctx.Log("event", "created data dir", "path", dataDir)
 	ctx.Log("event", "installed")
-	return nil
+	return "", nil
 }
 
-func uninstall(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) error {
+func uninstall(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (string, error) {
 	{ // a new context scope with path
 		ctx = ctx.With("path", dataDir)
 		ctx.Log("event", "removing data dir", "path", dataDir)
 		if err := os.RemoveAll(dataDir); err != nil {
-			return errors.Wrap(err, "failed to delete data dir")
+			return "", errors.Wrap(err, "failed to delete data dir")
 		}
 		ctx.Log("event", "removed data dir")
 	}
 	ctx.Log("event", "uninstalled")
-	return nil
+	return "", nil
 }
 
 func enablePre(ctx *log.Context, seqNum int) error {
@@ -82,24 +86,39 @@ func enablePre(ctx *log.Context, seqNum int) error {
 	return nil
 }
 
-func enable(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) error {
+func enable(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (string, error) {
 	// parse the extension handler settings (not available prior to 'enable')
 	cfg, err := parseAndValidateSettings(ctx, h.HandlerEnvironment.ConfigFolder)
 	if err != nil {
-		return errors.Wrap(err, "failed to get configuration")
+		return "", errors.Wrap(err, "failed to get configuration")
 	}
 
 	dir := filepath.Join(dataDir, downloadDir, fmt.Sprintf("%d", seqNum))
 	if err := downloadFiles(ctx, dir, cfg); err != nil {
-		return errors.Wrap(err, "processing file downloads failed")
+		return "", errors.Wrap(err, "processing file downloads failed")
 	}
 
-	if err := runCmd(ctx, dir, cfg); err != nil {
-		return err
-	}
+	// execute the command, save its error
+	runErr := runCmd(ctx, dir, cfg)
 
-	ctx.Log("event", "enabled")
-	return nil
+	// collect the logs if available
+	stdoutF, stderrF := logPaths(dir)
+	stdoutTail, err := tailFile(stdoutF, maxTailLen)
+	if err != nil {
+		ctx.Log("message", "error tailing stdout logs", "error", err)
+	}
+	stderrTail, err := tailFile(stderrF, maxTailLen)
+	if err != nil {
+		ctx.Log("message", "error tailing stderr logs", "error", err)
+	}
+	msg := fmt.Sprintf("\n[stdout]\n%s\n[stderr]\n%s", string(stdoutTail), string(stderrTail))
+
+	if runErr == nil {
+		ctx.Log("event", "enabled")
+	} else {
+		ctx.Log("event", "enable failed")
+	}
+	return msg, runErr
 }
 
 // checkAndSaveSeqNum checks if the given seqNum is already processed

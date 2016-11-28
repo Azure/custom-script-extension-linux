@@ -57,12 +57,13 @@ func main() {
 	}
 	// execute the subcommand
 	reportStatus(ctx, hEnv, seqNum, status.StatusTransitioning, cmd, "")
-	if err := cmd.f(ctx, hEnv, seqNum); err != nil {
+	msg, err := cmd.f(ctx, hEnv, seqNum)
+	if err != nil {
 		ctx.Log("event", "failed to handle", "error", err)
 		reportStatus(ctx, hEnv, seqNum, status.StatusError, cmd, err.Error())
 		os.Exit(1)
 	}
-	reportStatus(ctx, hEnv, seqNum, status.StatusSuccess, cmd, "")
+	reportStatus(ctx, hEnv, seqNum, status.StatusSuccess, cmd, msg)
 	ctx.Log("event", "end")
 }
 

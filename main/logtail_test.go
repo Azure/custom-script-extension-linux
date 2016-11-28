@@ -1,13 +1,10 @@
 package main
 
 import (
-	"testing"
-
-	"io/ioutil"
-
-	"os"
-
 	"bytes"
+	"io/ioutil"
+	"os"
+	"testing"
 
 	"github.com/stretchr/testify/require"
 )
