@@ -12,7 +12,12 @@ You can add Custom Script Extension to your VM using:
 - Azure Resource Manager (ARM) Templates
 - Azure Virtual Machines REST API
 
-# User Guide
+:information_source: Please read the [Using the Azure Custom Script Extension with Linux
+Virtual Machines][doc] page for detailed usage instructions.
+
+[doc]: https://docs.microsoft.com/azure/virtual-machines/virtual-machines-linux-extensions-customscript
+
+# Custom Script Extension Reference Guide
 
 ## 1. Extension Configuration
 
