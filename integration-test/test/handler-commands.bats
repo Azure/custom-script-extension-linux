@@ -45,8 +45,7 @@ teardown(){
     [[ "$output" == *"json validation error: invalid public settings JSON: badElement"* ]]
 }
 
-
-@test "handler command: enable - captures stdout/stderr into file" {
+@test "handler command: enable - captures stdout/stderr into file and .status" {
     mk_container sh -c "fake-waagent install && fake-waagent enable && wait-for-enable"
     push_settings '
     {
@@ -60,6 +59,9 @@ teardown(){
     echo "stdout=$stdout" && [[ "$stdout" = "HelloStdout" ]]
     stderr="$(container_read_file /var/lib/waagent/custom-script/download/0/stderr)"
     echo "stderr=$stderr" && [[ "$stderr" = "HelloStderr" ]]
+
+    status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
+    echo "status_file=$status_file"; [[ "$status_file" = *'Enable succeeded: \n[stdout]\nHelloStdout\n\n[stderr]\nHelloStderr\n'* ]]
 }
 
 @test "handler command: enable - doesn't process the same sequence number again" {

@@ -2,7 +2,7 @@ sudo: true
 services:
  - docker
 language: go
-go: go1.6
+go: go1.7
 install:
   - sudo add-apt-repository ppa:duggan/bats --yes
   - sudo apt-get update -qq
