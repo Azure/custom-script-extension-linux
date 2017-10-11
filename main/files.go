@@ -12,12 +12,13 @@ import (
 	"github.com/Azure/custom-script-extension-linux/pkg/preprocess"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
+	"os"
 )
 
 // downloadAndProcessURL downloads using the specified downloader and saves it to the
 // specified existing directory, which must be the path to the saved file. Then
 // it post-processes file based on heuristics.
-func downloadAndProcessURL(ctx *log.Context, url, downloadDir, storageAccountName, storageAccountKey string) error {
+func downloadAndProcessURL(ctx *log.Context, url, downloadDir, storageAccountName, storageAccountKey string, skipDos2Unix bool) error {
 	fn, err := urlToFileName(url)
 	if err != nil {
 		return err
@@ -34,7 +35,9 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir, storageAccountNam
 		return err
 	}
 
-	err = postProcessFile(fp)
+	if skipDos2Unix == false {
+		err = postProcessFile(fp)
+	}
 	return errors.Wrapf(err, "failed to post-process '%s'", fn)
 }
 
@@ -92,6 +95,7 @@ func postProcessFile(path string) error {
 	}
 	b = preprocess.RemoveBOM(b)
 	b = preprocess.Dos2Unix(b)
-	err = ioutil.WriteFile(path, b, 0) // mode is ignored
-	return errors.Wrapf(err, "failed to write to file")
+
+	err = ioutil.WriteFile(path, b, 0)
+	return errors.Wrap(os.Rename(path, path), "error writing file")
 }

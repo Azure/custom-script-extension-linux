@@ -59,6 +59,26 @@ func TestValidateProtectedSettings_commandToExecute(t *testing.T) {
 	require.Nil(t, validateProtectedSettings(`{"commandToExecute":"date"}`))
 }
 
+func TestValidateProtectedSettings_script(t *testing.T) {
+	// Invalid type
+	err := validateProtectedSettings(`{"script": false}`)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "Expected: string, given: boolean")
+
+	// Valid
+	require.Nil(t, validateProtectedSettings(`{"script":"date"}`))
+}
+
+func TestValidateProtectedSettings_skipDos2Unix(t *testing.T) {
+	// Invalid type
+	err := validatePublicSettings(`{"skipDos2Unix": "not-a-bool"}`)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "Expected: boolean, given: string")
+
+	// Valid
+	require.Nil(t, validatePublicSettings(`{"skipDos2Unix":true}`))
+}
+
 func TestValidateProtectedSettings_storageAccountName(t *testing.T) {
 	chkPatternMismatch := func(e error, reason string) {
 		require.NotNil(t, e, reason)

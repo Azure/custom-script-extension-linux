@@ -64,6 +64,44 @@ teardown(){
     echo "status_file=$status_file"; [[ "$status_file" = *'Enable succeeded: \n[stdout]\nHelloStdout\n\n[stderr]\nHelloStderr\n'* ]]
 }
 
+@test "handler command: enable - base64 encoded script captures stdout/stderr into file and .status" {
+    mk_container sh -c "fake-waagent install && fake-waagent enable && wait-for-enable"
+    push_settings '
+    {
+        "script": "ZWNobyBIZWxsb1N0ZG91dD4mMTsgZWNobyBIZWxsb1N0ZGVycj4mMgo="
+    }' ''
+    run start_container
+    echo "$output"
+
+    # Validate contents of stdout/stderr files
+    stdout="$(container_read_file /var/lib/waagent/custom-script/download/0/stdout)"
+    echo "stdout=$stdout" && [[ "$stdout" = "HelloStdout" ]]
+    stderr="$(container_read_file /var/lib/waagent/custom-script/download/0/stderr)"
+    echo "stderr=$stderr" && [[ "$stderr" = "HelloStderr" ]]
+
+    status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
+    echo "status_file=$status_file"; [[ "$status_file" = *'Enable succeeded: \n[stdout]\nHelloStdout\n\n[stderr]\nHelloStderr\n'* ]]
+}
+
+@test "handler command: enable - base64 encoded and gzip'ed script captures stdout/stderr into file and .status" {
+    mk_container sh -c "fake-waagent install && fake-waagent enable && wait-for-enable"
+    push_settings '
+    {
+        "script": "H4sIADf031kAA0tNzshX8EjNyckPLknJLy2xUzO0VkhFFkwtKrJTM+ICACj9Z3gpAAAA"
+    }' ''
+    run start_container
+    echo "$output"
+
+    # Validate contents of stdout/stderr files
+    stdout="$(container_read_file /var/lib/waagent/custom-script/download/0/stdout)"
+    echo "stdout=$stdout" && [[ "$stdout" = "HelloStdout" ]]
+    stderr="$(container_read_file /var/lib/waagent/custom-script/download/0/stderr)"
+    echo "stderr=$stderr" && [[ "$stderr" = "HelloStderr" ]]
+
+    status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
+    echo "status_file=$status_file"; [[ "$status_file" = *'Enable succeeded: \n[stdout]\nHelloStdout\n\n[stderr]\nHelloStderr\n'* ]]
+}
+
 @test "handler command: enable - captures stdout/stderr into .status on error" {
     mk_container sh -c "fake-waagent install && fake-waagent enable && wait-for-enable"
     push_settings '
@@ -98,6 +136,38 @@ teardown(){
 
     diff="$(container_diff)"; echo "$diff"
     [[ "$diff" == *"A /a.txt"* ]]
+}
+
+@test "handler command: enable - no dos2unix conversion" {
+    mk_container sh -c "fake-waagent install && fake-waagent enable && wait-for-enable"
+    # ZWNobyBIZWxsbw0K == echo Hello\r\n
+    push_settings '
+    {
+        "skipDos2Unix": true,
+        "script": "ZWNobyBIZWxsbw0K"
+    }' ''
+    run start_container
+    echo "$output"
+
+    # Validate contents of stdout/stderr files
+    script="$(container_read_file /var/lib/waagent/custom-script/download/0/script.sh | base64)"
+    echo "script=$script" && [[ "$script" = "ZWNobyBIZWxsbw0K" ]]
+}
+
+@test "handler command: enable - dos2unix conversion" {
+    mk_container sh -c "fake-waagent install && fake-waagent enable && wait-for-enable"
+    # ZWNobyBIZWxsbw0K == echo Hello\r\n
+    push_settings '
+    {
+        "script": "ZWNobyBIZWxsbw0K"
+    }' ''
+    run start_container
+    echo "$output"
+
+    # Validate contents of stdout/stderr files
+    script="$(container_read_file /var/lib/waagent/custom-script/download/0/script.sh | base64)"
+    # ZWNobyBIZWxsbwo= == "echo Hello\n"
+    echo "script=$script" && [[ "$script" = "ZWNobyBIZWxsbwo=" ]]
 }
 
 @test "handler command: enable - downloads files" {

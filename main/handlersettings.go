@@ -11,6 +11,8 @@ import (
 var (
 	errStoragePartialCredentials = errors.New("both 'storageAccountName' and 'storageAccountKey' must be specified")
 	errCmdTooMany                = errors.New("'commandToExecute' was specified both in public and protected settings; it must be specified only once")
+	errScriptTooMany             = errors.New("'script' was specified both in public and protected settings; it must be specified only once")
+	errCmdAndScript              = errors.New("'commandToExecute' and 'script' were both specified, but only one is validate at a time")
 	errCmdMissing                = errors.New("'commandToExecute' is not specified")
 )
 
@@ -20,14 +22,43 @@ type handlerSettings struct {
 	protectedSettings
 }
 
-// validate makes logical valiation on the handlerSettings which already passed
+func (s *handlerSettings) commandToExecute() string {
+	if s.publicSettings.CommandToExecute != "" {
+		return s.publicSettings.CommandToExecute
+	}
+	return s.protectedSettings.CommandToExecute
+}
+
+func (s *handlerSettings) script() string {
+	if s.publicSettings.Script != "" {
+		return s.publicSettings.Script
+	}
+	return s.protectedSettings.Script
+}
+
+func (s *handlerSettings) fileUrls() []string {
+	if len(s.publicSettings.FileURLs) > 0 {
+		return s.publicSettings.FileURLs
+	}
+	return s.protectedSettings.FileURLs
+}
+
+// validate makes logical validation on the handlerSettings which already passed
 // the schema validation.
 func (h handlerSettings) validate() error {
-	if h.publicSettings.CommandToExecute == "" && h.protectedSettings.CommandToExecute == "" {
+	if h.commandToExecute() == "" && h.script() == "" {
 		return errCmdMissing
 	}
 	if h.publicSettings.CommandToExecute != "" && h.protectedSettings.CommandToExecute != "" {
 		return errCmdTooMany
+	}
+
+	if h.publicSettings.Script != "" && h.protectedSettings.Script != "" {
+		return errScriptTooMany
+	}
+
+	if h.commandToExecute() != "" && h.script() != "" {
+		return errCmdAndScript
 	}
 
 	if (h.protectedSettings.StorageAccountName != "") !=
@@ -41,16 +72,20 @@ func (h handlerSettings) validate() error {
 // publicSettings is the type deserialized from public configuration section of
 // the extension handler. This should be in sync with publicSettingsSchema.
 type publicSettings struct {
+	SkipDos2Unix     bool     `json:"skipDos2Unix"`
 	CommandToExecute string   `json:"commandToExecute"`
+	Script           string   `json:"script"`
 	FileURLs         []string `json:"fileUris"`
 }
 
 // protectedSettings is the type decoded and deserialized from protected
 // configuration section. This should be in sync with protectedSettingsSchema.
 type protectedSettings struct {
-	CommandToExecute   string `json:"commandToExecute"`
-	StorageAccountName string `json:"storageAccountName"`
-	StorageAccountKey  string `json:"storageAccountKey"`
+	CommandToExecute   string   `json:"commandToExecute"`
+	Script             string   `json:"script"`
+	FileURLs           []string `json:"fileUris"`
+	StorageAccountName string   `json:"storageAccountName"`
+	StorageAccountKey  string   `json:"storageAccountKey"`
 }
 
 // parseAndValidateSettings reads configuration from configFolder, decrypts it,

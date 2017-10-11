@@ -16,6 +16,23 @@ func Test_handlerSettingsValidate(t *testing.T) {
 		protectedSettings{CommandToExecute: "foo"},
 	}.validate())
 
+	// script specified twice
+	require.Equal(t, errScriptTooMany, handlerSettings{
+		publicSettings{Script: "foo"},
+		protectedSettings{Script: "foo"},
+	}.validate())
+
+	// commandToExecute and script both specified
+	require.Equal(t, errCmdAndScript, handlerSettings{
+		publicSettings{CommandToExecute: "foo"},
+		protectedSettings{Script: "foo"},
+	}.validate())
+
+	require.Equal(t, errCmdAndScript, handlerSettings{
+		publicSettings{Script: "foo"},
+		protectedSettings{CommandToExecute: "foo"},
+	}.validate())
+
 	// storageAccount name specified; but not key
 	require.Equal(t, errStoragePartialCredentials, handlerSettings{
 		protectedSettings: protectedSettings{
@@ -31,6 +48,42 @@ func Test_handlerSettingsValidate(t *testing.T) {
 			StorageAccountName: "",
 			StorageAccountKey:  "foo"},
 	}.validate())
+}
+
+func Test_commandToExecutePrivateIfNotPublic(t *testing.T) {
+	testSubject := handlerSettings{
+		publicSettings{},
+		protectedSettings{CommandToExecute: "bar"},
+	}
+
+	require.Equal(t, "bar", testSubject.commandToExecute())
+}
+
+func Test_scriptPrivateIfNotPublic(t *testing.T) {
+	testSubject := handlerSettings{
+		publicSettings{},
+		protectedSettings{Script: "bar"},
+	}
+
+	require.Equal(t, "bar", testSubject.script())
+}
+
+func Test_fileURLsPrivateIfNotPublic(t *testing.T) {
+	testSubject := handlerSettings{
+		publicSettings{},
+		protectedSettings{FileURLs: []string{"bar"}},
+	}
+
+	require.Equal(t, []string{"bar"}, testSubject.fileUrls())
+}
+
+func Test_skipDos2UnixDefaultsToFalse(t *testing.T) {
+	testSubject := handlerSettings{
+		publicSettings{CommandToExecute: "/bin/ls"},
+		protectedSettings{},
+	}
+
+	require.Equal(t, false, testSubject.SkipDos2Unix)
 }
 
 func Test_toJSON_empty(t *testing.T) {

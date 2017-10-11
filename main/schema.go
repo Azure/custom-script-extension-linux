@@ -19,6 +19,14 @@ const (
       "description": "Command to be executed",
       "type": "string"
     },
+	"script": {
+	  "description": "Script to be executed",
+	  "type": "string"
+	},
+	"skipDos2Unix": {
+	  "description": "Skip DOS2UNIX and BOM removal for download files and script",
+	  "type": "boolean"
+	},
     "fileUris": {
       "description": "List of files to be downloaded",
       "type": "array",
@@ -44,6 +52,10 @@ const (
       "description": "Command to be executed",
       "type": "string"
     },
+	"script": {
+	  "description": "Script to be executed",
+	  "type": "string"
+	},
     "storageAccountName": {
       "description": "Name of the Azure Storage Account (3-24 characters of lowercase letters or digits)",
       "type": "string",
