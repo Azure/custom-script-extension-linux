@@ -38,7 +38,7 @@ func main() {
 	hEnv, err := vmextension.GetHandlerEnv()
 	if err != nil {
 		ctx.Log("message", "failed to parse handlerenv", "error", err)
-		os.Exit(1)
+		os.Exit(cmd.failExitCode)
 	}
 	seqNum, err := vmextension.FindSeqNum(hEnv.HandlerEnvironment.ConfigFolder)
 	if err != nil {
@@ -52,7 +52,7 @@ func main() {
 		ctx.Log("event", "pre-check")
 		if err := cmd.pre(ctx, seqNum); err != nil {
 			ctx.Log("event", "pre-check failed", "error", err)
-			os.Exit(1)
+			os.Exit(cmd.failExitCode)
 		}
 	}
 	// execute the subcommand
@@ -60,8 +60,8 @@ func main() {
 	msg, err := cmd.f(ctx, hEnv, seqNum)
 	if err != nil {
 		ctx.Log("event", "failed to handle", "error", err)
-		reportStatus(ctx, hEnv, seqNum, status.StatusError, cmd, err.Error())
-		os.Exit(1)
+		reportStatus(ctx, hEnv, seqNum, status.StatusError, cmd, err.Error()+msg)
+		os.Exit(cmd.failExitCode)
 	}
 	reportStatus(ctx, hEnv, seqNum, status.StatusSuccess, cmd, msg)
 	ctx.Log("event", "end")
@@ -73,14 +73,14 @@ func parseCmd(args []string) cmd {
 	if len(os.Args) != 2 {
 		printUsage(args)
 		fmt.Println("Incorrect usage.")
-		os.Exit(1)
+		os.Exit(2)
 	}
 	op := os.Args[1]
 	cmd, ok := cmds[op]
 	if !ok {
 		printUsage(args)
 		fmt.Printf("Incorrect command: %q\n", op)
-		os.Exit(1)
+		os.Exit(2)
 	}
 	return cmd
 }

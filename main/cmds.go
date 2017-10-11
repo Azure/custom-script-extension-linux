@@ -19,6 +19,7 @@ type cmd struct {
 	name               string  // human readable string
 	shouldReportStatus bool    // determines if running this should log to a .status file
 	pre                preFunc // executed before any status is reported
+	failExitCode       int     // exitCode to use when commands fail
 }
 
 const (
@@ -26,16 +27,16 @@ const (
 )
 
 var (
-	cmdInstall   = cmd{install, "Install", false, nil}
-	cmdEnable    = cmd{enable, "Enable", true, enablePre}
-	cmdUninstall = cmd{uninstall, "Uninstall", false, nil}
+	cmdInstall   = cmd{install, "Install", false, nil, 52}
+	cmdEnable    = cmd{enable, "Enable", true, enablePre, 3}
+	cmdUninstall = cmd{uninstall, "Uninstall", false, nil, 3}
 
 	cmds = map[string]cmd{
 		"install":   cmdInstall,
 		"uninstall": cmdUninstall,
 		"enable":    cmdEnable,
-		"update":    {noop, "Update", true, nil},
-		"disable":   {noop, "Disable", true, nil},
+		"update":    {noop, "Update", true, nil, 3},
+		"disable":   {noop, "Disable", true, nil, 3},
 	}
 )
 
