@@ -117,22 +117,6 @@ teardown(){
     [[ "$diff" == *"A /b.txt"* ]] # created by script.sh
 }
 
-@test "handler command: enable - migrates the old data directory" {
-    mk_container sh -c "OLD=/var/lib/azure/custom-script; \
-		mkdir -p \$OLD && \
-		touch \$OLD/sentinel.txt && \
-		fake-waagent install && \
-		fake-waagent enable && wait-for-enable"
-    # download an external script and run it
-    push_settings '{"commandToExecute":"date"}'
-    run start_container
-    echo "$output"
-
-    diff="$(container_diff)"; echo "$diff"
-    [[ "$diff" != *"A /var/lib/azure/custom-script"* ]] # should have gone
-    [[ "$diff" == *"A /var/lib/waagent/custom-script/sentinel.txt"* ]] # should be migrated
-}
-
 @test "handler command: enable - download files from storage account" {
     if [[ -z  "$AZURE_STORAGE_ACCOUNT" ]] || [[ -z  "$AZURE_STORAGE_ACCESS_KEY" ]]; then
         skip "AZURE_STORAGE_ACCOUNT or AZURE_STORAGE_ACCESS_KEY not specified"

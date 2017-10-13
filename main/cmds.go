@@ -68,13 +68,6 @@ func uninstall(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (
 }
 
 func enablePre(ctx *log.Context, seqNum int) error {
-	// for a few versions we need to migrate dataDirOld (introduced in v2.0.0) to
-	// dataDir (introduced in v2.0.1).
-	ctx.Log("message", "checking for state migration")
-	if err := migrateDataDir(ctx, dataDirOld, dataDir); err != nil {
-		return errors.Wrap(err, "state directory could not be migrated")
-	}
-
 	// exit if this sequence number (a snapshot of the configuration) is alrady
 	// processed. if not, save this sequence number before proceeding.
 	seqNumPath := filepath.Join(dataDir, seqNumFile)
