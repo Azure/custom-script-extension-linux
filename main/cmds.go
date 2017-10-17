@@ -17,6 +17,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	maxScriptSize = 256 * 1024
+)
+
 type cmdFunc func(ctx *log.Context, hEnv vmextension.HandlerEnvironment, seqNum int) (msg string, err error)
 type preFunc func(ctx *log.Context, seqNum int) error
 
@@ -205,7 +209,7 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (err error) {
 		scenario = fmt.Sprintf("public-script;%s", scenarioInfo)
 	} else if cfg.protectedSettings.Script != "" {
 		ctx.Log("event", "executing protected script", "output", dir)
-		if cmd, scenarioInfo, err = writeTempScript(cfg.publicSettings.Script, dir, cfg.publicSettings.SkipDos2Unix); err != nil {
+		if cmd, scenarioInfo, err = writeTempScript(cfg.protectedSettings.Script, dir, cfg.publicSettings.SkipDos2Unix); err != nil {
 			return
 		}
 		scenario = fmt.Sprintf("protected-script;%s", scenarioInfo)
@@ -227,6 +231,10 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (err error) {
 }
 
 func writeTempScript(script, dir string, skipDosToUnix bool) (string, string, error) {
+	if len(script) > maxScriptSize {
+		return "", "", fmt.Errorf("The script's length (%d) exceeded the maximum allowed length of %d!", len(script), maxScriptSize)
+	}
+
 	s, info, err := decodeScript(script)
 	if err != nil {
 		return "", "", err

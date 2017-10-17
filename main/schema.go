@@ -52,6 +52,14 @@ const (
       "description": "Command to be executed",
       "type": "string"
     },
+	"fileUris": {
+      "description": "List of files to be downloaded",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uri"
+      }
+    },
 	"script": {
 	  "description": "Script to be executed",
 	  "type": "string"

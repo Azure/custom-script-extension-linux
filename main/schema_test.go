@@ -59,6 +59,22 @@ func TestValidateProtectedSettings_commandToExecute(t *testing.T) {
 	require.Nil(t, validateProtectedSettings(`{"commandToExecute":"date"}`))
 }
 
+func TestValidateProtectedSettings_fileUris(t *testing.T) {
+	// empty
+	err := validateProtectedSettings(`{"commandToExecute": "date", "fileUris":[]}`)
+	require.Nil(t, err)
+
+	// not a URL
+	err = validateProtectedSettings(`{"commandToExecute": "date", "fileUris":["a"]}`)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "Does not match format 'uri'")
+
+	// mixed types
+	err = validateProtectedSettings(`{"commandToExecute": "date", "fileUris":["https://a.b/c.txt?d=e&f=g", 0]}`)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "Expected: string, given: integer")
+}
+
 func TestValidateProtectedSettings_script(t *testing.T) {
 	// Invalid type
 	err := validateProtectedSettings(`{"script": false}`)
