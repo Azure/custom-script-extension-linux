@@ -7,11 +7,10 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"net"
 	"net/http"
 	"strconv"
 	"time"
-
-	"net"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -43,6 +42,7 @@ func GetMux() *mux.Router {
 	r.HandleFunc(`/bytes/{n:[\d]+}`, BytesHandler).Methods("GET")
 	r.HandleFunc(`/delay/{n:\d+(\.\d+)?}`, DelayHandler).Methods("GET")
 	r.HandleFunc(`/stream/{n:[\d]+}`, StreamHandler).Methods("GET")
+	r.HandleFunc(`/dos2unix`, Dos2UnixHandler).Methods("GET")
 	r.HandleFunc(`/drip`, DripHandler).Methods("GET").Queries(
 		"numbytes", `{numbytes:\d+}`,
 		"duration", `{duration:\d+(\.\d+)?}`)
@@ -60,6 +60,10 @@ func IPHandler(w http.ResponseWriter, r *http.Request) {
 	if err := writeJSON(w, ipResponse{h}); err != nil {
 		writeErrorJSON(w, errors.Wrap(err, "failed to write json")) // TODO handle this error in writeJSON(w,v)
 	}
+}
+
+func Dos2UnixHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("#!/bin/sh\r\necho 'Hello, world!'\r\n"))
 }
 
 // UserAgentHandler returns user agent.

@@ -110,8 +110,7 @@ func Test_downloadAndProcessURL(t *testing.T) {
 	require.Nil(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	err = downloadAndProcessURL(log.NewContext(log.NewNopLogger()),
-		srv.URL+"/bytes/256", tmpDir, "", "")
+	err = downloadAndProcessURL(log.NewContext(log.NewNopLogger()), srv.URL+"/bytes/256", tmpDir, "", "", false)
 	require.Nil(t, err)
 
 	fp := filepath.Join(tmpDir, "256")

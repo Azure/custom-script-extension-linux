@@ -59,6 +59,42 @@ func TestValidateProtectedSettings_commandToExecute(t *testing.T) {
 	require.Nil(t, validateProtectedSettings(`{"commandToExecute":"date"}`))
 }
 
+func TestValidateProtectedSettings_fileUris(t *testing.T) {
+	// empty
+	err := validateProtectedSettings(`{"commandToExecute": "date", "fileUris":[]}`)
+	require.Nil(t, err)
+
+	// not a URL
+	err = validateProtectedSettings(`{"commandToExecute": "date", "fileUris":["a"]}`)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "Does not match format 'uri'")
+
+	// mixed types
+	err = validateProtectedSettings(`{"commandToExecute": "date", "fileUris":["https://a.b/c.txt?d=e&f=g", 0]}`)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "Expected: string, given: integer")
+}
+
+func TestValidateProtectedSettings_script(t *testing.T) {
+	// Invalid type
+	err := validateProtectedSettings(`{"script": false}`)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "Expected: string, given: boolean")
+
+	// Valid
+	require.Nil(t, validateProtectedSettings(`{"script":"date"}`))
+}
+
+func TestValidateProtectedSettings_skipDos2Unix(t *testing.T) {
+	// Invalid type
+	err := validatePublicSettings(`{"skipDos2Unix": "not-a-bool"}`)
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "Expected: boolean, given: string")
+
+	// Valid
+	require.Nil(t, validatePublicSettings(`{"skipDos2Unix":true}`))
+}
+
 func TestValidateProtectedSettings_storageAccountName(t *testing.T) {
 	chkPatternMismatch := func(e error, reason string) {
 		require.NotNil(t, e, reason)

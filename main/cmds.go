@@ -1,14 +1,24 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
+	"compress/gzip"
+	"encoding/base64"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/Azure/azure-docker-extension/pkg/vmextension"
 	"github.com/Azure/custom-script-extension-linux/pkg/seqnum"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
+)
+
+const (
+	maxScriptSize = 256 * 1024
 )
 
 type cmdFunc func(ctx *log.Context, hEnv vmextension.HandlerEnvironment, seqNum int) (msg string, err error)
@@ -23,10 +33,13 @@ type cmd struct {
 }
 
 const (
+	fullName   = "Microsoft.Azure.Extensions.CustomScript"
 	maxTailLen = 4 * 1024 // length of max stdout/stderr to be transmitted in .status file
 )
 
 var (
+	telemetry = sendTelemetry(newTelemetryEventSender(), fullName, Version)
+
 	cmdInstall   = cmd{install, "Install", false, nil, 52}
 	cmdEnable    = cmd{enable, "Enable", true, enablePre, 3}
 	cmdUninstall = cmd{uninstall, "Uninstall", false, nil, 3}
@@ -68,7 +81,7 @@ func uninstall(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (
 }
 
 func enablePre(ctx *log.Context, seqNum int) error {
-	// exit if this sequence number (a snapshot of the configuration) is alrady
+	// exit if this sequence number (a snapshot of the configuration) is already
 	// processed. if not, save this sequence number before proceeding.
 	seqNumPath := filepath.Join(dataDir, seqNumFile)
 	if shouldExit, err := checkAndSaveSeqNum(ctx, seqNum, seqNumPath); err != nil {
@@ -147,12 +160,23 @@ func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) error {
 	}
 	ctx.Log("event", "created output directory")
 
+	dos2unix := 1
+	if cfg.publicSettings.SkipDos2Unix {
+		dos2unix = 0
+	}
+
 	// - download files
-	ctx.Log("files", len(cfg.FileURLs))
-	for i, f := range cfg.FileURLs {
+	ctx.Log("files", len(cfg.fileUrls()))
+	if len(cfg.publicSettings.FileURLs) > 0 {
+		telemetry("scenario", fmt.Sprintf("public-fileUrls;dos2unix=%d", dos2unix), true, 0*time.Millisecond)
+	} else if len(cfg.protectedSettings.FileURLs) > 0 {
+		telemetry("scenario", fmt.Sprintf("protected-fileUrls;dos2unix=%d", dos2unix), true, 0*time.Millisecond)
+	}
+
+	for i, f := range cfg.fileUrls() {
 		ctx := ctx.With("file", i)
 		ctx.Log("event", "download start")
-		if err := downloadAndProcessURL(ctx, f, dir, cfg.StorageAccountName, cfg.StorageAccountKey); err != nil {
+		if err := downloadAndProcessURL(ctx, f, dir, cfg.StorageAccountName, cfg.StorageAccountKey, cfg.publicSettings.SkipDos2Unix); err != nil {
 			ctx.Log("event", "download failed", "error", err)
 			return errors.Wrapf(err, "failed to download file[%d]", i)
 		}
@@ -162,16 +186,102 @@ func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) error {
 }
 
 // runCmd runs the command (extracted from cfg) in the given dir (assumed to exist).
-func runCmd(ctx log.Logger, dir string, cfg handlerSettings) error {
+func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (err error) {
 	ctx.Log("event", "executing command", "output", dir)
-	cmd := cfg.publicSettings.CommandToExecute
-	if cmd == "" {
+	var cmd string
+	var scenario string
+	var scenarioInfo string
+
+	// So many ways to execute a command!
+	if cfg.publicSettings.CommandToExecute != "" {
+		ctx.Log("event", "executing public commandToExecute", "output", dir)
+		cmd = cfg.publicSettings.CommandToExecute
+		scenario = "public-commandToExecute"
+	} else if cfg.protectedSettings.CommandToExecute != "" {
+		ctx.Log("event", "executing protected commandToExecute", "output", dir)
 		cmd = cfg.protectedSettings.CommandToExecute
+		scenario = "protected-commandToExecute"
+	} else if cfg.publicSettings.Script != "" {
+		ctx.Log("event", "executing public script", "output", dir)
+		if cmd, scenarioInfo, err = writeTempScript(cfg.publicSettings.Script, dir, cfg.publicSettings.SkipDos2Unix); err != nil {
+			return
+		}
+		scenario = fmt.Sprintf("public-script;%s", scenarioInfo)
+	} else if cfg.protectedSettings.Script != "" {
+		ctx.Log("event", "executing protected script", "output", dir)
+		if cmd, scenarioInfo, err = writeTempScript(cfg.protectedSettings.Script, dir, cfg.publicSettings.SkipDos2Unix); err != nil {
+			return
+		}
+		scenario = fmt.Sprintf("protected-script;%s", scenarioInfo)
 	}
-	if err := ExecCmdInDir(cmd, dir); err != nil {
+
+	begin := time.Now()
+	err = ExecCmdInDir(cmd, dir)
+	elapsed := time.Now().Sub(begin)
+	isSuccess := err == nil
+
+	telemetry("scenario", scenario, isSuccess, elapsed)
+
+	if err != nil {
 		ctx.Log("event", "failed to execute command", "error", err, "output", dir)
 		return errors.Wrap(err, "failed to execute command")
 	}
 	ctx.Log("event", "executed command", "output", dir)
 	return nil
+}
+
+func writeTempScript(script, dir string, skipDosToUnix bool) (string, string, error) {
+	if len(script) > maxScriptSize {
+		return "", "", fmt.Errorf("The script's length (%d) exceeded the maximum allowed length of %d!", len(script), maxScriptSize)
+	}
+
+	s, info, err := decodeScript(script)
+	if err != nil {
+		return "", "", err
+	}
+
+	cmd := fmt.Sprintf("%s/script.sh", dir)
+	f, err := os.OpenFile(cmd, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0500)
+	if err != nil {
+		return "", "", errors.Wrap(err, "failed to write script.sh")
+	}
+
+	f.WriteString(s)
+	f.Close()
+
+	dos2unix := 1
+	if skipDosToUnix == false {
+		err = postProcessFile(cmd)
+		if err != nil {
+			return "", "", errors.Wrap(err, "failed to post process file")
+		}
+		dos2unix = 0
+	}
+	return cmd, fmt.Sprintf("%s;dos2unix=%d", info, dos2unix), nil
+}
+
+// base64 decode and optionally GZip decompress a script
+func decodeScript(script string) (string, string, error) {
+	// scripts must be base64 encoded
+	s, err := base64.StdEncoding.DecodeString(script)
+	if err != nil {
+		return "", "", errors.Wrap(err, "failed to base64 decode script")
+	}
+
+	// scripts may be gzip'ed
+	r, err := gzip.NewReader(bytes.NewReader(s))
+	if err != nil {
+		return string(s), fmt.Sprintf("%d;%d;gzip=0", len(script), len(s)), nil
+	}
+
+	var buf bytes.Buffer
+	w := bufio.NewWriter(&buf)
+
+	n, err := io.Copy(w, r)
+	if err != nil {
+		return "", "", errors.Wrap(err, "failed to decompress script")
+	}
+
+	w.Flush()
+	return buf.String(), fmt.Sprintf("%d;%d;gzip=1", len(script), n), nil
 }
