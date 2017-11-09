@@ -33,8 +33,9 @@ type cmd struct {
 }
 
 const (
-	fullName   = "Microsoft.Azure.Extensions.CustomScript"
-	maxTailLen = 4 * 1024 // length of max stdout/stderr to be transmitted in .status file
+	fullName                = "Microsoft.Azure.Extensions.CustomScript"
+	maxTailLen              = 4 * 1024 // length of max stdout/stderr to be transmitted in .status file
+	maxTelemetryTailLen int = 1800
 )
 
 var (
@@ -93,6 +94,13 @@ func enablePre(ctx *log.Context, seqNum int) error {
 	return nil
 }
 
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func enable(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (string, error) {
 	// parse the extension handler settings (not available prior to 'enable')
 	cfg, err := parseAndValidateSettings(ctx, h.HandlerEnvironment.ConfigFolder)
@@ -118,9 +126,19 @@ func enable(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (str
 	if err != nil {
 		ctx.Log("message", "error tailing stderr logs", "error", err)
 	}
+
 	msg := fmt.Sprintf("\n[stdout]\n%s\n[stderr]\n%s", string(stdoutTail), string(stderrTail))
 
-	if runErr == nil {
+	minStdout := min(len(stdoutTail), maxTelemetryTailLen)
+	minStderr := min(len(stderrTail), maxTelemetryTailLen)
+	msgTelemetry := fmt.Sprintf("\n[stdout]\n%s\n[stderr]\n%s",
+		string(stdoutTail[len(stdoutTail)-minStdout:]),
+		string(stderrTail[len(stderrTail)-minStderr:]))
+
+	isSuccess := runErr == nil
+	telemetry("Output", msgTelemetry, isSuccess, 0)
+
+	if isSuccess {
 		ctx.Log("event", "enabled")
 	} else {
 		ctx.Log("event", "enable failed")
