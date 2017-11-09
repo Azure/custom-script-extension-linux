@@ -8,6 +8,6 @@
     "disableCommand": "bin/custom-script-shim disable",
     "rebootAfterInstall": false,
     "reportHeartbeat": false,
-    "updateMode": "UpdateWithoutInstall"
+    "updateMode": "UpdateWithInstall"
   }
 }]
