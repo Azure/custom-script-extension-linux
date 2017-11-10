@@ -81,10 +81,18 @@ func install(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (st
 
 func migrateToMostRecentSequence(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) {
 	// The status folder is used instead of the settings because the settings file is written
-	// by the agent before install is called.  The extension cannot determine if this is a new
-	// install or an upgrade.  The agent will copy mrseq and the old status files.  If this method
-	// was called mrseq does not exist.  The status files indicate what sequence numbers have been
-	// executed already.  The last status file is the last sequence number executed.
+	// by the agent before install is called.  As a result, the extension cannot determine if this
+	// is a new install or an upgrade.
+	//
+	// If this is an upgrade there will be a status file. The agent will re-write the last status
+	// file to indicate that the upgrade happened successfully. The extension uses the last status
+	// sequence number to determine the last settings file that was executed.
+	//
+	// The agent helpfully copies mrseq every time an extension is upgraded thereby preserving the
+	// most recent executed sequence. If extensions use mrseq they benefit from this mechanism, and
+	// do not have invent another method.  The CustomScript extension should have been using this
+	// from the beginning, but it was not.
+	//
 	computedSeqNum, err := vmextension.FindSeqNumStatus(h.HandlerEnvironment.StatusFolder)
 	if err != nil {
 		// If there was an error, the sequence number is zero.
@@ -99,7 +107,7 @@ func migrateToMostRecentSequence(ctx *log.Context, h vmextension.HandlerEnvironm
 	}
 	defer fout.Close()
 
-	ctx.Log("event", "migrate to mrseq", "message", fmt.Sprintf("upgraded mrseq to %v", computedSeqNum))
+	ctx.Log("event", "migrate to mrseq", "message", fmt.Sprintf("migrated mrseq to %v", computedSeqNum))
 	fout.WriteString(fmt.Sprintf("%v", computedSeqNum))
 }
 
