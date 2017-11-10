@@ -20,6 +20,10 @@ var (
 	// number. Stored under dataDir.
 	seqNumFile = "seqnum"
 
+	// most recent sequence, which was previously traced by seqNumFile. This was
+	// incorrect. The correct way is mrseq.  This file is auto-preserved by the agent.
+	mostRecentSequence = "mrseq"
+
 	// downloadDir is where we store the downloaded files in the "{downloadDir}/{seqnum}/file"
 	// format and the logs as "{downloadDir}/{seqnum}/std(out|err)". Stored under dataDir
 	downloadDir = "download"
@@ -39,7 +43,7 @@ func main() {
 		ctx.Log("message", "failed to parse handlerenv", "error", err)
 		os.Exit(cmd.failExitCode)
 	}
-	seqNum, err := vmextension.FindSeqNum(hEnv.HandlerEnvironment.ConfigFolder)
+	seqNum, err := vmextension.FindSeqNumConfig(hEnv.HandlerEnvironment.ConfigFolder)
 	if err != nil {
 		ctx.Log("messsage", "failed to find sequence number", "error", err)
 	}
