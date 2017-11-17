@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/Azure/custom-script-extension-linux/pkg/blobutil"
+	"github.com/koralski/run-command-extension-linux/pkg/blobutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -103,7 +103,7 @@ func Test_blobDownload_actualBlob(t *testing.T) {
 	var (
 		n         = 1024 * 64
 		name      = "blob.txt"
-		container = fmt.Sprintf("custom-script-test-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Int63())
+		container = fmt.Sprintf("run-command-test-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Int63())
 		chunk     = make([]byte, n)
 	)
 	_, err = bs.DeleteContainerIfExists(container)

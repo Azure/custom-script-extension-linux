@@ -1,5 +1,5 @@
 {
-	"ImportPath": "github.com/Azure/custom-script-extension-linux",
+	"ImportPath": "github.com/koralski/run-command-extension-linux",
 	"GoVersion": "go1.6",
 	"GodepVersion": "v74",
 	"Packages": [

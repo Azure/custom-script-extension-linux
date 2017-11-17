@@ -1,5 +1,5 @@
 If you are encountering issues, please take a look at the following log files
 on your virtual machine and provide their contents in the issue description:
 
-- /var/log/azure/custom-script/handler.log
+- /var/log/azure/run-command/handler.log
 - /var/log/waagent.log

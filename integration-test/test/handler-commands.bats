@@ -18,7 +18,7 @@ teardown(){
 
     diff="$(container_diff)"
     echo "$diff"
-    [[ "$diff" = *"A /var/lib/waagent/custom-script"* ]]
+    [[ "$diff" = *"A /var/lib/waagent/run-command"* ]]
 }
 
 @test "handler command: enable - can process empty settings, but fails" {
@@ -55,9 +55,9 @@ teardown(){
     echo "$output"
 
     # Validate contents of stdout/stderr files
-    stdout="$(container_read_file /var/lib/waagent/custom-script/download/0/stdout)"
+    stdout="$(container_read_file /var/lib/waagent/run-command/download/0/stdout)"
     echo "stdout=$stdout" && [[ "$stdout" = "HelloStdout" ]]
-    stderr="$(container_read_file /var/lib/waagent/custom-script/download/0/stderr)"
+    stderr="$(container_read_file /var/lib/waagent/run-command/download/0/stderr)"
     echo "stderr=$stderr" && [[ "$stderr" = "HelloStderr" ]]
 
     status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
@@ -74,9 +74,9 @@ teardown(){
     echo "$output"
 
     # Validate contents of stdout/stderr files
-    stdout="$(container_read_file /var/lib/waagent/custom-script/download/0/stdout)"
+    stdout="$(container_read_file /var/lib/waagent/run-command/download/0/stdout)"
     echo "stdout=$stdout" && [[ "$stdout" = "HelloStdout" ]]
-    stderr="$(container_read_file /var/lib/waagent/custom-script/download/0/stderr)"
+    stderr="$(container_read_file /var/lib/waagent/run-command/download/0/stderr)"
     echo "stderr=$stderr" && [[ "$stderr" = "HelloStderr" ]]
 
     status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
@@ -93,9 +93,9 @@ teardown(){
     echo "$output"
 
     # Validate contents of stdout/stderr files
-    stdout="$(container_read_file /var/lib/waagent/custom-script/download/0/stdout)"
+    stdout="$(container_read_file /var/lib/waagent/run-command/download/0/stdout)"
     echo "stdout=$stdout" && [[ "$stdout" = "HelloStdout" ]]
-    stderr="$(container_read_file /var/lib/waagent/custom-script/download/0/stderr)"
+    stderr="$(container_read_file /var/lib/waagent/run-command/download/0/stderr)"
     echo "stderr=$stderr" && [[ "$stderr" = "HelloStderr" ]]
 
     status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
@@ -150,7 +150,7 @@ teardown(){
     echo "$output"
 
     # Validate contents of stdout/stderr files
-    script="$(container_read_file /var/lib/waagent/custom-script/download/0/script.sh | base64)"
+    script="$(container_read_file /var/lib/waagent/run-command/download/0/script.sh | base64)"
     echo "script=$script" && [[ "$script" = "ZWNobyBIZWxsbw0K" ]]
 }
 
@@ -165,7 +165,7 @@ teardown(){
     echo "$output"
 
     # Validate contents of stdout/stderr files
-    script="$(container_read_file /var/lib/waagent/custom-script/download/0/script.sh | base64)"
+    script="$(container_read_file /var/lib/waagent/run-command/download/0/script.sh | base64)"
     # ZWNobyBIZWxsbwo= == "echo Hello\n"
     echo "script=$script" && [[ "$script" = "ZWNobyBIZWxsbwo=" ]]
 }
@@ -175,7 +175,7 @@ teardown(){
     # download an external script and run it
     push_settings '{
         "fileUris": [
-                "https://github.com/Azure/custom-script-extension-linux/raw/master/integration-test/testdata/script.sh"
+                "https://github.com/koralski/run-command-extension-linux/raw/master/integration-test/testdata/script.sh"
         ],
         "commandToExecute":"./script.sh"
         }'
@@ -183,7 +183,7 @@ teardown(){
     echo "$output"
 
     diff="$(container_diff)"; echo "$diff"
-    [[ "$diff" == *"A /var/lib/waagent/custom-script/download/0/script.sh"* ]] # file downloaded
+    [[ "$diff" == *"A /var/lib/waagent/run-command/download/0/script.sh"* ]] # file downloaded
     [[ "$diff" == *"A /b.txt"* ]] # created by script.sh
 }
 
@@ -227,13 +227,13 @@ teardown(){
     [[ "$output" == *'file=1 event="download complete"'* ]]
 
     diff="$(container_diff)"; echo "$diff"
-    [[ "$diff" == *"A /var/lib/waagent/custom-script/download/0/$blob1"* ]] # file downloaded
-    [[ "$diff" == *"A /var/lib/waagent/custom-script/download/0/$blob2"* ]] # file downloaded
+    [[ "$diff" == *"A /var/lib/waagent/run-command/download/0/$blob1"* ]] # file downloaded
+    [[ "$diff" == *"A /var/lib/waagent/run-command/download/0/$blob2"* ]] # file downloaded
 
     # compare checksum
     existing=$(md5 -q "$tmp")
     echo "Local file checksum: $existing"
-    got=$(container_read_file "/var/lib/waagent/custom-script/download/0/$blob1" | md5 -q)
+    got=$(container_read_file "/var/lib/waagent/run-command/download/0/$blob1" | md5 -q)
     echo "Downloaded file checksum: $got"
     [[ "$existing" == "$got" ]]
 }
@@ -257,5 +257,5 @@ teardown(){
     [ "$status" -eq 0 ]
 
     diff="$(container_diff)" && echo "$diff"
-    [[ "$diff" != */var/lib/waagent/custom-script* ]]
+    [[ "$diff" != */var/lib/waagent/run-command* ]]
 }

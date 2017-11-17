@@ -12,7 +12,7 @@ import (
 const (
 	publicSettingsSchema = `{
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "title": "Custom Script - Public Settings",
+  "title": "Run Command - Public Settings",
   "type": "object",
   "properties": {
     "commandToExecute": {
@@ -45,7 +45,7 @@ const (
 
 	protectedSettingsSchema = `{
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "title": "Custom Script - Protected Settings",
+  "title": "Run Command - Protected Settings",
   "type": "object",
   "properties": {
     "commandToExecute": {

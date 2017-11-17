@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/Azure/azure-docker-extension/pkg/vmextension"
-	"github.com/Azure/custom-script-extension-linux/pkg/seqnum"
 	"github.com/go-kit/kit/log"
+	"github.com/koralski/run-command-extension-linux/pkg/seqnum"
 	"github.com/pkg/errors"
 )
 
@@ -33,7 +33,7 @@ type cmd struct {
 }
 
 const (
-	fullName   = "Microsoft.Azure.Extensions.CustomScript"
+	fullName   = "Microsoft.Compute.CPlat.Core.RunCommandLinux"
 	maxTailLen = 4 * 1024 // length of max stdout/stderr to be transmitted in .status file
 )
 

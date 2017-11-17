@@ -1,12 +1,11 @@
 package seqnum_test
 
 import (
+	"github.com/koralski/run-command-extension-linux/pkg/seqnum"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"testing"
-
-	"github.com/Azure/custom-script-extension-linux/pkg/seqnum"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSet_nonExistingDir(t *testing.T) {

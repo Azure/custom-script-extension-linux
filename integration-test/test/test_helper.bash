@@ -1,6 +1,6 @@
 # Test helpers for BATS tests
 
-IMAGE=custom-script
+IMAGE=run-command
 DOCKERFILE=test.Dockerfile
 TEST_CONTAINER=test
 

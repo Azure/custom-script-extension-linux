@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# This script exists because custom-script-shim will detach the enable command
-# into background and when that happens the custom-script shim will exit,
+# This script exists because run-command-shim will detach the enable command
+# into background and when that happens the run-command shim will exit,
 # causing test container to exit as its entrypoint has exited. So we use this
 # to wait indefinitely until enable background process disappears from ps output.
 
 log(){ echo "[wait] time=$(date --rfc-3339=s | sed 's/ /T/') $@">&2; }
 
 sleep 1
-bin="bin/custom-script-extension"
+bin="bin/run-command-extension"
 while true; do
     out="$(ps aux)"
     if [[ "$out" == **"$bin"** ]]; then
