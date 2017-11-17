@@ -1,16 +1,16 @@
 <?xml version='1.0' encoding='utf-8' ?>
 <ExtensionImage xmlns="http://schemas.microsoft.com/windowsazure">
-  <ProviderNameSpace>Microsoft.Azure.Extensions</ProviderNameSpace>
-  <Type>CustomScript</Type>
-  <Version>2.0.4</Version>
-  <Label>Microsoft Azure Custom Script Extension for Linux Virtual Machines</Label>
+  <ProviderNameSpace>Microsoft.Compute.CPlat.Core</ProviderNameSpace>
+  <Type>RunCommandLinux</Type>
+  <Version>1.0.0</Version>
+  <Label>Microsoft Azure Run Command Extension for Linux Virtual Machines</Label>
   <HostingResources>VmRole</HostingResources>
   <MediaLink></MediaLink>
-  <Description>Microsoft Azure Custom Script Extension for Linux Virtual Machines</Description>
+  <Description>Microsoft Azure Run Command Extension for Linux Virtual Machines</Description>
   <IsInternalExtension>true</IsInternalExtension>
-  <Eula>https://github.com/Azure/custom-script-extension-linux/blob/master/LICENSE</Eula>
+  <Eula>https://github.com/koralski/run-command-extension-linux/blob/master/LICENSE</Eula>
   <PrivacyUri>http://www.microsoft.com/privacystatement/en-us/OnlineServices/Default.aspx</PrivacyUri>
-  <HomepageUri>https://github.com/Azure/custom-script-extension-linux</HomepageUri>
+  <HomepageUri>https://github.com/koralski/run-command-extension-linux</HomepageUri>
   <IsJsonExtension>true</IsJsonExtension>
   <SupportedOS>Linux</SupportedOS>
   <CompanyName>Microsoft</CompanyName>

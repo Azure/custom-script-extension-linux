@@ -1,14 +1,14 @@
 # Azure Custom Script Virtual Machine Extension (2.0) 
-[![Build Status](https://travis-ci.org/Azure/custom-script-extension-linux.svg?branch=master)](https://travis-ci.org/Azure/custom-script-extension-linux)
+[![Build Status](https://travis-ci.org/koralski/run-command-extension-linux.svg?branch=master)](https://travis-ci.org/koralski/run-command-extension-linux)
 
-This documentation is current for version 2.0.4 and above.
+This documentation is current for version 1.0.0 and above.
 
-CustomScript extensions runs scripts on VMs.  These scripts can be
+RunCommand extension runs scripts on VMs.  These scripts can be
 used to bootstrap/install software, run administrative tasks, or run
-automation tasks. CustomScript can run an inline script you specify or
+automation tasks. RunCommand can run an inline script you specify or
 download a script file from the Internet or Azure Storage.
 
-You can add CustomScript extension to your VM using:
+You can add RunCommand extension to your VM using:
 
 - Azure CLI (python based / Cloud Shell)
 - Azure XPlat CLI (node based)
@@ -128,7 +128,7 @@ The follow values can only by set in **protected** settings.
 The default value is false, which means dos2unix conversion **is**
 executed.
 
-The previous version of CustomScript,
+The previous version of RunCommand,
 Microsoft.OSTCExtensions.CustomScriptForLinux, would automatically
 convert DOS files to UNIX files by translating `\r\n` to `\n`.  This
 translation still exists, and is on by default.  This conversion is
@@ -154,7 +154,7 @@ true.
 
 ### 1.4 script
 
-CustomScript supports execution of a user-defined script.  The script
+RunCommand supports execution of a user-defined script.  The script
 settings to combine commandToExecute and fileUris into a single
 setting.  Instead of the having to setup a file for download from
 Azure storage or GitHub gist, you can simply encode the script as a
@@ -175,7 +175,7 @@ apt update
 apt upgrade -y
 ```
 
-The correct CustomScript script setting would be constructed by taking
+The correct RunCommand script setting would be constructed by taking
 the output of the following command.
 
 ```sh
@@ -189,19 +189,19 @@ cat script.sh | base64 -w0
 ```
 
 The script can optionally be gzip'ed to further reduce size (in most
-cases).  (CustomScript auto-detects the use of gzip compression.)
+cases).  (RunCommand auto-detects the use of gzip compression.)
 
 ```sh
 cat script | gzip -9 | base64 -w 0
 ```
 
-CustomScript uses the following algorithm to execute a script.
+RunCommand uses the following algorithm to execute a script.
 
  1. assert the length of the script's value does not exceed 256 KB.
  1. base64 decode the script's value
  1. _attempt_ to gunzip the base64 decoded value
- 1. write the decoded (and optionally decompressed) value to disk (/var/lib/waagent/custom-script/#/script.sh)
- 1. execute the script using _/bin/sh -c /var/lib/waagent/custom-script/#/script.sh.
+ 1. write the decoded (and optionally decompressed) value to disk (/var/lib/waagent/run-command/#/script.sh)
+ 1. execute the script using _/bin/sh -c /var/lib/waagent/run-command/#/script.sh.
 
 # 2. Deployment to a Virtual Machine
 
@@ -213,25 +213,25 @@ resource in your template.
 For **Azure CLI**, create a `public.json` (and optionally `protected.json`) and run:
 
     $ az vm extension set --resource-group <resource-group> --vm-name <vm-name> \
-        --name CustomScript --publisher Microsoft.Azure.Extensions --version 2.0 \
+        --name RunCommand --publisher Microsoft.Azure.Extensions --version 2.0 \
         --settings ./public.json \
         --protected-settings ./protected.json
 
 For **Azure XPlat CLI**, create a `public.json` (and optionally `protected.json`) and run:
 
     $ azure vm extension set <resource-group> <vm-name> \
-	    CustomScript Microsoft.Azure.Extensions 2.0 \
+	    RunCommand Microsoft.Azure.Extensions 2.0 \
 	    --auto-upgrade-minor-version \
 	    --public-config-path public.json \
 	    --private-config-path protected.json
 
 # 3. Troubleshooting
 
-Your files are downloaded to a path like: `/var/lib/waagent/custom-script/download/0/` and
+Your files are downloaded to a path like: `/var/lib/waagent/run-command/download/0/` and
 the command output is saved to `stdout` and `stderr` files in this directory. Please read
 these files to find out output from your script.
 
-You can find the logs for the extension at `/var/log/azure/custom-script/handler.log`.
+You can find the logs for the extension at `/var/log/azure/run-command/handler.log`.
 
 Please open an issue on this GitHub repository if you encounter problems that
 you could not debug with these log files.  

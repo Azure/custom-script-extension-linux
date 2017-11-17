@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Azure/custom-script-extension-linux/pkg/blobutil"
-	"github.com/Azure/custom-script-extension-linux/pkg/download"
-	"github.com/Azure/custom-script-extension-linux/pkg/preprocess"
 	"github.com/go-kit/kit/log"
+	"github.com/koralski/run-command-extension-linux/pkg/blobutil"
+	"github.com/koralski/run-command-extension-linux/pkg/download"
+	"github.com/koralski/run-command-extension-linux/pkg/preprocess"
 	"github.com/pkg/errors"
 	"os"
 )
