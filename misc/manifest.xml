@@ -1,16 +1,13 @@
 <?xml version='1.0' encoding='utf-8' ?>
 <ExtensionImage xmlns="http://schemas.microsoft.com/windowsazure">
-  <ProviderNameSpace>Microsoft.Compute.CPlat.Core</ProviderNameSpace>
+  <ProviderNameSpace>Microsoft.CPlat.Core</ProviderNameSpace>
   <Type>RunCommandLinux</Type>
   <Version>1.0.0</Version>
   <Label>Microsoft Azure Run Command Extension for Linux Virtual Machines</Label>
   <HostingResources>VmRole</HostingResources>
   <MediaLink></MediaLink>
-  <Description>Microsoft Azure Run Command Extension for Linux Virtual Machines</Description>
+  <Description>Microsoft Azure RunCommand Extension is the component installed on a VM to execute RunCommand VM operation.</Description>
   <IsInternalExtension>true</IsInternalExtension>
-  <Eula>https://github.com/koralski/run-command-extension-linux/blob/master/LICENSE</Eula>
-  <PrivacyUri>http://www.microsoft.com/privacystatement/en-us/OnlineServices/Default.aspx</PrivacyUri>
-  <HomepageUri>https://github.com/koralski/run-command-extension-linux</HomepageUri>
   <IsJsonExtension>true</IsJsonExtension>
   <SupportedOS>Linux</SupportedOS>
   <CompanyName>Microsoft</CompanyName>
