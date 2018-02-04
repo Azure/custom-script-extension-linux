@@ -33,7 +33,7 @@ type cmd struct {
 }
 
 const (
-	fullName                = "Microsoft.Azure.Extensions.CustomScript"
+	fullName                = "Microsoft.Azure.Extensions.FixLinuxDiagnostic"
 	maxTailLen              = 4 * 1024 // length of max stdout/stderr to be transmitted in .status file
 	maxTelemetryTailLen int = 1800
 )
