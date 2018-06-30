@@ -251,7 +251,7 @@ you could not debug with these log files.
 
 # 4. Build Badges
 
-The Custom Script extension is test across a variety of distributions.
+The Custom Script extension is tested across a variety of distributions.
 There are tests cases to exercise all of the settings supported by
 Custom Script.  This includes the following:
 
@@ -261,6 +261,8 @@ Custom Script.  This includes the following:
  1. public and protected fileUris
  1. invalid script
  1. scripts that are too big are rejected
+ 
+ Tests are executed with the version that ships with the Linux distro being tested.
 
 -----
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
