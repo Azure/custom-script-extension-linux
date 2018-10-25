@@ -11,7 +11,7 @@ install:
   - sudo apt-get install -qqy nodejs
   - sudo npm install -g npm
   - sudo npm install -g azure-cli
-  - go get -u github.com/golang/lint/golint
+  - go get -u golang.org/x/lint/golint
   - go get -u github.com/ahmetalpbalkan/govvv
 before_script:
   - docker version
