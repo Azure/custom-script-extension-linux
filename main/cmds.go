@@ -169,22 +169,16 @@ func enable(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (str
 		ctx.Log("message", "error tailing stderr logs", "error", err)
 	}
 
-	msg := fmt.Sprintf("\n[stdout]\n%s\n[stderr]\n%s", string(stdoutTail), string(stderrTail))
-
-	minStdout := min(len(stdoutTail), maxTelemetryTailLen)
-	minStderr := min(len(stderrTail), maxTelemetryTailLen)
-	msgTelemetry := fmt.Sprintf("\n[stdout]\n%s\n[stderr]\n%s",
-		string(stdoutTail[len(stdoutTail)-minStdout:]),
-		string(stderrTail[len(stderrTail)-minStderr:]))
-
 	isSuccess := runErr == nil
-	telemetry("Output", msgTelemetry, isSuccess, 0)
+	telemetry("Output", "-- stdout/stderr omitted from telemetry pipeline --", isSuccess, 0)
 
 	if isSuccess {
 		ctx.Log("event", "enabled")
 	} else {
 		ctx.Log("event", "enable failed")
 	}
+
+	msg := fmt.Sprintf("\n[stdout]\n%s\n[stderr]\n%s", string(stdoutTail), string(stderrTail))
 	return msg, runErr
 }
 
