@@ -2,7 +2,7 @@
 <ExtensionImage xmlns="http://schemas.microsoft.com/windowsazure">
   <ProviderNameSpace>Microsoft.CPlat.Core</ProviderNameSpace>
   <Type>RunCommandLinux</Type>
-  <Version>1.0.0</Version>
+  <Version>1.0.1</Version>
   <Label>Microsoft Azure Run Command Extension for Linux Virtual Machines</Label>
   <HostingResources>VmRole</HostingResources>
   <MediaLink></MediaLink>
