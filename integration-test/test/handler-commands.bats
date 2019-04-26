@@ -112,7 +112,7 @@ teardown(){
     echo "$output"
 
     status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
-    echo "status_file=$status_file"; [[ "$status_file" = *'Enable failed: failed to execute command: command terminated with exit status=2\n[stdout]\n\n[stderr]\nls: cannot access'* ]]
+    echo "status_file=$status_file"; [[ "$status_file" = *'Enable succeeded: \n[stdout]\n\n[stderr]\nls: cannot access'* ]]
 }
 
 @test "handler command: enable - doesn't process the same sequence number again" {
