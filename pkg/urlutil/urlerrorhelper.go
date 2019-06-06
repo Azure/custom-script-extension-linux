@@ -1,4 +1,4 @@
-package main
+package urlutil
 
 import (
 	"fmt"
@@ -9,11 +9,18 @@ import (
 func RemoveUrlFromErr(err error) error{
 	strSegments := strings.Split(err.Error(), " ")
 	for i, v := range strSegments{
-		u, parseError := url.Parse(v)
-		if parseError == nil && u.Scheme != "" && u.Host != "" && u.Path != ""{
+		if IsValidUrl(v){
 			// we found a url
 			strSegments[i] = "[uri redacted]"
 		}
 	}
 	return fmt.Errorf(strings.Join(strSegments, " "))
+}
+
+func IsValidUrl(urlstring string) bool {
+	u, parseError := url.Parse(urlstring)
+	if parseError == nil && u.Scheme != "" && u.Host != "" && u.Path != "" {
+		return true
+	}
+	return false
 }

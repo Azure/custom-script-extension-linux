@@ -10,6 +10,7 @@ import (
 	"github.com/Azure/custom-script-extension-linux/pkg/blobutil"
 	"github.com/Azure/custom-script-extension-linux/pkg/download"
 	"github.com/Azure/custom-script-extension-linux/pkg/preprocess"
+	"github.com/Azure/custom-script-extension-linux/pkg/urlutil"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 	"os"
@@ -22,6 +23,10 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir, storageAccountNam
 	fn, err := urlToFileName(url)
 	if err != nil {
 		return err
+	}
+
+	if !urlutil.IsValidUrl(url){
+		return fmt.Errorf("[url redacted] is not a valid url")
 	}
 
 	dl, err := getDownloader(url, storageAccountName, storageAccountKey)
