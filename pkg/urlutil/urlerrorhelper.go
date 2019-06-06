@@ -11,7 +11,7 @@ func RemoveUrlFromErr(err error) error{
 	for i, v := range strSegments{
 		if IsValidUrl(v){
 			// we found a url
-			strSegments[i] = "[uri redacted]"
+			strSegments[i] = "[REDACTED]"
 		}
 	}
 	return fmt.Errorf(strings.Join(strSegments, " "))
