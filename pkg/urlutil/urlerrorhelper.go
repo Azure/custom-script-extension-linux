@@ -6,10 +6,10 @@ import (
 	"strings"
 )
 
-func RemoveUrlFromErr(err error) error{
+func RemoveUrlFromErr(err error) error {
 	strSegments := strings.Split(err.Error(), " ")
-	for i, v := range strSegments{
-		if IsValidUrl(v){
+	for i, v := range strSegments {
+		if IsValidUrl(v) {
 			// we found a url
 			strSegments[i] = "[REDACTED]"
 		}

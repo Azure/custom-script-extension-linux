@@ -25,7 +25,7 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir, storageAccountNam
 		return err
 	}
 
-	if !urlutil.IsValidUrl(url){
+	if !urlutil.IsValidUrl(url) {
 		return fmt.Errorf("[REDACTED] is not a valid url")
 	}
 
