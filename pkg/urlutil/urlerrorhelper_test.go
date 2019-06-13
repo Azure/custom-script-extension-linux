@@ -12,6 +12,8 @@ func Test_expectedErrorString(t *testing.T) {
 	outputErr := RemoveUrlFromErr(inputErr)
 	if strings.Contains(outputErr.Error(), "https://") || strings.Contains(outputErr.Error(), "secret") || !strings.Contains(outputErr.Error(), "[REDACTED]") {
 		t.Error("Url removal failed")
+	} else if !strings.Contains(outputErr.Error(), "dial tcp 13.68.165.64:443: i/o timeout") {
+		t.Error("rest of the error not preserved")
 	} else {
 		fmt.Println(outputErr.Error())
 	}
