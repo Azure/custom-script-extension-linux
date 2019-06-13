@@ -19,7 +19,7 @@ func RemoveUrlFromErr(err error) error {
 
 func IsValidUrl(urlstring string) bool {
 	u, parseError := url.Parse(urlstring)
-	if parseError == nil && u.Scheme != "" && u.Host != "" && u.Path != "" {
+	if parseError == nil && u.Scheme != "" && u.Host != "" {
 		return true
 	}
 	return false
