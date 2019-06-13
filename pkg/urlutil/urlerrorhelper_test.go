@@ -23,7 +23,7 @@ func Test_nonHttpsSchema(t *testing.T) {
 	outputErr := RemoveUrlFromErr(inputErr)
 	if strings.Contains(outputErr.Error(), "https://") || strings.Contains(outputErr.Error(), "secret") || !strings.Contains(outputErr.Error(), "[REDACTED]") {
 		t.Error("Url removal failed")
-	} else if !strings.Contains(outputErr.Error(), "dial tcp 13.68.165.64:443: i/o timeout"){
+	} else if !strings.Contains(outputErr.Error(), "dial tcp 13.68.165.64:443: i/o timeout") {
 		t.Error("rest of the error not preserved")
 	} else {
 		fmt.Println(outputErr.Error())
@@ -36,7 +36,7 @@ func Test_errorWithMissingSpaces(t *testing.T) {
 	outputErr := RemoveUrlFromErr(inputErr)
 	if strings.Contains(outputErr.Error(), "https://") || strings.Contains(outputErr.Error(), "secret") || !strings.Contains(outputErr.Error(), "[REDACTED]") {
 		t.Error("Url removal failed")
-	} else if !strings.Contains(outputErr.Error(), "tcp 13.68.165.64:443:i/o timeout"){
+	} else if !strings.Contains(outputErr.Error(), "tcp 13.68.165.64:443:i/o timeout") {
 		t.Error("rest of the error not preserved")
 	} else {
 		fmt.Println(outputErr.Error())
@@ -55,7 +55,7 @@ func Test_errorStringIsUrlOnly(t *testing.T) {
 	}
 }
 
-func Test_errorStringIsSpaces(t *testing.T){
+func Test_errorStringIsSpaces(t *testing.T) {
 	errorString := `   `
 	inputErr := fmt.Errorf("%s", errorString)
 	outputErr := RemoveUrlFromErr(inputErr)
