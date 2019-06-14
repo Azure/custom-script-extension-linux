@@ -2,6 +2,7 @@ package download
 
 import (
 	"fmt"
+	"github.com/Azure/custom-script-extension-linux/pkg/urlutil"
 	"io"
 	"net"
 	"net/http"
@@ -44,6 +45,7 @@ func Download(d Downloader) (io.ReadCloser, error) {
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
+		err = urlutil.RemoveUrlFromErr(err)
 		return nil, errors.Wrapf(err, "http request failed")
 	}
 
