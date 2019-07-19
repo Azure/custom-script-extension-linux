@@ -73,7 +73,23 @@ const (
       "description": "Key for the Azure Storage Account (a base64 encoded string)",
       "type": "string",
       "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$"
-    }
+    },
+	"managedServiceIdentity": {
+      "description": "Setting to use Managed Service Identity to try to download fileUri from azure blob",
+      "type": "object",
+      "properties": {
+        "objectId": {
+          "description": "Object id that identifies the user created managed identity",
+		  "type": "string",
+		  "pattern": "^(?:[0-9A-Fa-f]{8}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{12})$"
+        },
+        "clientId": {
+          "description": "Client id that identifies the user created managed identity",
+		  "type": "string",
+	       "pattern": "^(?:[0-9A-Fa-f]{8}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{12})$"
+        }
+      }
+	}
   },
   "additionalProperties": false
 }`

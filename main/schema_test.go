@@ -144,3 +144,15 @@ func TestValidateProtectedSettings_storageAccountKey(t *testing.T) {
 	require.Nil(t, validateProtectedSettings(`{"storageAccountKey": "A+hMRrsZQ6COPXTYX/EiKiF2HVtfhCfLDo3Dkc3ekKoX3jA58zXVG2QRe/C1+zdEFSrVX6FZsKyivsSlnwmWOw=="}`), "ok")
 	require.Nil(t, validateProtectedSettings(`{"storageAccountKey": "/yGnx6KyxQ8Pjzk0QXeY+66Du0BeTWaCt83la59w72hu/81e6TzskXXvL/IlO3q6g0k0kJrR9MYQNi+cNR3SXA=="}`), "ok")
 }
+
+func TestValidateProtectedSettings_managedServiceIdentity(t *testing.T) {
+	require.NoError(t, validateProtectedSettings(`{"managedServiceIdentity": { "clientId": "31b403aa-c364-4240-a7ff-d85fb6cd7232"}}`),
+		"couldn't parse msi proprety with lowercase guid")
+	require.NoError(t, validateProtectedSettings(`{"managedServiceIdentity": { "objectId": "31B403AA-C364-4240-A7FF-D85FB6CD7232"}}`),
+		"couldn't parse msi property with uppercase guid")
+	require.NoError(t, validateProtectedSettings(`{"managedServiceIdentity": { }}`),
+		"couldn't parse msi property without clientId or objectId")
+
+	require.Error(t, validateProtectedSettings(`{"managedServiceIdentity": { "clientId": "notaguid"}}`),
+		"guid validation succeded when expected to fail")
+}
