@@ -73,7 +73,7 @@ func (h handlerSettings) validate() error {
 	}
 
 	if h.protectedSettings.ManagedServiceIdentity.ClientId != "" && h.protectedSettings.ManagedServiceIdentity.ObjectId != "" {
-
+		return errUsingBothClientIdAndObjectId
 	}
 
 	return nil

@@ -102,14 +102,26 @@ func Test_managedSystemIdentityVerification(t *testing.T) {
 		},
 	}}.validate(), "validation failed for settings with MSI")
 
-	require.Error(t, handlerSettings{publicSettings{}, protectedSettings{
-		CommandToExecute:   "echo hi",
-		StorageAccountName: "name",
-		StorageAccountKey:  "key",
-		ManagedServiceIdentity: clientOrObjectId{
-			ObjectId: "31b403aa-c364-4240-a7ff-d85fb6cd7232",
-		},
-	}}.validate(), "validation didn't fail for settings with both MSI and storage account")
+	require.Equal(t, errUsingBothKeyAndMsi,
+		handlerSettings{publicSettings{},
+			protectedSettings{
+				CommandToExecute:   "echo hi",
+				StorageAccountName: "name",
+				StorageAccountKey:  "key",
+				ManagedServiceIdentity: clientOrObjectId{
+					ObjectId: "31b403aa-c364-4240-a7ff-d85fb6cd7232",
+				},
+			}}.validate(), "validation didn't fail for settings with both MSI and storage account")
+
+	require.Equal(t, errUsingBothClientIdAndObjectId,
+		handlerSettings{publicSettings{},
+			protectedSettings{
+				CommandToExecute:   "echo hi",
+				ManagedServiceIdentity: clientOrObjectId{
+					ObjectId: "31b403aa-c364-4240-a7ff-d85fb6cd7232",
+					ClientId: "31b403aa-c364-4240-a7ff-d85fb6cd7232",
+				},
+			}}.validate(), "validation didn't fail for settings with both MSI and storage account")
 }
 
 func Test_toJSON_empty(t *testing.T) {
