@@ -96,7 +96,7 @@ type protectedSettings struct {
 	FileURLs               []string         `json:"fileUris"`
 	StorageAccountName     string           `json:"storageAccountName"`
 	StorageAccountKey      string           `json:"storageAccountKey"`
-	ManagedServiceIdentity clientOrObjectId `json:managedServiceIdentity`
+	ManagedServiceIdentity *clientOrObjectId `json:managedServiceIdentity`
 }
 
 type clientOrObjectId struct {

@@ -19,7 +19,7 @@ import (
 // downloadAndProcessURL downloads using the specified downloader and saves it to the
 // specified existing directory, which must be the path to the saved file. Then
 // it post-processes file based on heuristics.
-func downloadAndProcessURL(ctx *log.Context, url, downloadDir, storageAccountName, storageAccountKey string, skipDos2Unix bool) error {
+func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handlerSettings) error {
 	fn, err := urlToFileName(url)
 	if err != nil {
 		return err
@@ -29,9 +29,15 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir, storageAccountNam
 		return fmt.Errorf("[REDACTED] is not a valid url")
 	}
 
-	dl, err := getDownloader(url, storageAccountName, storageAccountKey)
-	if err != nil {
-		return err
+	var dl download.Downloader
+
+	if cfg.ManagedServiceIdentity == nil {
+		dl, err = getDownloader(url, cfg.StorageAccountName, cfg.StorageAccountKey)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Todo: call downloader using managed identity
 	}
 
 	fp := filepath.Join(downloadDir, fn)
@@ -40,7 +46,7 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir, storageAccountNam
 		return err
 	}
 
-	if skipDos2Unix == false {
+	if cfg.SkipDos2Unix == false {
 		err = postProcessFile(fp)
 	}
 	return errors.Wrapf(err, "failed to post-process '%s'", fn)
