@@ -25,20 +25,15 @@ var msiJson = `` // place the msi json here e.g.
 var blobUri = ""         // set the blob to download here e.g. https://storageaccount.blob.core.windows.net/container/blobname
 var stringToLookFor = "" // the string to look for in you blob
 
-type mockMsiProvider struct { //implements MsiProvider
-}
-
-func (self *mockMsiProvider) GetMsi() (msi.Msi, error) {
-	msi := msi.Msi{}
-	err := json.Unmarshal([]byte(msiJson), &msi)
-	return msi, err
-}
-
 func Test_realDownloadBlobWithMsiToken(t *testing.T) {
 	if msiJson == "" || blobUri == "" || stringToLookFor == "" {
 		t.Skip()
 	}
-	downloader := blobWithMsiToken{blobUri, new(mockMsiProvider)}
+	downloader := blobWithMsiToken{blobUri, func() (msi.Msi, error) {
+		msi := msi.Msi{}
+		err := json.Unmarshal([]byte(msiJson), &msi)
+		return msi, err
+	}}
 	_, stream, err := Download(&downloader)
 	require.NoError(t, err, "File download failed")
 	defer stream.Close()
@@ -48,4 +43,9 @@ func Test_realDownloadBlobWithMsiToken(t *testing.T) {
 
 	//verify
 	require.Contains(t, string(bytes), stringToLookFor)
+}
+
+func Test_isAzureStorageBlobUri(t *testing.T) {
+	require.True(t, IsAzureStorageBlobUri("https://a.blob.core.windows.net"))
+	require.False(t, IsAzureStorageBlobUri("https://github.com/Azure-Samples/storage-blobs-go-quickstart/blob/master/README.md"))
 }

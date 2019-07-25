@@ -68,12 +68,14 @@ func (h handlerSettings) validate() error {
 		return errStoragePartialCredentials
 	}
 
-	if (h.protectedSettings.StorageAccountKey != "" || h.protectedSettings.StorageAccountName != "") && !h.protectedSettings.ManagedServiceIdentity.isEmpty() {
+	if (h.protectedSettings.StorageAccountKey != "" || h.protectedSettings.StorageAccountName != "") && !h.protectedSettings.ManagedIdentity.isEmpty() {
 		return errUsingBothKeyAndMsi
 	}
 
-	if h.protectedSettings.ManagedServiceIdentity.ClientId != "" && h.protectedSettings.ManagedServiceIdentity.ObjectId != "" {
-		return errUsingBothClientIdAndObjectId
+	if h.protectedSettings.ManagedIdentity != nil {
+		if h.protectedSettings.ManagedIdentity.ClientId != "" && h.protectedSettings.ManagedIdentity.ObjectId != "" {
+			return errUsingBothClientIdAndObjectId
+		}
 	}
 
 	return nil
@@ -91,12 +93,12 @@ type publicSettings struct {
 // protectedSettings is the type decoded and deserialized from protected
 // configuration section. This should be in sync with protectedSettingsSchema.
 type protectedSettings struct {
-	CommandToExecute       string            `json:"commandToExecute"`
-	Script                 string            `json:"script"`
-	FileURLs               []string          `json:"fileUris"`
-	StorageAccountName     string            `json:"storageAccountName"`
-	StorageAccountKey      string            `json:"storageAccountKey"`
-	ManagedServiceIdentity *clientOrObjectId `json:managedServiceIdentity`
+	CommandToExecute   string            `json:"commandToExecute"`
+	Script             string            `json:"script"`
+	FileURLs           []string          `json:"fileUris"`
+	StorageAccountName string            `json:"storageAccountName"`
+	StorageAccountKey  string            `json:"storageAccountKey"`
+	ManagedIdentity    *clientOrObjectId `json:"managedIdentity"`
 }
 
 type clientOrObjectId struct {

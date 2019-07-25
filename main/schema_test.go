@@ -146,13 +146,13 @@ func TestValidateProtectedSettings_storageAccountKey(t *testing.T) {
 }
 
 func TestValidateProtectedSettings_managedServiceIdentity(t *testing.T) {
-	require.NoError(t, validateProtectedSettings(`{"managedServiceIdentity": { "clientId": "31b403aa-c364-4240-a7ff-d85fb6cd7232"}}`),
+	require.NoError(t, validateProtectedSettings(`{"managedIdentity": { "clientId": "31b403aa-c364-4240-a7ff-d85fb6cd7232"}}`),
 		"couldn't parse msi proprety with lowercase guid")
-	require.NoError(t, validateProtectedSettings(`{"managedServiceIdentity": { "objectId": "31B403AA-C364-4240-A7FF-D85FB6CD7232"}}`),
+	require.NoError(t, validateProtectedSettings(`{"managedIdentity": { "objectId": "31B403AA-C364-4240-A7FF-D85FB6CD7232"}}`),
 		"couldn't parse msi property with uppercase guid")
-	require.NoError(t, validateProtectedSettings(`{"managedServiceIdentity": { }}`),
+	require.NoError(t, validateProtectedSettings(`{"managedIdentity": { }}`),
 		"couldn't parse msi property without clientId or objectId")
 
-	require.Error(t, validateProtectedSettings(`{"managedServiceIdentity": { "clientId": "notaguid"}}`),
+	require.Error(t, validateProtectedSettings(`{"managedIdentity": { "clientId": "notaguid"}}`),
 		"guid validation succeded when expected to fail")
 }

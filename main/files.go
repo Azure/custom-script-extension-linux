@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/Azure/azure-extension-foundation/httputil"
-	"github.com/Azure/azure-extension-foundation/msi"
 	"io/ioutil"
 	"net/url"
 	"path/filepath"
@@ -33,13 +31,9 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handl
 
 	var dl []download.Downloader
 
-	if cfg.ManagedServiceIdentity == nil {
-		dl, err = getDownloaders(url, cfg.StorageAccountName, cfg.StorageAccountKey)
-		if err != nil {
-			return err
-		}
-	} else {
-		// Todo: call downloader using managed identity
+	dl, err = getDownloaders(url, cfg.StorageAccountName, cfg.StorageAccountKey, cfg.ManagedIdentity)
+	if err != nil {
+		return err
 	}
 
 	fp := filepath.Join(downloadDir, fn)
@@ -56,20 +50,35 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handl
 
 // getDownloader returns a downloader for the given URL based on whether the
 // storage credentials are empty or not.
-func getDownloaders(fileURL string, storageAccountName, storageAccountKey string) (
+func getDownloaders(fileURL string, storageAccountName, storageAccountKey string, managedIdentity *clientOrObjectId) (
 	[]download.Downloader, error) {
 	if storageAccountName == "" || storageAccountKey == "" {
-		if download.IsAzureStorageBlobUri(fileURL) {
-			msiProvider := msi.NewMsiProvider(httputil.NewSecureHttpClient(httputil.DefaultRetryBehavior))
+		if download.IsAzureStorageBlobUri(fileURL) && managedIdentity != nil {
+			// If managed identity was specified in the configuration, try to use it to download the files
+			var msiProvider download.MsiProvider
+			switch {
+			case managedIdentity.ClientId == "" && managedIdentity.ObjectId == "":
+				// get msi using clientId or objectId or implicitly
+				msiProvider = download.GetMsiProviderForStorageAccountsImplicitly()
+			case managedIdentity.ClientId != "" && managedIdentity.ObjectId == "":
+				msiProvider = download.GetMsiProviderForStorageAccountsWithClientId(managedIdentity.ClientId)
+			case managedIdentity.ClientId == "" && managedIdentity.ObjectId != "":
+				msiProvider = download.GetMsiProviderForStorageAccountsWithObjectId(managedIdentity.ObjectId)
+			default:
+				return nil, fmt.Errorf("unexpected combination of ClientId and ObjectId found")
+			}
 			return []download.Downloader{
+				// try downloading without MSI token first, but attempt with MSI if the download fails
 				download.NewURLDownload(fileURL),
-				download.NewBlobWithMsiDownload(fileURL, &msiProvider),
+				download.NewBlobWithMsiDownload(fileURL, msiProvider),
 			}, nil
 		} else {
+			// do not use MSI downloader if the uri is not azure storage blob, or managedIdentity isn't specified
 			return []download.Downloader{download.NewURLDownload(fileURL)}, nil
 		}
 	} else {
-
+		// If storage name account and key are specified, use that for all files
+		// This preserves old behavior
 		blob, err := blobutil.ParseBlobURL(fileURL)
 		if err != nil {
 			return nil, err

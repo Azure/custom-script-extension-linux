@@ -74,7 +74,7 @@ const (
       "type": "string",
       "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$"
     },
-	"managedServiceIdentity": {
+	"managedIdentity": {
       "description": "Setting to use Managed Service Identity to try to download fileUri from azure blob",
       "type": "object",
       "properties": {

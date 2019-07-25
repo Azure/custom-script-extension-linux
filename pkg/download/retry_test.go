@@ -1,7 +1,6 @@
 package download_test
 
 import (
-	"github.com/Azure/azure-extension-foundation/msi"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -82,23 +81,27 @@ func TestWithRetries_healingServer(t *testing.T) {
 
 func TestRetriesWith_SwitchDownloaderOn403(t *testing.T) {
 	svr := httptest.NewServer(httpbin.GetMux())
+	hSvr := httptest.NewServer(new(healingServer))
 	defer svr.Close()
-	d403 := download.NewURLDownload(svr.URL + "/status/403")
-	d200 := download.NewBlobWithMsiDownload(svr.URL+"/status/200", &mockMsiProvider{})
-	resp, err := download.WithRetries(nopLog(), []download.Downloader{d403, d200}, func(d time.Duration) { return })
+	d403 := mockDownloader{0, svr.URL + "/status/403"}
+	d200 := mockDownloader{0, hSvr.URL}
+	resp, err := download.WithRetries(nopLog(), []download.Downloader{&d403, &d200}, func(d time.Duration) { return })
 	require.Nil(t, err, "should eventually succeed")
 	require.NotNil(t, resp, "response body exists")
-
+	require.Equal(t, d403.timesCalled, 1)
+	require.Equal(t, d200.timesCalled, 4)
 }
 
 // Test Utilities:
 
-//implements MsiProvider
-type mockMsiProvider struct {
+type mockDownloader struct {
+	timesCalled int
+	url         string
 }
 
-func (self *mockMsiProvider) GetMsi() (msi.Msi, error) {
-	return msi.Msi{AccessToken: "Dummy Token"}, nil
+func (self *mockDownloader) GetRequest() (*http.Request, error) {
+	self.timesCalled++
+	return http.NewRequest("GET", self.url, nil)
 }
 
 // sleepRecorder keeps track of the durations of Sleep calls
