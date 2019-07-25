@@ -91,11 +91,11 @@ type publicSettings struct {
 // protectedSettings is the type decoded and deserialized from protected
 // configuration section. This should be in sync with protectedSettingsSchema.
 type protectedSettings struct {
-	CommandToExecute       string           `json:"commandToExecute"`
-	Script                 string           `json:"script"`
-	FileURLs               []string         `json:"fileUris"`
-	StorageAccountName     string           `json:"storageAccountName"`
-	StorageAccountKey      string           `json:"storageAccountKey"`
+	CommandToExecute       string            `json:"commandToExecute"`
+	Script                 string            `json:"script"`
+	FileURLs               []string          `json:"fileUris"`
+	StorageAccountName     string            `json:"storageAccountName"`
+	StorageAccountKey      string            `json:"storageAccountKey"`
 	ManagedServiceIdentity *clientOrObjectId `json:managedServiceIdentity`
 }
 

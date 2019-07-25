@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -70,9 +71,10 @@ func Test_blobDownload_fails_badCreds(t *testing.T) {
 		Container:   "foocontainer",
 	})
 
-	_, err := Download(d)
+	status, _, err := Download(d)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "unexpected status code: got=403")
+	require.Equal(t, status, http.StatusForbidden)
 }
 
 func Test_blobDownload_fails_urlNotFound(t *testing.T) {
@@ -82,7 +84,7 @@ func Test_blobDownload_fails_urlNotFound(t *testing.T) {
 		Container:   "foocontainer",
 	})
 
-	_, err := Download(d)
+	_, _, err := Download(d)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "http request failed:")
 }
@@ -121,7 +123,7 @@ func Test_blobDownload_actualBlob(t *testing.T) {
 		Blob:        name,
 		StorageBase: base,
 	})
-	body, err := Download(d)
+	_, body, err := Download(d)
 	require.Nil(t, err)
 	defer body.Close()
 	b, err := ioutil.ReadAll(body)

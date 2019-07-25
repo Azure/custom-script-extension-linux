@@ -1,8 +1,10 @@
 package download
 
 import (
+	"fmt"
 	"io"
 	"math"
+	"net/http"
 	"time"
 
 	"github.com/go-kit/kit/log"
@@ -29,26 +31,34 @@ const (
 // closed on failures). If the retries do not succeed, the last error is returned.
 //
 // It sleeps in exponentially increasing durations between retries.
-func WithRetries(ctx *log.Context, d Downloader, sf SleepFunc) (io.ReadCloser, error) {
+func WithRetries(ctx *log.Context, downloaders []Downloader, sf SleepFunc) (io.ReadCloser, error) {
 	var lastErr error
-	for n := 0; n < expRetryN; n++ {
-		ctx := ctx.With("retry", n)
-		out, err := Download(d)
-		if err == nil {
-			return out, nil
-		}
-		lastErr = err
-		ctx.Log("error", err)
+	for _, d := range downloaders {
+		for n := 0; n < expRetryN; n++ {
+			ctx := ctx.With("retry", n)
+			status, out, err := Download(d)
+			if err == nil {
+				return out, nil
+			}
 
-		if out != nil { // we are not going to read this response body
-			out.Close()
-		}
+			lastErr = err
+			ctx.Log("error", err)
 
-		if n != expRetryN-1 {
-			// have more retries to go, sleep before retrying
-			slp := expRetryK * time.Duration(int(math.Pow(float64(expRetryM), float64(n))))
-			ctx.Log("sleep", slp)
-			sf(slp)
+			if out != nil { // we are not going to read this response body
+				out.Close()
+			}
+
+			if status == http.StatusForbidden {
+				ctx.Log("info", fmt.Sprintf("downloader %T returned 403, skipping retries", d))
+				break
+			}
+
+			if n != expRetryN-1 {
+				// have more retries to go, sleep before retrying
+				slp := expRetryK * time.Duration(int(math.Pow(float64(expRetryM), float64(n))))
+				ctx.Log("sleep", slp)
+				sf(slp)
+			}
 		}
 	}
 	return nil, lastErr

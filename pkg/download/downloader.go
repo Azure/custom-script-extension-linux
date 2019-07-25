@@ -37,20 +37,20 @@ var (
 // Download retrieves a response body and checks the response status code to see
 // if it is 200 OK and then returns the response body. It issues a new request
 // every time called. It is caller's responsibility to close the response body.
-func Download(d Downloader) (io.ReadCloser, error) {
+func Download(d Downloader) (int, io.ReadCloser, error) {
 	req, err := d.GetRequest()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create the request")
+		return -1, nil, errors.Wrapf(err, "failed to create the request")
 	}
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		err = urlutil.RemoveUrlFromErr(err)
-		return nil, errors.Wrapf(err, "http request failed")
+		return -1, nil, errors.Wrapf(err, "http request failed")
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: got=%d expected=%d", resp.StatusCode, http.StatusOK)
+	if resp.StatusCode == http.StatusOK {
+		return resp.StatusCode, resp.Body, nil
 	}
-	return resp.Body, nil
+	return resp.StatusCode, nil, fmt.Errorf("unexpected status code: got=%d expected=%d", resp.StatusCode, http.StatusOK)
 }

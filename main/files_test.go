@@ -15,31 +15,39 @@ import (
 
 func Test_getDownloader_azureBlob(t *testing.T) {
 	// error condition
-	_, err := getDownloader("http://acct.blob.core.windows.net/", "acct", "key")
+	_, err := getDownloaders("http://acct.blob.core.windows.net/", "acct", "key")
 	require.NotNil(t, err)
 
 	// valid input
-	d, err := getDownloader("http://acct.blob.core.windows.net/container/blob", "acct", "key")
+	d, err := getDownloaders("http://acct.blob.core.windows.net/container/blob", "acct", "key")
 	require.Nil(t, err)
 	require.NotNil(t, d)
-	require.Equal(t, "download.blobDownload", fmt.Sprintf("%T", d), "got wrong type")
+	require.Equal(t, 1, len(d))
+	require.Equal(t, "download.blobDownload", fmt.Sprintf("%T", d[0]), "got wrong type")
 }
 
 func Test_getDownloader_externalUrl(t *testing.T) {
-	d, err := getDownloader("http://acct.blob.core.windows.net/", "", "")
+	d, err := getDownloaders("http://acct.blob.core.windows.net/", "", "")
 	require.Nil(t, err)
 	require.NotNil(t, d)
-	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d), "got wrong type")
+	require.NotEmpty(t, d)
+	require.Equal(t, 2, len(d))
+	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d[0]), "got wrong type")
+	require.Equal(t, "*download.blobWithMsiToken", fmt.Sprintf("%T", d[1]), "got wrong type")
 
-	d, err = getDownloader("http://acct.blob.core.windows.net/", "foo", "")
+	d, err = getDownloaders("http://acct.blob.core.windows.net/", "foo", "")
 	require.Nil(t, err)
 	require.NotNil(t, d)
-	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d), "got wrong type")
+	require.Equal(t, 2, len(d))
+	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d[0]), "got wrong type")
+	require.Equal(t, "*download.blobWithMsiToken", fmt.Sprintf("%T", d[1]), "got wrong type")
 
-	d, err = getDownloader("http://acct.blob.core.windows.net/", "", "bar")
+	d, err = getDownloaders("http://acct.blob.core.windows.net/", "", "bar")
 	require.Nil(t, err)
 	require.NotNil(t, d)
-	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d), "got wrong type")
+	require.Equal(t, 2, len(d))
+	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d[0]), "got wrong type")
+	require.Equal(t, "*download.blobWithMsiToken", fmt.Sprintf("%T", d[1]), "got wrong type")
 }
 
 func Test_urlToFileName_badURL(t *testing.T) {

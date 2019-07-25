@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/Azure/azure-extension-foundation/httputil"
+	"github.com/Azure/azure-extension-foundation/msi"
 	"io/ioutil"
 	"net/url"
 	"path/filepath"
@@ -29,10 +31,10 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handl
 		return fmt.Errorf("[REDACTED] is not a valid url")
 	}
 
-	var dl download.Downloader
+	var dl []download.Downloader
 
 	if cfg.ManagedServiceIdentity == nil {
-		dl, err = getDownloader(url, cfg.StorageAccountName, cfg.StorageAccountKey)
+		dl, err = getDownloaders(url, cfg.StorageAccountName, cfg.StorageAccountKey)
 		if err != nil {
 			return err
 		}
@@ -54,19 +56,26 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handl
 
 // getDownloader returns a downloader for the given URL based on whether the
 // storage credentials are empty or not.
-func getDownloader(fileURL string, storageAccountName, storageAccountKey string) (
-	download.Downloader, error) {
+func getDownloaders(fileURL string, storageAccountName, storageAccountKey string) (
+	[]download.Downloader, error) {
 	if storageAccountName == "" || storageAccountKey == "" {
-		return download.NewURLDownload(fileURL), nil
-	}
+		if download.IsAzureStorageBlobUri(fileURL) {
+			msiProvider :=  msi.NewMsiProvider(httputil.NewSecureHttpClient(httputil.DefaultRetryBehavior))
+			return []download.Downloader{download.NewURLDownload(fileURL),
+			download.NewBlobWithMsiDownload(fileURL, &msiProvider )}, nil
+		} else {
+			return []download.Downloader{download.NewURLDownload(fileURL)}, nil
+		}
+	} else {
 
-	blob, err := blobutil.ParseBlobURL(fileURL)
-	if err != nil {
-		return nil, err
+		blob, err := blobutil.ParseBlobURL(fileURL)
+		if err != nil {
+			return nil, err
+		}
+		return []download.Downloader{download.NewBlobDownload(
+			storageAccountName, storageAccountKey,
+			blob)}, nil
 	}
-	return download.NewBlobDownload(
-		storageAccountName, storageAccountKey,
-		blob), nil
 }
 
 // urlToFileName parses given URL and returns the section after the last slash
