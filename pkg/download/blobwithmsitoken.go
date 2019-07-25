@@ -34,7 +34,6 @@ func (self *blobWithMsiToken) GetRequest() (*http.Request, error) {
 		return nil, err
 	}
 
-
 	if IsAzureStorageBlobUri(self.url) {
 		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", msi.AccessToken))
 		request.Header.Set(xMsVersionHeaderName, xMsVersionValue)
@@ -46,7 +45,7 @@ func NewBlobWithMsiDownload(url string, msiProvider msi.MsiProvider) Downloader 
 	return &blobWithMsiToken{url, msiProvider}
 }
 
-func IsAzureStorageBlobUri(url string ) bool {
+func IsAzureStorageBlobUri(url string) bool {
 	// TODO update this function
 	parsedUrl, err := url2.Parse(url)
 	if err != nil {

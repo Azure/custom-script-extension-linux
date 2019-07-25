@@ -8,12 +8,10 @@ import (
 	"testing"
 )
 
-
 // README for running this test
 // Assign/create an azure VM with system assigned or user assigned identity
 // this is the machine that you'll get the msiJson from
 // Assign "Storage Blob Data Reader" permissions to managed identity on a blob
-
 
 var msiJson = `` // place the msi json here e.g.
 // {"access_token":<access token>","client_id":"31b403aa-c364-4240-a7ff-d85fb6cd7232","expires_in":"28799",
@@ -24,8 +22,7 @@ var msiJson = `` // place the msi json here e.g.
 // Powershell command to get msi
 // Invoke-RestMethod -Method "GET" -Headers @{"Metadata"=$true} "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fstorage.azure.com%2F" | ConvertTo-Json
 
-
-var blobUri = "" // set the blob to download here e.g. https://storageaccount.blob.core.windows.net/container/blobname
+var blobUri = ""         // set the blob to download here e.g. https://storageaccount.blob.core.windows.net/container/blobname
 var stringToLookFor = "" // the string to look for in you blob
 
 type mockMsiProvider struct { //implements MsiProvider

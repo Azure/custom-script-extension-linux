@@ -60,9 +60,11 @@ func getDownloaders(fileURL string, storageAccountName, storageAccountKey string
 	[]download.Downloader, error) {
 	if storageAccountName == "" || storageAccountKey == "" {
 		if download.IsAzureStorageBlobUri(fileURL) {
-			msiProvider :=  msi.NewMsiProvider(httputil.NewSecureHttpClient(httputil.DefaultRetryBehavior))
-			return []download.Downloader{download.NewURLDownload(fileURL),
-			download.NewBlobWithMsiDownload(fileURL, &msiProvider )}, nil
+			msiProvider := msi.NewMsiProvider(httputil.NewSecureHttpClient(httputil.DefaultRetryBehavior))
+			return []download.Downloader{
+				download.NewURLDownload(fileURL),
+				download.NewBlobWithMsiDownload(fileURL, &msiProvider),
+			}, nil
 		} else {
 			return []download.Downloader{download.NewURLDownload(fileURL)}, nil
 		}

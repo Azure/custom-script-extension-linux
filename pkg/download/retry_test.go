@@ -80,12 +80,12 @@ func TestWithRetries_healingServer(t *testing.T) {
 	require.Equal(t, sleepSchedule[:3], []time.Duration(*sr))
 }
 
-func TestRetriesWith_SwitchDownloaderOn403(t *testing.T){
+func TestRetriesWith_SwitchDownloaderOn403(t *testing.T) {
 	svr := httptest.NewServer(httpbin.GetMux())
 	defer svr.Close()
 	d403 := download.NewURLDownload(svr.URL + "/status/403")
-	d200 := download.NewBlobWithMsiDownload(svr.URL + "/status/200", &mockMsiProvider{})
-	resp, err  := download.WithRetries(nopLog(), []download.Downloader{d403, d200}, func (d time.Duration) {return})
+	d200 := download.NewBlobWithMsiDownload(svr.URL+"/status/200", &mockMsiProvider{})
+	resp, err := download.WithRetries(nopLog(), []download.Downloader{d403, d200}, func(d time.Duration) { return })
 	require.Nil(t, err, "should eventually succeed")
 	require.NotNil(t, resp, "response body exists")
 
@@ -98,7 +98,7 @@ type mockMsiProvider struct {
 }
 
 func (self *mockMsiProvider) GetMsi() (msi.Msi, error) {
-	return msi.Msi{AccessToken:"Dummy Token"}, nil
+	return msi.Msi{AccessToken: "Dummy Token"}, nil
 }
 
 // sleepRecorder keeps track of the durations of Sleep calls
