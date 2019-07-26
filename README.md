@@ -14,7 +14,7 @@ RedHat RHEL 6.9|![badge](https://dcrbadges.blob.core.windows.net/scenarios/RedHa
 RedHat RHEL 7-RAW|![badge](https://dcrbadges.blob.core.windows.net/scenarios/RedHat_RHEL_7-RAW__ext--custom--script.svg)
 SUSE SLES 12-SP2|![badge](https://dcrbadges.blob.core.windows.net/scenarios/SUSE_SLES_12-SP2__ext--custom--script.svg)
 
-This documentation is current for version 2.0.6 and above.
+This documentation is current for version 2.0.8 and above.
 
 CustomScript extensions runs scripts on VMs.  These scripts can be
 used to bootstrap/install software, run administrative tasks, or run
