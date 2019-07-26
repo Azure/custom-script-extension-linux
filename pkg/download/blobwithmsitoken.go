@@ -61,7 +61,7 @@ func GetMsiProviderForStorageAccountsWithClientId(clientId string) MsiProvider {
 
 func GetMsiProviderForStorageAccountsWithObjectId(objectId string) MsiProvider {
 	msiProvider := msi.NewMsiProvider(httputil.NewSecureHttpClient(httputil.DefaultRetryBehavior))
-	return func() (msi.Msi, error) { return msiProvider.GetMsiUsingClientId(objectId, storageResourceName) }
+	return func() (msi.Msi, error) { return msiProvider.GetMsiUsingObjectId(objectId, storageResourceName) }
 }
 
 func IsAzureStorageBlobUri(url string) bool {
