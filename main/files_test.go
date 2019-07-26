@@ -31,6 +31,13 @@ func Test_getDownloader_externalUrl(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, d)
 	require.NotEmpty(t, d)
+	require.Equal(t, 1, len(d))
+	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d[0]), "got wrong type")
+
+	d, err = getDownloaders("http://acct.blob.core.windows.net/", "", "", &clientOrObjectId{"", "dummyclientid"})
+	require.Nil(t, err)
+	require.NotNil(t, d)
+	require.NotEmpty(t, d)
 	require.Equal(t, 2, len(d))
 	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d[0]), "got wrong type")
 	require.Equal(t, "*download.blobWithMsiToken", fmt.Sprintf("%T", d[1]), "got wrong type")
@@ -38,16 +45,14 @@ func Test_getDownloader_externalUrl(t *testing.T) {
 	d, err = getDownloaders("http://acct.blob.core.windows.net/", "foo", "", nil)
 	require.Nil(t, err)
 	require.NotNil(t, d)
-	require.Equal(t, 2, len(d))
+	require.Equal(t, 1, len(d))
 	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d[0]), "got wrong type")
-	require.Equal(t, "*download.blobWithMsiToken", fmt.Sprintf("%T", d[1]), "got wrong type")
 
 	d, err = getDownloaders("http://acct.blob.core.windows.net/", "", "bar", nil)
 	require.Nil(t, err)
 	require.NotNil(t, d)
-	require.Equal(t, 2, len(d))
+	require.Equal(t, 1, len(d))
 	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d[0]), "got wrong type")
-	require.Equal(t, "*download.blobWithMsiToken", fmt.Sprintf("%T", d[1]), "got wrong type")
 }
 
 func Test_urlToFileName_badURL(t *testing.T) {
