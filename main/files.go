@@ -29,9 +29,7 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handl
 		return fmt.Errorf("[REDACTED] is not a valid url")
 	}
 
-	var dl []download.Downloader
-
-	dl, err = getDownloaders(url, cfg.StorageAccountName, cfg.StorageAccountKey, cfg.ManagedIdentity)
+	dl, err := getDownloaders(url, cfg.StorageAccountName, cfg.StorageAccountKey, cfg.ManagedIdentity)
 	if err != nil {
 		return err
 	}
@@ -53,8 +51,11 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handl
 func getDownloaders(fileURL string, storageAccountName, storageAccountKey string, managedIdentity *clientOrObjectId) (
 	[]download.Downloader, error) {
 	if storageAccountName == "" || storageAccountKey == "" {
+		// storage account name and key cannot be specified with managed identity, handler settings validation won't allow that
+		// handler settings validation will also not allow storageAccountName XOR storageAccountKey == 1
+		// in this case, we can be sure that storage account name and key was not specified
 		if download.IsAzureStorageBlobUri(fileURL) && managedIdentity != nil {
-			// If managed identity was specified in the configuration, try to use it to download the files
+			// if managed identity was specified in the configuration, try to use it to download the files
 			var msiProvider download.MsiProvider
 			switch {
 			case managedIdentity.ClientId == "" && managedIdentity.ObjectId == "":
@@ -77,8 +78,8 @@ func getDownloaders(fileURL string, storageAccountName, storageAccountKey string
 			return []download.Downloader{download.NewURLDownload(fileURL)}, nil
 		}
 	} else {
-		// If storage name account and key are specified, use that for all files
-		// This preserves old behavior
+		// if storage name account and key are specified, use that for all files
+		// this preserves old behavior
 		blob, err := blobutil.ParseBlobURL(fileURL)
 		if err != nil {
 			return nil, err
