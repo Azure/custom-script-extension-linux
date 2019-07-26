@@ -15,7 +15,7 @@ binary: clean
 	  echo "GOPATH is not set"; \
 	  exit 1; \
 	fi
-	go get -d github.com/Azure/azure-extension-foundation/...
+	go get -d -u -f github.com/Azure/azure-extension-foundation/...
 	GOOS=linux GOARCH=amd64 govvv build -v \
 	  -ldflags "-X main.Version=`grep -E -m 1 -o  '<Version>(.*)</Version>' misc/manifest.xml | awk -F">" '{print $$2}' | awk -F"<" '{print $$1}'`" \
 	  -o $(BINDIR)/$(BIN) ./main 
