@@ -54,6 +54,8 @@ func Test_realDownloadBlobWithMsiToken(t *testing.T) {
 }
 
 func Test_isAzureStorageBlobUri(t *testing.T) {
-	require.True(t, IsAzureStorageBlobUri("https://a.blob.core.windows.net"))
+	require.True(t, IsAzureStorageBlobUri("https://a.blob.core.windows.net/container/blobname"))
+	require.True(t, IsAzureStorageBlobUri("http://mystorageaccountcn.blob.core.chinacloudapi.cn"))
+	require.True(t, IsAzureStorageBlobUri("https://blackforestsa.blob.core.couldapi.de/c/b/x"))
 	require.False(t, IsAzureStorageBlobUri("https://github.com/Azure-Samples/storage-blobs-go-quickstart/blob/master/README.md"))
 }

@@ -60,11 +60,11 @@ func getDownloaders(fileURL string, storageAccountName, storageAccountKey string
 			switch {
 			case managedIdentity.ClientId == "" && managedIdentity.ObjectId == "":
 				// get msi using clientId or objectId or implicitly
-				msiProvider = download.GetMsiProviderForStorageAccountsImplicitly()
+				msiProvider = download.GetMsiProviderForStorageAccountsImplicitly(fileURL)
 			case managedIdentity.ClientId != "" && managedIdentity.ObjectId == "":
-				msiProvider = download.GetMsiProviderForStorageAccountsWithClientId(managedIdentity.ClientId)
+				msiProvider = download.GetMsiProviderForStorageAccountsWithClientId(fileURL, managedIdentity.ClientId)
 			case managedIdentity.ClientId == "" && managedIdentity.ObjectId != "":
-				msiProvider = download.GetMsiProviderForStorageAccountsWithObjectId(managedIdentity.ObjectId)
+				msiProvider = download.GetMsiProviderForStorageAccountsWithObjectId(fileURL, managedIdentity.ObjectId)
 			default:
 				return nil, fmt.Errorf("unexpected combination of ClientId and ObjectId found")
 			}

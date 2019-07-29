@@ -13,9 +13,15 @@ import (
 const (
 	xMsVersionHeaderName = "x-ms-version"
 	xMsVersionValue      = "2018-03-28"
-	azureBlobDomainName  = ".blob.core.windows.net"
 	storageResourceName  = "https://storage.azure.com/"
 )
+
+var azureBlobDomains = map[string]interface{}{ // golang doesn't have builtin hash sets, so this is a workaround for that
+	"blob.core.windows.net":       nil,
+	"blob.core.chinacloudapi.cn":  nil,
+	"blob.core.usgovcloudapi.net": nil,
+	"blob.core.couldapi.de":       nil,
+}
 
 type blobWithMsiToken struct {
 	url         string
@@ -49,19 +55,29 @@ func NewBlobWithMsiDownload(url string, msiProvider MsiProvider) Downloader {
 	return &blobWithMsiToken{url, msiProvider}
 }
 
-func GetMsiProviderForStorageAccountsImplicitly() MsiProvider {
+func GetMsiProviderForStorageAccountsImplicitly(blobUri string) MsiProvider {
 	msiProvider := msi.NewMsiProvider(httputil.NewSecureHttpClient(httputil.DefaultRetryBehavior))
-	return func() (msi.Msi, error) { return msiProvider.GetMsiForResource(storageResourceName) }
+	return func() (msi.Msi, error) { return msiProvider.GetMsiForResource(GetResourceNameFromBlobUri(blobUri)) }
 }
 
-func GetMsiProviderForStorageAccountsWithClientId(clientId string) MsiProvider {
+func GetMsiProviderForStorageAccountsWithClientId(blobUri, clientId string) MsiProvider {
 	msiProvider := msi.NewMsiProvider(httputil.NewSecureHttpClient(httputil.DefaultRetryBehavior))
-	return func() (msi.Msi, error) { return msiProvider.GetMsiUsingClientId(clientId, storageResourceName) }
+	return func() (msi.Msi, error) {
+		return msiProvider.GetMsiUsingClientId(clientId, GetResourceNameFromBlobUri(blobUri))
+	}
 }
 
-func GetMsiProviderForStorageAccountsWithObjectId(objectId string) MsiProvider {
+func GetMsiProviderForStorageAccountsWithObjectId(blobUri, objectId string) MsiProvider {
 	msiProvider := msi.NewMsiProvider(httputil.NewSecureHttpClient(httputil.DefaultRetryBehavior))
-	return func() (msi.Msi, error) { return msiProvider.GetMsiUsingObjectId(objectId, storageResourceName) }
+	return func() (msi.Msi, error) {
+		return msiProvider.GetMsiUsingObjectId(objectId, GetResourceNameFromBlobUri(blobUri))
+	}
+}
+
+func GetResourceNameFromBlobUri(uri string) string {
+	// TODO: update this function as sovereign cloud blob resource strings become available
+	// resource string for getting MSI for azure storage is still https://storage.azure.com/ for sovereign regions but it is expected to change
+	return storageResourceName
 }
 
 func IsAzureStorageBlobUri(url string) bool {
@@ -70,5 +86,13 @@ func IsAzureStorageBlobUri(url string) bool {
 	if err != nil {
 		return false
 	}
-	return strings.HasSuffix(parsedUrl.Host, azureBlobDomainName)
+	s := strings.Split(parsedUrl.Hostname(), ".")
+	if len(s) < 2 {
+		return false
+	}
+
+	domainName := strings.Join(s[1:], ".")
+	_, foundDomain := azureBlobDomains[domainName]
+	return foundDomain
+
 }
