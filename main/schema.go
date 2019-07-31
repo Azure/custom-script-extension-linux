@@ -19,14 +19,14 @@ const (
       "description": "Command to be executed",
       "type": "string"
     },
-	"script": {
-	  "description": "Script to be executed",
-	  "type": "string"
-	},
-	"skipDos2Unix": {
-	  "description": "Skip DOS2UNIX and BOM removal for download files and script",
-	  "type": "boolean"
-	},
+    "script": {
+      "description": "Script to be executed",
+      "type": "string"
+    },
+    "skipDos2Unix": {
+      "description": "Skip DOS2UNIX and BOM removal for download files and script",
+      "type": "boolean"
+    },
     "fileUris": {
       "description": "List of files to be downloaded",
       "type": "array",
@@ -52,7 +52,7 @@ const (
       "description": "Command to be executed",
       "type": "string"
     },
-	"fileUris": {
+    "fileUris": {
       "description": "List of files to be downloaded",
       "type": "array",
       "items": {
@@ -60,10 +60,10 @@ const (
         "format": "uri"
       }
     },
-	"script": {
-	  "description": "Script to be executed",
-	  "type": "string"
-	},
+    "script": {
+      "description": "Script to be executed",
+      "type": "string"
+    },
     "storageAccountName": {
       "description": "Name of the Azure Storage Account (3-24 characters of lowercase letters or digits)",
       "type": "string",
@@ -74,22 +74,22 @@ const (
       "type": "string",
       "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$"
     },
-	"managedIdentity": {
+    "managedIdentity": {
       "description": "Setting to use Managed Service Identity to try to download fileUri from azure blob",
       "type": "object",
       "properties": {
         "objectId": {
           "description": "Object id that identifies the user created managed identity",
-		  "type": "string",
-		  "pattern": "^(?:[0-9A-Fa-f]{8}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{12})$"
+          "type": "string",
+          "pattern": "^(?:[0-9A-Fa-f]{8}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{12})$"
         },
         "clientId": {
           "description": "Client id that identifies the user created managed identity",
-		  "type": "string",
-	       "pattern": "^(?:[0-9A-Fa-f]{8}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{12})$"
+          "type": "string",
+          "pattern": "^(?:[0-9A-Fa-f]{8}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{12})$"
         }
       }
-	}
+    }
   },
   "additionalProperties": false
 }`
