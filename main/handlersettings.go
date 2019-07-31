@@ -68,7 +68,7 @@ func (h handlerSettings) validate() error {
 		return errStoragePartialCredentials
 	}
 
-	if (h.protectedSettings.StorageAccountKey != "" || h.protectedSettings.StorageAccountName != "") && !h.protectedSettings.ManagedIdentity.isEmpty() {
+	if (h.protectedSettings.StorageAccountKey != "" || h.protectedSettings.StorageAccountName != "") && h.protectedSettings.ManagedIdentity != nil {
 		return errUsingBothKeyAndMsi
 	}
 
