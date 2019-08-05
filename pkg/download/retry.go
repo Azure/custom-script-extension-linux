@@ -48,8 +48,8 @@ func WithRetries(ctx *log.Context, downloaders []Downloader, sf SleepFunc) (io.R
 				out.Close()
 			}
 
-			if status == http.StatusForbidden {
-				ctx.Log("info", fmt.Sprintf("downloader %T returned 403, skipping retries", d))
+			if !isTransientHttpStatusCode(status) {
+				ctx.Log("info", fmt.Sprintf("downloader %T returned %v, skipping retries", d, status))
 				break
 			}
 
@@ -62,4 +62,19 @@ func WithRetries(ctx *log.Context, downloaders []Downloader, sf SleepFunc) (io.R
 		}
 	}
 	return nil, lastErr
+}
+
+func isTransientHttpStatusCode(statusCode int) bool {
+	switch statusCode {
+	case
+		http.StatusRequestTimeout,      // 408
+		http.StatusTooManyRequests,     // 429
+		http.StatusInternalServerError, // 500
+		http.StatusBadGateway,          // 502
+		http.StatusServiceUnavailable,  // 503
+		http.StatusGatewayTimeout:      // 504
+		return true // timeout and too many requests
+	default:
+		return false
+	}
 }

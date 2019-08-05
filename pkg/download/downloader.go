@@ -52,5 +52,13 @@ func Download(d Downloader) (int, io.ReadCloser, error) {
 	if resp.StatusCode == http.StatusOK {
 		return resp.StatusCode, resp.Body, nil
 	}
-	return resp.StatusCode, nil, fmt.Errorf("unexpected status code: got=%d expected=%d", resp.StatusCode, http.StatusOK)
+
+	err = fmt.Errorf("unexpected status code: got=%d expected=%d", resp.StatusCode, http.StatusOK)
+	switch d.(type) {
+	case *blobWithMsiToken:
+		if resp.StatusCode == http.StatusForbidden {
+			return resp.StatusCode, nil, errors.Wrapf(err, "please ensure that the specified Managed Identity has read permissions to the storage blob")
+		}
+	}
+	return resp.StatusCode, nil, err
 }

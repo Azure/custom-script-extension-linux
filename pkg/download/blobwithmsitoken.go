@@ -57,20 +57,38 @@ func NewBlobWithMsiDownload(url string, msiProvider MsiProvider) Downloader {
 
 func GetMsiProviderForStorageAccountsImplicitly(blobUri string) MsiProvider {
 	msiProvider := msi.NewMsiProvider(httputil.NewSecureHttpClient(httputil.DefaultRetryBehavior))
-	return func() (msi.Msi, error) { return msiProvider.GetMsiForResource(GetResourceNameFromBlobUri(blobUri)) }
+	return func() (msi.Msi, error) {
+		msi, err := msiProvider.GetMsiForResource(GetResourceNameFromBlobUri(blobUri))
+		if err != nil {
+			return msi, errors.Wrapf(err, "Unable to get managed identity. "+
+				"Please make sure that system assigned managed identity is enabled on the VM"+
+				"or user assigned identity is added to the system.")
+		}
+		return msi, nil
+	}
 }
 
 func GetMsiProviderForStorageAccountsWithClientId(blobUri, clientId string) MsiProvider {
 	msiProvider := msi.NewMsiProvider(httputil.NewSecureHttpClient(httputil.DefaultRetryBehavior))
 	return func() (msi.Msi, error) {
-		return msiProvider.GetMsiUsingClientId(clientId, GetResourceNameFromBlobUri(blobUri))
+		msi, err := msiProvider.GetMsiUsingClientId(clientId, GetResourceNameFromBlobUri(blobUri))
+		if err != nil {
+			return msi, errors.Wrapf(err, "Unable to get managed identity with client id %s. "+
+				"Please make sure that the user assigned managed identity is added to the VM ", clientId)
+		}
+		return msi, nil
 	}
 }
 
 func GetMsiProviderForStorageAccountsWithObjectId(blobUri, objectId string) MsiProvider {
 	msiProvider := msi.NewMsiProvider(httputil.NewSecureHttpClient(httputil.DefaultRetryBehavior))
 	return func() (msi.Msi, error) {
-		return msiProvider.GetMsiUsingObjectId(objectId, GetResourceNameFromBlobUri(blobUri))
+		msi, err := msiProvider.GetMsiUsingObjectId(objectId, GetResourceNameFromBlobUri(blobUri))
+		if err != nil {
+			return msi, errors.Wrapf(err, "Unable to get managed identity with object id %s. "+
+				"Please make sure that the user assigned managed identity is added to the VM ", objectId)
+		}
+		return msi, nil
 	}
 }
 
