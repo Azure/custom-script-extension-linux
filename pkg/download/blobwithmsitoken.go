@@ -61,7 +61,7 @@ func GetMsiProviderForStorageAccountsImplicitly(blobUri string) MsiProvider {
 		msi, err := msiProvider.GetMsiForResource(GetResourceNameFromBlobUri(blobUri))
 		if err != nil {
 			return msi, errors.Wrapf(err, "Unable to get managed identity. "+
-				"Please make sure that system assigned managed identity is enabled on the VM"+
+				"Please make sure that system assigned managed identity is enabled on the VM "+
 				"or user assigned identity is added to the system.")
 		}
 		return msi, nil

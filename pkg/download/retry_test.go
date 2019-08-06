@@ -57,11 +57,11 @@ func TestWithRetries_failingBadStatusCode_validateSleeps(t *testing.T) {
 	srv := httptest.NewServer(httpbin.GetMux())
 	defer srv.Close()
 
-	d := download.NewURLDownload(srv.URL + "/status/404")
+	d := download.NewURLDownload(srv.URL + "/status/429")
 
 	sr := new(sleepRecorder)
 	_, err := download.WithRetries(nopLog(), []download.Downloader{d}, sr.Sleep)
-	require.EqualError(t, err, "unexpected status code: got=404 expected=200")
+	require.EqualError(t, err, "unexpected status code: actual=429 expected=200")
 
 	require.Equal(t, sleepSchedule, []time.Duration(*sr))
 }

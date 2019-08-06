@@ -48,7 +48,8 @@ func WithRetries(ctx *log.Context, downloaders []Downloader, sf SleepFunc) (io.R
 				out.Close()
 			}
 
-			if !isTransientHttpStatusCode(status) {
+			// status == -1 the value when there was no http request
+			if status != -1 && !isTransientHttpStatusCode(status) {
 				ctx.Log("info", fmt.Sprintf("downloader %T returned %v, skipping retries", d, status))
 				break
 			}
