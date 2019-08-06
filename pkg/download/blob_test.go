@@ -73,7 +73,7 @@ func Test_blobDownload_fails_badCreds(t *testing.T) {
 
 	status, _, err := Download(d)
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "unexpected status code: got=403")
+	require.Contains(t, err.Error(), "unexpected status code: actual=403")
 	require.Equal(t, status, http.StatusForbidden)
 }
 
