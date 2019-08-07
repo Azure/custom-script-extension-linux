@@ -79,16 +79,16 @@ func TestWithRetries_healingServer(t *testing.T) {
 	require.Equal(t, sleepSchedule[:3], []time.Duration(*sr))
 }
 
-func TestRetriesWith_SwitchDownloaderOn403(t *testing.T) {
+func TestRetriesWith_SwitchDownloaderOn404(t *testing.T) {
 	svr := httptest.NewServer(httpbin.GetMux())
 	hSvr := httptest.NewServer(new(healingServer))
 	defer svr.Close()
-	d403 := mockDownloader{0, svr.URL + "/status/403"}
+	d404 := mockDownloader{0, svr.URL + "/status/404"}
 	d200 := mockDownloader{0, hSvr.URL}
-	resp, err := download.WithRetries(nopLog(), []download.Downloader{&d403, &d200}, func(d time.Duration) { return })
+	resp, err := download.WithRetries(nopLog(), []download.Downloader{&d404, &d200}, func(d time.Duration) { return })
 	require.Nil(t, err, "should eventually succeed")
 	require.NotNil(t, resp, "response body exists")
-	require.Equal(t, d403.timesCalled, 1)
+	require.Equal(t, d404.timesCalled, 1)
 	require.Equal(t, d200.timesCalled, 4)
 }
 
