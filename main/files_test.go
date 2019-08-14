@@ -15,31 +15,44 @@ import (
 
 func Test_getDownloader_azureBlob(t *testing.T) {
 	// error condition
-	_, err := getDownloader("http://acct.blob.core.windows.net/", "acct", "key")
+	_, err := getDownloaders("http://acct.blob.core.windows.net/", "acct", "key", nil)
 	require.NotNil(t, err)
 
 	// valid input
-	d, err := getDownloader("http://acct.blob.core.windows.net/container/blob", "acct", "key")
+	d, err := getDownloaders("http://acct.blob.core.windows.net/container/blob", "acct", "key", nil)
 	require.Nil(t, err)
 	require.NotNil(t, d)
-	require.Equal(t, "download.blobDownload", fmt.Sprintf("%T", d), "got wrong type")
+	require.Equal(t, 1, len(d))
+	require.Equal(t, "download.blobDownload", fmt.Sprintf("%T", d[0]), "got wrong type")
 }
 
 func Test_getDownloader_externalUrl(t *testing.T) {
-	d, err := getDownloader("http://acct.blob.core.windows.net/", "", "")
+	d, err := getDownloaders("http://acct.blob.core.windows.net/", "", "", nil)
 	require.Nil(t, err)
 	require.NotNil(t, d)
-	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d), "got wrong type")
+	require.NotEmpty(t, d)
+	require.Equal(t, 1, len(d))
+	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d[0]), "got wrong type")
 
-	d, err = getDownloader("http://acct.blob.core.windows.net/", "foo", "")
+	d, err = getDownloaders("http://acct.blob.core.windows.net/", "", "", &clientOrObjectId{"", "dummyclientid"})
 	require.Nil(t, err)
 	require.NotNil(t, d)
-	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d), "got wrong type")
+	require.NotEmpty(t, d)
+	require.Equal(t, 2, len(d))
+	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d[0]), "got wrong type")
+	require.Equal(t, "*download.blobWithMsiToken", fmt.Sprintf("%T", d[1]), "got wrong type")
 
-	d, err = getDownloader("http://acct.blob.core.windows.net/", "", "bar")
+	d, err = getDownloaders("http://acct.blob.core.windows.net/", "foo", "", nil)
 	require.Nil(t, err)
 	require.NotNil(t, d)
-	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d), "got wrong type")
+	require.Equal(t, 1, len(d))
+	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d[0]), "got wrong type")
+
+	d, err = getDownloaders("http://acct.blob.core.windows.net/", "", "bar", nil)
+	require.Nil(t, err)
+	require.NotNil(t, d)
+	require.Equal(t, 1, len(d))
+	require.Equal(t, "download.urlDownload", fmt.Sprintf("%T", d[0]), "got wrong type")
 }
 
 func Test_urlToFileName_badURL(t *testing.T) {
@@ -110,7 +123,8 @@ func Test_downloadAndProcessURL(t *testing.T) {
 	require.Nil(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	err = downloadAndProcessURL(log.NewContext(log.NewNopLogger()), srv.URL+"/bytes/256", tmpDir, "", "", false)
+	cfg := handlerSettings{publicSettings{}, protectedSettings{StorageAccountName: "", StorageAccountKey: ""}}
+	err = downloadAndProcessURL(log.NewContext(log.NewNopLogger()), srv.URL+"/bytes/256", tmpDir, &cfg)
 	require.Nil(t, err)
 
 	fp := filepath.Join(tmpDir, "256")

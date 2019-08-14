@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 import "github.com/stretchr/testify/require"
 
 func Test_handlerSettingsValidate(t *testing.T) {
@@ -86,6 +89,44 @@ func Test_skipDos2UnixDefaultsToFalse(t *testing.T) {
 	require.Equal(t, false, testSubject.SkipDos2Unix)
 }
 
+func Test_managedIdentityVerification(t *testing.T) {
+	require.NoError(t, handlerSettings{publicSettings{}, protectedSettings{
+		CommandToExecute: "echo hi",
+		FileURLs:         []string{"file1", "file2"},
+		ManagedIdentity: &clientOrObjectId{
+			ClientId: "31b403aa-c364-4240-a7ff-d85fb6cd7232",
+		},
+	}}.validate(), "validation failed for settings with MSI")
+
+	require.NoError(t, handlerSettings{publicSettings{}, protectedSettings{
+		CommandToExecute: "echo hi",
+		ManagedIdentity: &clientOrObjectId{
+			ObjectId: "31b403aa-c364-4240-a7ff-d85fb6cd7232",
+		},
+	}}.validate(), "validation failed for settings with MSI")
+
+	require.Equal(t, errUsingBothKeyAndMsi,
+		handlerSettings{publicSettings{},
+			protectedSettings{
+				CommandToExecute:   "echo hi",
+				StorageAccountName: "name",
+				StorageAccountKey:  "key",
+				ManagedIdentity: &clientOrObjectId{
+					ObjectId: "31b403aa-c364-4240-a7ff-d85fb6cd7232",
+				},
+			}}.validate(), "validation didn't fail for settings with both MSI and storage account")
+
+	require.Equal(t, errUsingBothClientIdAndObjectId,
+		handlerSettings{publicSettings{},
+			protectedSettings{
+				CommandToExecute: "echo hi",
+				ManagedIdentity: &clientOrObjectId{
+					ObjectId: "31b403aa-c364-4240-a7ff-d85fb6cd7232",
+					ClientId: "31b403aa-c364-4240-a7ff-d85fb6cd7232",
+				},
+			}}.validate(), "validation didn't fail for settings with both MSI and storage account")
+}
+
 func Test_toJSON_empty(t *testing.T) {
 	s, err := toJSON(nil)
 	require.Nil(t, err)
@@ -97,4 +138,59 @@ func Test_toJSON(t *testing.T) {
 		"a": 3})
 	require.Nil(t, err)
 	require.Equal(t, `{"a":3}`, s)
+}
+
+func Test_toJSONUmarshallForManagedIdentity(t *testing.T) {
+	testString := `{"commandToExecute" : "echo hello", "fileUris":["https://a.com/file.txt", "https://b.com/file2.txt"]}`
+	require.NoError(t, validateProtectedSettings(testString), "protected settings should be valid")
+	protSettings := new(protectedSettings)
+	err := json.Unmarshal([]byte(testString), protSettings)
+	require.NoError(t, err, "error while deserializing json")
+	require.Nil(t, protSettings.ManagedIdentity, "ProtectedSettings.ManagedIdentity was expected to be nil")
+	h := handlerSettings{publicSettings{}, *protSettings}
+	require.NoError(t, h.validate(), "settings should be valid")
+
+	testString = `{"commandToExecute" : "echo hello", "fileUris":["https://a.com/file.txt"], "managedIdentity": { }}`
+	require.NoError(t, validateProtectedSettings(testString), "protected settings should be valid")
+	protSettings = new(protectedSettings)
+	err = json.Unmarshal([]byte(testString), protSettings)
+	require.NoError(t, err, "error while deserializing json")
+	require.NotNil(t, protSettings.ManagedIdentity, "ProtectedSettings.ManagedIdentity was expected to not be nil")
+	require.Equal(t, protSettings.ManagedIdentity.ClientId, "")
+	require.Equal(t, protSettings.ManagedIdentity.ObjectId, "")
+	h = handlerSettings{publicSettings{}, *protSettings}
+	require.NoError(t, h.validate(), "settings should be valid")
+
+	testString = `{"commandToExecute" : "echo hello", "fileUris":["https://a.com/file.txt", "https://b.com/file2.txt"], "managedIdentity": { "clientId": "31b403aa-c364-4240-a7ff-d85fb6cd7232"}}`
+	require.NoError(t, validateProtectedSettings(testString), "protected settings should be valid")
+	protSettings = new(protectedSettings)
+	err = json.Unmarshal([]byte(testString), protSettings)
+	require.NoError(t, err, "error while deserializing json")
+	require.NotNil(t, protSettings.ManagedIdentity, "ProtectedSettings.ManagedIdentity was expected to not be nil")
+	require.Equal(t, protSettings.ManagedIdentity.ClientId, "31b403aa-c364-4240-a7ff-d85fb6cd7232")
+	require.Equal(t, protSettings.ManagedIdentity.ObjectId, "")
+	h = handlerSettings{publicSettings{}, *protSettings}
+	require.NoError(t, h.validate(), "settings should be valid")
+
+	testString = `{"commandToExecute" : "echo hello", "fileUris":["https://a.com/file.txt"], "managedIdentity": { "objectId": "31b403aa-c364-4240-a7ff-d85fb6cd7232"}}`
+	require.NoError(t, validateProtectedSettings(testString), "protected settings should be valid")
+	protSettings = new(protectedSettings)
+	err = json.Unmarshal([]byte(testString), protSettings)
+	require.NoError(t, err, "error while deserializing json")
+	require.NotNil(t, protSettings.ManagedIdentity, "ProtectedSettings.ManagedIdentity was expected to not be nil")
+	require.Equal(t, protSettings.ManagedIdentity.ObjectId, "31b403aa-c364-4240-a7ff-d85fb6cd7232")
+	require.Equal(t, protSettings.ManagedIdentity.ClientId, "")
+	h = handlerSettings{publicSettings{}, *protSettings}
+	require.NoError(t, h.validate(), "settings should be valid")
+
+	testString = `{"commandToExecute" : "echo hello", "fileUris":["https://a.com/file.txt", "https://b.com/file2.txt"], "managedIdentity": { "clientId": "31b403aa-c364-4240-a7ff-d85fb6cd7232", "objectId": "41b403aa-c364-4240-a7ff-d85fb6cd7232"}}`
+	require.NoError(t, validateProtectedSettings(testString), "protected settings should be valid")
+	protSettings = new(protectedSettings)
+	err = json.Unmarshal([]byte(testString), protSettings)
+	require.NoError(t, err, "error while deserializing json")
+	require.NotNil(t, protSettings.ManagedIdentity, "ProtectedSettings.ManagedIdentity was expected to not be nil")
+	require.Equal(t, protSettings.ManagedIdentity.ClientId, "31b403aa-c364-4240-a7ff-d85fb6cd7232")
+	require.Equal(t, protSettings.ManagedIdentity.ObjectId, "41b403aa-c364-4240-a7ff-d85fb6cd7232")
+	h = handlerSettings{publicSettings{}, *protSettings}
+	require.Error(t, h.validate(), "settings should be invalid")
 }
