@@ -51,14 +51,16 @@ write_status() {
 }
 
 check_binary_write_lock() {
+    set +e # disable exit on non-zero return code
     lsof_output="$(lsof ${bin})"
-
     if [ "$?" -eq 0 ]; then
         echo "${HANDLER_BIN} is open by the following processes: "
         echo "${lsof_output}"
         echo "attempting to kill processes with open file handles to ${HANDLER_BIN}"
-        lsof -t ${bin} | xargs kill -9
+        # suppress output and errors in case process with file-handle is already dead and kill gets called without a process id
+        lsof -t ${bin} | xargs kill -9 > /dev/null 2>&1
     fi
+    set -e # re-enable exit on non-zero return code
 }
 
 if [ "$#" -ne 1 ]; then
