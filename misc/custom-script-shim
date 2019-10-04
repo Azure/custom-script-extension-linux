@@ -50,6 +50,17 @@ write_status() {
 	fi
 }
 
+check_binary_write_lock() {
+    lsof_output="$(lsof ${bin})"
+
+    if [ "$?" -eq 0 ]; then
+        echo "${HANDLER_BIN} is open by the following processes: "
+        echo "${lsof_output}"
+        echo "attempting to kill processes with open file handles to ${HANDLER_BIN}"
+        lsof -t ${bin} | xargs kill -9
+    fi
+}
+
 if [ "$#" -ne 1 ]; then
     echo "Incorrect usage."
     echo "Usage: $0 <command>"
@@ -69,10 +80,12 @@ if [[ "$cmd" == "enable" ]]; then
     # to detach from the  handler process tree to avoid getting terminated 
     # after the 15-minute extension enabling timeout.
     write_status
+    check_binary_write_lock
     set -x
     nohup "$bin" $@ &
 else
     # execute the handler process as a child process
+    check_binary_write_lock
     set -x
     "$bin" $@
 fi
