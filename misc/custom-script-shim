@@ -63,19 +63,10 @@ check_binary_write_lock() {
             sleep 30
         else
             set -e
-            return 0
+            return 0 #Success path
         fi
     done
-
-    # retries over, kill process(es) if needed
-    lsof_output="$(lsof ${bin})"
-    if [ "$?" -eq 0 ]; then
-    # If the wait timed out we need to write status file
-        echo "Timed out waiting for lock on ${HANDLER_BIN}"
-        echo "attempting to kill processes with open file handles to ${HANDLER_BIN}"
-        lsof -t ${bin} | xargs kill -9 > /dev/null 2>&1
-    fi
-    set -e # re-enable exit on non-zero return code
+    exit 1
 }
 
 if [ "$#" -ne 1 ]; then
