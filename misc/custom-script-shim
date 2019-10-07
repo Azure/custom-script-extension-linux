@@ -50,6 +50,28 @@ write_status() {
 	fi
 }
 
+check_binary_write_lock() {
+    set +e # disable exit on non-zero return code
+    local retry_attempts=0
+    while (( retry_attempts < 10 )); do
+        lsof_output="$(lsof ${bin})"
+        if [ "$?" -eq 0 ]; then
+            echo "${HANDLER_BIN} is open by the following processes: "
+            echo "${lsof_output}"
+            ((++retry_attempts))
+            echo "sleeping for 3 seconds before retry, attempt ${retry_attempts} of 10"
+            sleep 3
+        else
+            set -e
+            return 0 #Success path
+        fi
+    done
+    echo "Timed out waiting for lock on ${HANDLER_BIN}"
+    echo "File handle is still open by the following processes: "
+    echo "${lsof_output}"
+    exit 1
+}
+
 if [ "$#" -ne 1 ]; then
     echo "Incorrect usage."
     echo "Usage: $0 <command>"
@@ -69,10 +91,12 @@ if [[ "$cmd" == "enable" ]]; then
     # to detach from the  handler process tree to avoid getting terminated 
     # after the 15-minute extension enabling timeout.
     write_status
+    check_binary_write_lock
     set -x
     nohup "$bin" $@ &
 else
     # execute the handler process as a child process
+    check_binary_write_lock
     set -x
     "$bin" $@
 fi
