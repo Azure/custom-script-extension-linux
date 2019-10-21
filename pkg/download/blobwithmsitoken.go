@@ -60,7 +60,7 @@ func GetMsiProviderForStorageAccountsImplicitly(blobUri string) MsiProvider {
 	return func() (msi.Msi, error) {
 		msi, err := msiProvider.GetMsiForResource(GetResourceNameFromBlobUri(blobUri))
 		if err != nil {
-			return msi, errors.Wrapf(err, "Unable to get managed identity. "+
+			return msi, fmt.Errorf("Unable to get managed identity. "+
 				"Please make sure that system assigned managed identity is enabled on the VM "+
 				"or user assigned identity is added to the system.")
 		}
@@ -73,7 +73,7 @@ func GetMsiProviderForStorageAccountsWithClientId(blobUri, clientId string) MsiP
 	return func() (msi.Msi, error) {
 		msi, err := msiProvider.GetMsiUsingClientId(clientId, GetResourceNameFromBlobUri(blobUri))
 		if err != nil {
-			return msi, errors.Wrapf(err, "Unable to get managed identity with client id %s. "+
+			return msi, fmt.Errorf("Unable to get managed identity with client id %s. "+
 				"Please make sure that the user assigned managed identity is added to the VM ", clientId)
 		}
 		return msi, nil
@@ -85,7 +85,7 @@ func GetMsiProviderForStorageAccountsWithObjectId(blobUri, objectId string) MsiP
 	return func() (msi.Msi, error) {
 		msi, err := msiProvider.GetMsiUsingObjectId(objectId, GetResourceNameFromBlobUri(blobUri))
 		if err != nil {
-			return msi, errors.Wrapf(err, "Unable to get managed identity with object id %s. "+
+			return msi, fmt.Errorf("Unable to get managed identity with object id %s. "+
 				"Please make sure that the user assigned managed identity is added to the VM ", objectId)
 		}
 		return msi, nil
