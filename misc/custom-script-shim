@@ -68,7 +68,7 @@ check_binary_write_lock() {
             for name in $process_name
             do
                 file_handle_mode=${file_mode_array[i]}
-                echo "$name has a(n) $file_handle_mode lock on ${HANDLER_BIN} "
+                echo "$name has access mode '$file_handle_mode' file handle on ${HANDLER_BIN}"
                 ## w and u are file descriptor modes for write and read/write access
                 if [[ $file_handle_mode == "w" ]] || [[ $file_handle_mode == "u" ]]; then
                     found_write_lock=1
