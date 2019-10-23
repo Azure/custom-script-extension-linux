@@ -54,22 +54,42 @@ check_binary_write_lock() {
     set +e # disable exit on non-zero return code
     local retry_attempts=0
     while (( retry_attempts < 10 )); do
-        lsof_output="$(lsof ${bin})"
-        if [ "$?" -eq 0 ]; then
-            echo "${HANDLER_BIN} is open by the following processes: "
-            echo "${lsof_output}"
+        lsof_result="$(lsof -F ac ${bin})"
+        lsof_return_code=$?
+        if [ "$lsof_return_code" -eq 0 ]; then
+            #"lsof -F" outputs results in more parse-able format, "-F ac" option prints access mode and command name for process
+            #access mode and command names are prepended with a and c
+            file_mode="$(echo "$lsof_result" | awk 'match($0, /^a(.*)$/) {print $0}')"
+            process_name="$(echo "$lsof_result" | awk 'match($0, /^c(.*)$/) {print substr($0, RSTART+1, RLENGTH-1)}')"
+
+            found_write_lock=0
+            file_mode_array=($file_mode)
+            i=0
+            for name in $process_name
+            do
+                file_handle_mode=${file_mode_array[$i]}
+                echo "$name has access mode '$file_handle_mode' file handle on ${HANDLER_BIN}"
+                ## w and u are file descriptor modes for write and read/write access
+                if [[ $file_handle_mode == "aw" ]] || [[ $file_handle_mode == "au" ]]; then
+                    found_write_lock=1
+                fi
+                ((++i))
+            done
+            if [ "$found_write_lock" -eq 0 ]; then
+                # did not find write lock on any file no need to wait or retry
+                break
+            fi
             ((++retry_attempts))
+            echo "waiting for process(es) with write handle on ${HANDLER_BIN}"
             echo "sleeping for 3 seconds before retry, attempt ${retry_attempts} of 10"
             sleep 3
         else
-            set -e
-            return 0 #Success path
+            break
         fi
     done
-    echo "Timed out waiting for lock on ${HANDLER_BIN}"
-    echo "File handle is still open by the following processes: "
-    echo "${lsof_output}"
-    exit 1
+    # do not return error if file descriptor is open after retries expire, make a best effort attempt to start custom-script-extension
+    set -e
+    return 0
 }
 
 if [ "$#" -ne 1 ]; then
