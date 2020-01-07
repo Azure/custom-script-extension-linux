@@ -115,7 +115,7 @@ func urlToFileName(fileURL string) (string, error) {
 func postProcessFile(path string) error {
 	ok, err := preprocess.IsTextFile(path)
 	if err != nil {
-		return errors.Wrapf(err, "error determining if script file")
+		return errors.Wrapf(err, "error determining if script is a text file")
 	}
 	if !ok {
 		return nil
