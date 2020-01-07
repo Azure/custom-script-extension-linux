@@ -40,7 +40,7 @@ var (
 func Download(d Downloader) (int, io.ReadCloser, error) {
 	req, err := d.GetRequest()
 	if err != nil {
-		return -1, nil, errors.Wrapf(err, "failed to create the request")
+		return -1, nil, errors.Wrapf(err, "failed to create http request")
 	}
 
 	resp, err := httpClient.Do(req)

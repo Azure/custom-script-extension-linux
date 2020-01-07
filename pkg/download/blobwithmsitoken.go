@@ -36,7 +36,7 @@ func (self *blobWithMsiToken) GetRequest() (*http.Request, error) {
 		return nil, err
 	}
 	if msi.AccessToken == "" {
-		return nil, errors.New("MSI token was empty")
+		return nil, errors.New("MSI token is empty")
 	}
 
 	request, err := http.NewRequest(http.MethodGet, self.url, nil)
