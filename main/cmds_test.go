@@ -40,7 +40,7 @@ func Test_checkAndSaveSeqNum_fails(t *testing.T) {
 	// pass in invalid seqnum format
 	_, err := checkAndSaveSeqNum(log.NewNopLogger(), 0, "/non/existing/dir")
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), `failed to save the sequence number`)
+	require.Contains(t, err.Error(), `failed to save sequence number`)
 }
 
 func Test_checkAndSaveSeqNum(t *testing.T) {
