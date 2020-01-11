@@ -98,12 +98,21 @@ decrypted inside your VM.
 * `storageAccountName`: (optional, string) the name of storage account. If you
   specify storage credentials, all `fileUris` must be URLs for Azure Blobs.
 * `storageAccountKey`: (optional, string) the access key of storage account
+* `managedIdentity`: (optional, jsonObject) the managed identity to use for downloading form fileUris. It can contain an empty object, or an object containing "client-id" or an "object-id" field
+  * `client_id`: (optional, string) the client id of the managed identity
+  * `object_id`: (optional, string) the object id of the managed identity
+```json
+{}
+{"client_id": "<client id>"}
+{"object_id": "<object id>"}
+```
 
 ```json
 {
   "commandToExecute": "<command-to-execute>",
   "storageAccountName": "<storage-account-name>",
-  "storageAccountKey": "<storage-account-key>"
+  "storageAccountKey": "<storage-account-key>",
+  "managedIdentity": "<managed-identity>"
 }
 ```
 
@@ -135,6 +144,7 @@ The follow values can only by set in **protected** settings.
 
 * `storageAccountName`
 * `storageAccountKey`
+* `managedIdentity`
 
 ### 1.3 skipDos2Unix
 
