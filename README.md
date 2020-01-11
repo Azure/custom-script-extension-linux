@@ -166,7 +166,7 @@ true.
 ```json
 {
   "fileUris": ["<url>"],
-  "commandToExecute": "<command-to-execute>"
+  "commandToExecute": "<command-to-execute>",
   "skipDos2Unix": true
 }
 ```
