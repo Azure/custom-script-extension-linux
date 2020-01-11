@@ -72,14 +72,14 @@ Schema for the public configuration file looks like this:
 
 > Examples:
 >
-> ```
+> ```json
 > {
 >   "fileUris": ["https://gist.github.com/ahmetalpbalkan/b5d4a856fe15464015ae87d5587a4439/raw/466f5c30507c990a4d5a2f5c79f901fa89a80841/hello.sh"],
 >   "commandToExecute": "./hello.sh"
 > }
 > ```
 > 
-> ```
+> ```json
 > {
 >   "commandToExecute": "apt-get -y update && apt-get install -y apache2"
 > }
@@ -232,7 +232,7 @@ To use the system-assigned idenity on the target VM/VMSS, set managedIdenity fie
 
 > Example:
 >
-> ```
+> ```json
 > {
 >   "fileUris": ["https://mystorage.blob.core.windows.net/publiccontainer/foo1.ps1"],
 >   "commandToExecute": "./hello.sh",
@@ -244,14 +244,14 @@ To use the system-assigned idenity on the target VM/VMSS, configure managedIdeni
 
 > Examples:
 >
-> ```
+> ```json
 > {
 >   "fileUris": ["https://mystorage.blob.core.windows.net/publiccontainer/foo1.ps1"],
 >   "commandToExecute": "./hello.sh",
 >   "managedIdentity" : { "clientId": "31b403aa-c364-4240-a7ff-d85fb6cd7232" }
 > }
 > ```
-> ```
+> ```json
 > {
 >   "fileUris": ["https://mystorage.blob.core.windows.net/publiccontainer/foo1.ps1"],
 >   "commandToExecute": "./hello.sh",
