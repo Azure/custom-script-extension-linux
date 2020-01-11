@@ -98,7 +98,7 @@ decrypted inside your VM.
 * `storageAccountName`: (optional, string) the name of storage account. If you
   specify storage credentials, all `fileUris` must be URLs for Azure Blobs.
 * `storageAccountKey`: (optional, string) the access key of storage account
-* `managedIdentity`: (optional, jsonObject) the managed identity to use for downloading form fileUris. It can contain an empty object, or an object containing "client-id" or an "object-id" field
+* `managedIdentity`: (optional, json object) the [managed identity](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview) for downloading file(s)
   * `clientId`: (optional, string) the client id of the managed identity
   * `objectId`: (optional, string) the object id of the managed identity
 
@@ -224,42 +224,42 @@ CustomScript uses the following algorithm to execute a script.
 
 ### 1.5 managedIdentity
 
-CustomScript (version 1.10.4 onwards) supports using managed identity based RBAC for accessing fileUris. This feature allows CustomScript to access files in Azure Storage blobs that have granted role-based access to the Azure VM or VMSS. This feature provides a secret-free way for CustomScript to download access conrolled files provided URIs.
+CustomScript (version 1.10.4 onwards) supports using [managed identity](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview) based RBAC. It allows CustomScript to download access controlled files from URLs without the user having to pass secrets like SAS tokens or storage account keys as a part of CustomScript settings.
 
-To use this feauture, the user must add a [system-assigned](https://docs.microsoft.com/en-us/azure/app-service/overview-managed-identity?tabs=dotnet#adding-a-system-assigned-identity) or [user-assigned](https://docs.microsoft.com/en-us/azure/app-service/overview-managed-identity?tabs=dotnet#adding-a-user-assigned-identity) idenity to the VM or VMSS, then [grant the managed identity access to the storage account container or blob](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/tutorial-vm-windows-access-storage#grant-access). CustomScript can them download files from the access protected azure storage containers or blobs without needing secrets like SAS URI or storage account keys.
+To use this feauture, the user must add a [system-assigned](https://docs.microsoft.com/en-us/azure/app-service/overview-managed-identity?tabs=dotnet#adding-a-system-assigned-identity) or [user-assigned](https://docs.microsoft.com/en-us/azure/app-service/overview-managed-identity?tabs=dotnet#adding-a-user-assigned-identity) idenity to the VM or VMSS where CustomScript is expected to run, then [grant the managed identity access to the storage account container or blob](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/tutorial-vm-windows-access-storage#grant-access).
 
-To use the system-assigned idenity on the target VM/VMSS, set managedIdenity field to an empty json object. 
+To use the system-assigned idenity on the target VM/VMSS, set "managedIdenity" field to an empty json object. 
 
 > Example:
 >
 > ```json
 > {
->   "fileUris": ["https://mystorage.blob.core.windows.net/publiccontainer/foo1.ps1"],
->   "commandToExecute": "./hello.sh",
+>   "fileUris": ["https://mystorage.blob.core.windows.net/privatecontainer/foo1.ps1"],
+>   "commandToExecute": "powershell.exe foo1.ps1",
 >   "managedIdentity" : {}
 > }
 > ```
 
-To use the system-assigned idenity on the target VM/VMSS, configure managedIdenity field with the client id or the object id of the user-assinged managed identity.
+To use the system-assigned idenity on the target VM/VMSS, configure "managedIdenity" field with the client id or the object id of the user-assinged managed identity.
 
 > Examples:
 >
 > ```json
 > {
->   "fileUris": ["https://mystorage.blob.core.windows.net/publiccontainer/foo1.ps1"],
->   "commandToExecute": "./hello.sh",
+>   "fileUris": ["https://mystorage.blob.core.windows.net/privatecontainer/foo1.ps1"],
+>   "commandToExecute": "powershell.exe foo1.ps1",
 >   "managedIdentity" : { "clientId": "31b403aa-c364-4240-a7ff-d85fb6cd7232" }
 > }
 > ```
 > ```json
 > {
->   "fileUris": ["https://mystorage.blob.core.windows.net/publiccontainer/foo1.ps1"],
->   "commandToExecute": "./hello.sh",
+>   "fileUris": ["https://mystorage.blob.core.windows.net/publicprivatecontainercontainer/foo1.ps1"],
+>   "commandToExecute": "powershell.exe foo1.ps1",
 >   "managedIdentity" : { "objectId": "12dd289c-0583-46e5-b9b4-115d5c19ef4b" }
 > }
 > ```
 
-Note: managedIdentity setting **must not** be used in conjunction with storageAccountName and storageAccountKey settings
+Note: managedIdentity setting **must not** be used in conjunction with storageAccountName or storageAccountKey settings
 
 # 2. Deployment to a Virtual Machine
 
