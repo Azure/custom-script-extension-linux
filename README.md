@@ -234,8 +234,8 @@ To use the system-assigned idenity on the target VM/VMSS, set "managedIdenity" f
 >
 > ```json
 > {
->   "fileUris": ["https://mystorage.blob.core.windows.net/privatecontainer/foo1.ps1"],
->   "commandToExecute": "powershell.exe foo1.ps1",
+>   "fileUris": ["https://mystorage.blob.core.windows.net/privatecontainer/script1.sh"],
+>   "commandToExecute": "sh script1.sh",
 >   "managedIdentity" : {}
 > }
 > ```
@@ -246,15 +246,15 @@ To use the user-assigned idenity on the target VM/VMSS, configure "managedIdenit
 >
 > ```json
 > {
->   "fileUris": ["https://mystorage.blob.core.windows.net/privatecontainer/foo1.ps1"],
->   "commandToExecute": "powershell.exe foo1.ps1",
+>   "fileUris": ["https://mystorage.blob.core.windows.net/privatecontainer/script1.sh"],
+>   "commandToExecute": "sh script1.sh",
 >   "managedIdentity" : { "clientId": "31b403aa-c364-4240-a7ff-d85fb6cd7232" }
 > }
 > ```
 > ```json
 > {
->   "fileUris": ["https://mystorage.blob.core.windows.net/privatecontainer/foo1.ps1"],
->   "commandToExecute": "powershell.exe foo1.ps1",
+>   "fileUris": ["https://mystorage.blob.core.windows.net/privatecontainer/script1.sh"],
+>   "commandToExecute": "sh script1.sh",
 >   "managedIdentity" : { "objectId": "12dd289c-0583-46e5-b9b4-115d5c19ef4b" }
 > }
 > ```
