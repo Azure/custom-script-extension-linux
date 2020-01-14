@@ -14,7 +14,7 @@ RedHat RHEL 6.9|![badge](https://dcrbadges.blob.core.windows.net/scenarios/RedHa
 RedHat RHEL 7-RAW|![badge](https://dcrbadges.blob.core.windows.net/scenarios/RedHat_RHEL_7-RAW__ext--custom--script.svg)
 SUSE SLES 12-SP2|![badge](https://dcrbadges.blob.core.windows.net/scenarios/SUSE_SLES_12-SP2__ext--custom--script.svg)
 
-This documentation is current for version 2.0.6 and above.
+This documentation is current for version 2.1.3 and above.
 
 CustomScript extensions runs scripts on VMs.  These scripts can be
 used to bootstrap/install software, run administrative tasks, or run
@@ -224,7 +224,7 @@ CustomScript uses the following algorithm to execute a script.
 
 ### 1.5 managedIdentity
 
-CustomScript (version 2.1.2 onwards) supports [managed identity](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview) based RBAC for downloading file(s) from URLs provided in the "fileUris" setting. It allows CustomScript to  access Azure Storage private blobs/containers without the user having to pass secrets like SAS tokens or storage account keys.
+CustomScript (version 2.1 onwards) supports [managed identity](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview) for downloading file(s) from URLs provided in the "fileUris" setting. It allows CustomScript to access private Azure Storage blobs or containers without the user having to pass secrets like SAS tokens or storage account keys.
 
 To use this feature, the user must add a [system-assigned](https://docs.microsoft.com/en-us/azure/app-service/overview-managed-identity?tabs=dotnet#adding-a-system-assigned-identity) or [user-assigned](https://docs.microsoft.com/en-us/azure/app-service/overview-managed-identity?tabs=dotnet#adding-a-user-assigned-identity) identity to the VM or VMSS where CustomScript is expected to run, and [grant the managed identity access to the Azure Storage container or blob](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/tutorial-vm-windows-access-storage#grant-access).
 
