@@ -14,7 +14,7 @@ RedHat RHEL 6.9|![badge](https://dcrbadges.blob.core.windows.net/scenarios/RedHa
 RedHat RHEL 7-RAW|![badge](https://dcrbadges.blob.core.windows.net/scenarios/RedHat_RHEL_7-RAW__ext--custom--script.svg)
 SUSE SLES 12-SP2|![badge](https://dcrbadges.blob.core.windows.net/scenarios/SUSE_SLES_12-SP2__ext--custom--script.svg)
 
-This documentation is current for version 2.0.6 and above.
+This documentation is current for version 2.1.3 and above.
 
 CustomScript extensions runs scripts on VMs.  These scripts can be
 used to bootstrap/install software, run administrative tasks, or run
@@ -72,14 +72,14 @@ Schema for the public configuration file looks like this:
 
 > Examples:
 >
-> ```
+> ```json
 > {
 >   "fileUris": ["https://gist.github.com/ahmetalpbalkan/b5d4a856fe15464015ae87d5587a4439/raw/466f5c30507c990a4d5a2f5c79f901fa89a80841/hello.sh"],
 >   "commandToExecute": "./hello.sh"
 > }
 > ```
 > 
-> ```
+> ```json
 > {
 >   "commandToExecute": "apt-get -y update && apt-get install -y apache2"
 > }
@@ -98,12 +98,17 @@ decrypted inside your VM.
 * `storageAccountName`: (optional, string) the name of storage account. If you
   specify storage credentials, all `fileUris` must be URLs for Azure Blobs.
 * `storageAccountKey`: (optional, string) the access key of storage account
+* `managedIdentity`: (optional, json object) the [managed identity](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview) for downloading file(s)
+  * `clientId`: (optional, string) the client id of the managed identity
+  * `objectId`: (optional, string) the object id of the managed identity
+
 
 ```json
 {
   "commandToExecute": "<command-to-execute>",
   "storageAccountName": "<storage-account-name>",
-  "storageAccountKey": "<storage-account-key>"
+  "storageAccountKey": "<storage-account-key>",
+  "managedIdentity": "<managed-identity>"
 }
 ```
 
@@ -135,6 +140,7 @@ The follow values can only by set in **protected** settings.
 
 * `storageAccountName`
 * `storageAccountKey`
+* `managedIdentity`
 
 ### 1.3 skipDos2Unix
 
@@ -160,7 +166,7 @@ true.
 ```json
 {
   "fileUris": ["<url>"],
-  "commandToExecute": "<command-to-execute>"
+  "commandToExecute": "<command-to-execute>",
   "skipDos2Unix": true
 }
 ```
@@ -215,6 +221,46 @@ CustomScript uses the following algorithm to execute a script.
  1. _attempt_ to gunzip the base64 decoded value
  1. write the decoded (and optionally decompressed) value to disk (/var/lib/waagent/custom-script/#/script.sh)
  1. execute the script using _/bin/sh -c /var/lib/waagent/custom-script/#/script.sh.
+
+### 1.5 managedIdentity
+
+CustomScript (version 2.1 onwards) supports [managed identity](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview) for downloading file(s) from URLs provided in the "fileUris" setting. It allows CustomScript to access private Azure Storage blobs or containers without the user having to pass secrets like SAS tokens or storage account keys.
+
+To use this feature, the user must add a [system-assigned](https://docs.microsoft.com/en-us/azure/app-service/overview-managed-identity?tabs=dotnet#adding-a-system-assigned-identity) or [user-assigned](https://docs.microsoft.com/en-us/azure/app-service/overview-managed-identity?tabs=dotnet#adding-a-user-assigned-identity) identity to the VM or VMSS where CustomScript is expected to run, and [grant the managed identity access to the Azure Storage container or blob](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/tutorial-vm-windows-access-storage#grant-access).
+
+To use the system-assigned identity on the target VM/VMSS, set "managedidentity" field to an empty json object. 
+
+> Example:
+>
+> ```json
+> {
+>   "fileUris": ["https://mystorage.blob.core.windows.net/privatecontainer/script1.sh"],
+>   "commandToExecute": "sh script1.sh",
+>   "managedIdentity" : {}
+> }
+> ```
+
+To use the user-assigned identity on the target VM/VMSS, configure "managedidentity" field with the client id or the object id of the managed identity.
+
+> Examples:
+>
+> ```json
+> {
+>   "fileUris": ["https://mystorage.blob.core.windows.net/privatecontainer/script1.sh"],
+>   "commandToExecute": "sh script1.sh",
+>   "managedIdentity" : { "clientId": "31b403aa-c364-4240-a7ff-d85fb6cd7232" }
+> }
+> ```
+> ```json
+> {
+>   "fileUris": ["https://mystorage.blob.core.windows.net/privatecontainer/script1.sh"],
+>   "commandToExecute": "sh script1.sh",
+>   "managedIdentity" : { "objectId": "12dd289c-0583-46e5-b9b4-115d5c19ef4b" }
+> }
+> ```
+
+> [!NOTE]
+> managedIdentity property **must not** be used in conjunction with storageAccountName or storageAccountKey properties
 
 # 2. Deployment to a Virtual Machine
 
