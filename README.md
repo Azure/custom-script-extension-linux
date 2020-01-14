@@ -259,7 +259,8 @@ To use the user-assigned idenity on the target VM/VMSS, configure "managedIdenit
 > }
 > ```
 
-Note: managedIdentity setting **must not** be used in conjunction with storageAccountName or storageAccountKey settings
+> [!NOTE]
+> managedIdentity property **must not** be used in conjunction with storageAccountName or storageAccountKey properties
 
 # 2. Deployment to a Virtual Machine
 
