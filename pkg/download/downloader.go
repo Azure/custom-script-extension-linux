@@ -17,7 +17,7 @@ type Downloader interface {
 	GetRequest() (*http.Request, error)
 }
 
-const(
+const (
 	MsiDownload404ErrorString = "please ensure that the blob location in the fileUri setting exists and the specified Managed Identity has read permissions to the storage blob"
 	MsiDownload403ErrorString = "please ensure that the specified Managed Identity has read permissions to the storage blob"
 )
@@ -61,9 +61,11 @@ func Download(d Downloader) (int, io.ReadCloser, error) {
 	err = fmt.Errorf("unexpected status code: actual=%d expected=%d", resp.StatusCode, http.StatusOK)
 	switch d.(type) {
 	case *blobWithMsiToken:
-		switch (resp.StatusCode){
-		case http.StatusNotFound : return resp.StatusCode, nil, errors.Wrapf(err, MsiDownload404ErrorString)
-		case http.StatusForbidden : return resp.StatusCode, nil, errors.Wrapf(err, MsiDownload403ErrorString)
+		switch resp.StatusCode {
+		case http.StatusNotFound:
+			return resp.StatusCode, nil, errors.Wrapf(err, MsiDownload404ErrorString)
+		case http.StatusForbidden:
+			return resp.StatusCode, nil, errors.Wrapf(err, MsiDownload403ErrorString)
 		}
 	}
 	return resp.StatusCode, nil, err
