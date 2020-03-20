@@ -3,9 +3,11 @@ package download_test
 import (
 	"errors"
 	"fmt"
+	"github.com/Azure/azure-extension-foundation/msi"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/Azure/custom-script-extension-linux/pkg/download"
@@ -58,6 +60,28 @@ func TestDownload_statusOKSucceeds(t *testing.T) {
 	require.Nil(t, err)
 	defer body.Close()
 	require.NotNil(t, body)
+}
+
+func TestDowload_msiDownloaderErrorMessage(t *testing.T){
+	var mockMsiProvider download.MsiProvider = func() (msi.Msi, error) {
+		return msi.Msi{AccessToken:"fakeAccessToken"}, nil
+	}
+	srv := httptest.NewServer(httpbin.GetMux())
+	defer srv.Close()
+
+	msiDownloader404 := download.NewBlobWithMsiDownload(srv.URL + "/status/404", mockMsiProvider)
+
+	returnCode, body, err := download.Download(msiDownloader404)
+	require.True(t, strings.Contains(err.Error(), download.MsiDownload404ErrorString), "error string doesn't contains the correctMessage")
+	require.Nil(t, body, "body is not nil for failed download")
+	require.Equal(t, 404, returnCode, "return code was not 404")
+
+	msiDownloader403 := download.NewBlobWithMsiDownload(srv.URL + "/status/403", mockMsiProvider)
+	returnCode, body, err = download.Download(msiDownloader403)
+	require.True(t, strings.Contains(err.Error(), download.MsiDownload403ErrorString), "error string doesn't contains the correctMessage")
+	require.Nil(t, body, "body is not nil for failed download")
+	require.Equal(t, 403, returnCode, "return code was not 403")
+
 }
 
 func TestDownload_retrievesBody(t *testing.T) {

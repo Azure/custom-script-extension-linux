@@ -1,8 +1,10 @@
 package download_test
 
 import (
+	"github.com/Azure/azure-extension-foundation/msi"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -90,6 +92,30 @@ func TestRetriesWith_SwitchDownloaderOn404(t *testing.T) {
 	require.NotNil(t, resp, "response body exists")
 	require.Equal(t, d404.timesCalled, 1)
 	require.Equal(t, d200.timesCalled, 4)
+}
+
+func TestRetriesWith_SwitchDownloaderThenFailWithCorretErrorMessage(t *testing.T) {
+	svr := httptest.NewServer(httpbin.GetMux())
+	defer svr.Close()
+	var mockMsiProvider download.MsiProvider = func() (msi.Msi, error) {
+		return msi.Msi{AccessToken:"fakeAccessToken"}, nil
+	}
+
+	d404 := mockDownloader{0, svr.URL + "/status/404"}
+	msiDownloader403 := download.NewBlobWithMsiDownload(svr.URL + "/status/403", mockMsiProvider)
+	resp, err := download.WithRetries(nopLog(), []download.Downloader{&d404, msiDownloader403}, func(d time.Duration) { return })
+	require.NotNil(t, err, "download with retries should fail")
+	require.Nil(t, resp, "response body should be null for failed download with retries")
+	require.Equal(t, d404.timesCalled, 1)
+	require.True(t, strings.Contains(err.Error(), download.MsiDownload403ErrorString), "error string doesn't contains the correctMessage")
+
+	d404 = mockDownloader{0, svr.URL + "/status/404"}
+	msiDownloader404 := download.NewBlobWithMsiDownload(svr.URL + "/status/404", mockMsiProvider)
+	resp, err = download.WithRetries(nopLog(), []download.Downloader{&d404, msiDownloader404}, func(d time.Duration) { return })
+	require.NotNil(t, err, "download with retries should fail")
+	require.Nil(t, resp, "response body should be null for failed download with retries")
+	require.Equal(t, d404.timesCalled, 1)
+	require.True(t, strings.Contains(err.Error(), download.MsiDownload404ErrorString), "error string doesn't contains the correctMessage")
 }
 
 // Test Utilities:
