@@ -72,13 +72,13 @@ func TestDowload_msiDownloaderErrorMessage(t *testing.T) {
 	msiDownloader404 := download.NewBlobWithMsiDownload(srv.URL+"/status/404", mockMsiProvider)
 
 	returnCode, body, err := download.Download(msiDownloader404)
-	require.True(t, strings.Contains(err.Error(), download.MsiDownload404ErrorString), "error string doesn't contains the correctMessage")
+	require.True(t, strings.Contains(err.Error(), download.MsiDownload404ErrorString), "error string doesn't contain the correct message")
 	require.Nil(t, body, "body is not nil for failed download")
 	require.Equal(t, 404, returnCode, "return code was not 404")
 
 	msiDownloader403 := download.NewBlobWithMsiDownload(srv.URL+"/status/403", mockMsiProvider)
 	returnCode, body, err = download.Download(msiDownloader403)
-	require.True(t, strings.Contains(err.Error(), download.MsiDownload403ErrorString), "error string doesn't contains the correctMessage")
+	require.True(t, strings.Contains(err.Error(), download.MsiDownload403ErrorString), "error string doesn't contain the correct message")
 	require.Nil(t, body, "body is not nil for failed download")
 	require.Equal(t, 403, returnCode, "return code was not 403")
 

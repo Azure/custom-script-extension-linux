@@ -105,17 +105,17 @@ func TestRetriesWith_SwitchDownloaderThenFailWithCorretErrorMessage(t *testing.T
 	msiDownloader403 := download.NewBlobWithMsiDownload(svr.URL+"/status/403", mockMsiProvider)
 	resp, err := download.WithRetries(nopLog(), []download.Downloader{&d404, msiDownloader403}, func(d time.Duration) { return })
 	require.NotNil(t, err, "download with retries should fail")
-	require.Nil(t, resp, "response body should be null for failed download with retries")
+	require.Nil(t, resp, "response body should be nil for failed download with retries")
 	require.Equal(t, d404.timesCalled, 1)
-	require.True(t, strings.Contains(err.Error(), download.MsiDownload403ErrorString), "error string doesn't contains the correctMessage")
+	require.True(t, strings.Contains(err.Error(), download.MsiDownload403ErrorString), "error string doesn't contain the correct message")
 
 	d404 = mockDownloader{0, svr.URL + "/status/404"}
 	msiDownloader404 := download.NewBlobWithMsiDownload(svr.URL+"/status/404", mockMsiProvider)
 	resp, err = download.WithRetries(nopLog(), []download.Downloader{&d404, msiDownloader404}, func(d time.Duration) { return })
 	require.NotNil(t, err, "download with retries should fail")
-	require.Nil(t, resp, "response body should be null for failed download with retries")
+	require.Nil(t, resp, "response body should be nil for failed download with retries")
 	require.Equal(t, d404.timesCalled, 1)
-	require.True(t, strings.Contains(err.Error(), download.MsiDownload404ErrorString), "error string doesn't contains the correctMessage")
+	require.True(t, strings.Contains(err.Error(), download.MsiDownload404ErrorString), "error string doesn't contain the correct message")
 }
 
 // Test Utilities:
