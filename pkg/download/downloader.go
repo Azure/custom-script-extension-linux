@@ -18,7 +18,7 @@ type Downloader interface {
 }
 
 const (
-	MsiDownload404ErrorString = "please ensure that the blob location in the fileUri setting exists and the specified Managed Identity has read permissions to the storage blob"
+	MsiDownload404ErrorString = "please ensure that the blob location in the fileUri setting exists, and the specified Managed Identity has read permissions to the storage blob"
 	MsiDownload403ErrorString = "please ensure that the specified Managed Identity has read permissions to the storage blob"
 )
 
