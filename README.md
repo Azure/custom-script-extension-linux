@@ -223,6 +223,8 @@ CustomScript uses the following algorithm to execute a script.
  1. execute the script using _/bin/sh -c /var/lib/waagent/custom-script/#/script.sh.
 
 ### 1.5 managedIdentity
+> [NOTE]
+> This property must be specified in protected settings only. 
 
 CustomScript (version 2.1 onwards) supports [managed identity](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview) for downloading file(s) from URLs provided in the "fileUris" setting. It allows CustomScript to access private Azure Storage blobs or containers without the user having to pass secrets like SAS tokens or storage account keys.
 
@@ -259,7 +261,7 @@ To use the user-assigned identity on the target VM/VMSS, configure "managedident
 > }
 > ```
 
-> [!NOTE]
+> [NOTE]
 > managedIdentity property **must not** be used in conjunction with storageAccountName or storageAccountKey properties
 
 # 2. Deployment to a Virtual Machine
