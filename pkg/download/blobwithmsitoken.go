@@ -21,6 +21,8 @@ var azureBlobDomains = map[string]interface{}{ // golang doesn't have builtin ha
 	"blob.core.chinacloudapi.cn":  nil,
 	"blob.core.usgovcloudapi.net": nil,
 	"blob.core.couldapi.de":       nil,
+	".blob.core.":				   nil,
+	".blob.azurestack.":		   nil
 }
 
 type blobWithMsiToken struct {
@@ -99,7 +101,6 @@ func GetResourceNameFromBlobUri(uri string) string {
 }
 
 func IsAzureStorageBlobUri(url string) bool {
-	// TODO update this function for sovereign regions
 	parsedUrl, err := url2.Parse(url)
 	if err != nil {
 		return false
