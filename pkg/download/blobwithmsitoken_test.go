@@ -57,5 +57,8 @@ func Test_isAzureStorageBlobUri(t *testing.T) {
 	require.True(t, IsAzureStorageBlobUri("https://a.blob.core.windows.net/container/blobname"))
 	require.True(t, IsAzureStorageBlobUri("http://mystorageaccountcn.blob.core.chinacloudapi.cn"))
 	require.True(t, IsAzureStorageBlobUri("https://blackforestsa.blob.core.couldapi.de/c/b/x"))
+	require.True(t, IsAzureStorageBlobUri("https://another.blob.core.future.store/c/b/x"))
 	require.False(t, IsAzureStorageBlobUri("https://github.com/Azure-Samples/storage-blobs-go-quickstart/blob/master/README.md"))
+	require.False(t, IsAzureStorageBlobUri("http://github.com/Azure-Samples/storage-blobs-go-quickstart/blob/master/README.md"))
+	require.False(t, IsAzureStorageBlobUri("file:\\\\C:\\scripts\\Script.ps1"))
 }
