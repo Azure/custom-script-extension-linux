@@ -2,12 +2,13 @@ package download
 
 import (
 	"fmt"
-	"github.com/Azure/azure-extension-foundation/httputil"
-	"github.com/Azure/azure-extension-foundation/msi"
-	"github.com/pkg/errors"
 	"net/http"
 	url2 "net/url"
 	"strings"
+
+	"github.com/Azure/azure-extension-foundation/httputil"
+	"github.com/Azure/azure-extension-foundation/msi"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -17,12 +18,8 @@ const (
 )
 
 var azureBlobDomains = map[string]interface{}{ // golang doesn't have builtin hash sets, so this is a workaround for that
-	"blob.core.windows.net":       nil,
-	"blob.core.chinacloudapi.cn":  nil,
-	"blob.core.usgovcloudapi.net": nil,
-	"blob.core.couldapi.de":       nil,
-	".blob.core.":				   nil,
-	".blob.azurestack.":		   nil
+	".blob.core.":       nil,
+	".blob.azurestack.": nil,
 }
 
 type blobWithMsiToken struct {
@@ -105,13 +102,14 @@ func IsAzureStorageBlobUri(url string) bool {
 	if err != nil {
 		return false
 	}
-	s := strings.Split(parsedUrl.Hostname(), ".")
-	if len(s) < 2 {
-		return false
+
+	host := parsedUrl.Host
+
+	for validBlobDomain, _ := range azureBlobDomains {
+		if strings.Contains(host, validBlobDomain) {
+			return true
+		}
 	}
 
-	domainName := strings.Join(s[1:], ".")
-	_, foundDomain := azureBlobDomains[domainName]
-	return foundDomain
-
+	return false
 }
