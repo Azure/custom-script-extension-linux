@@ -125,7 +125,7 @@ teardown(){
     enable_count="$(echo "$output" | grep -c 'event=enabled')"
     echo "Enable count=$enable_count"
     [ "$enable_count" -eq 1 ]
-    [[ "$output" == *"this script configuration is already processed, will not run again"* ]] # not processed again
+    [[ "$output" == *"the script configuration has already been processed, will not run again"* ]] # not processed again
 }
 
 @test "handler command: enable - parses protected settings" {

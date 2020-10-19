@@ -9,11 +9,13 @@ import (
 )
 
 var (
-	errStoragePartialCredentials = errors.New("both 'storageAccountName' and 'storageAccountKey' must be specified")
-	errCmdTooMany                = errors.New("'commandToExecute' was specified both in public and protected settings; it must be specified only once")
-	errScriptTooMany             = errors.New("'script' was specified both in public and protected settings; it must be specified only once")
-	errCmdAndScript              = errors.New("'commandToExecute' and 'script' were both specified, but only one is validate at a time")
-	errCmdMissing                = errors.New("'commandToExecute' is not specified")
+	errStoragePartialCredentials    = errors.New("both 'storageAccountName' and 'storageAccountKey' must be specified")
+	errCmdTooMany                   = errors.New("'commandToExecute' was specified both in public and protected settings; it must be specified only once")
+	errScriptTooMany                = errors.New("'script' was specified both in public and protected settings; it must be specified only once")
+	errCmdAndScript                 = errors.New("'commandToExecute' and 'script' were both specified, but only one is validate at a time")
+	errCmdMissing                   = errors.New("'commandToExecute' is not specified")
+	errUsingBothKeyAndMsi           = errors.New("'storageAccountName' or 'storageAccountKey' must not be specified with 'managedServiceIdentity'")
+	errUsingBothClientIdAndObjectId = errors.New("only one of 'clientId' or 'objectId' must be specified with 'managedServiceIdentity'")
 )
 
 // handlerSettings holds the configuration of the extension handler.
@@ -66,6 +68,16 @@ func (h handlerSettings) validate() error {
 		return errStoragePartialCredentials
 	}
 
+	if (h.protectedSettings.StorageAccountKey != "" || h.protectedSettings.StorageAccountName != "") && h.protectedSettings.ManagedIdentity != nil {
+		return errUsingBothKeyAndMsi
+	}
+
+	if h.protectedSettings.ManagedIdentity != nil {
+		if h.protectedSettings.ManagedIdentity.ClientId != "" && h.protectedSettings.ManagedIdentity.ObjectId != "" {
+			return errUsingBothClientIdAndObjectId
+		}
+	}
+
 	return nil
 }
 
@@ -81,11 +93,21 @@ type publicSettings struct {
 // protectedSettings is the type decoded and deserialized from protected
 // configuration section. This should be in sync with protectedSettingsSchema.
 type protectedSettings struct {
-	CommandToExecute   string   `json:"commandToExecute"`
-	Script             string   `json:"script"`
-	FileURLs           []string `json:"fileUris"`
-	StorageAccountName string   `json:"storageAccountName"`
-	StorageAccountKey  string   `json:"storageAccountKey"`
+	CommandToExecute   string            `json:"commandToExecute"`
+	Script             string            `json:"script"`
+	FileURLs           []string          `json:"fileUris"`
+	StorageAccountName string            `json:"storageAccountName"`
+	StorageAccountKey  string            `json:"storageAccountKey"`
+	ManagedIdentity    *clientOrObjectId `json:"managedIdentity"`
+}
+
+type clientOrObjectId struct {
+	ObjectId string `json:"objectId"`
+	ClientId string `json:"clientId"`
+}
+
+func (self *clientOrObjectId) isEmpty() bool {
+	return self.ClientId == "" && self.ObjectId == ""
 }
 
 // parseAndValidateSettings reads configuration from configFolder, decrypts it,

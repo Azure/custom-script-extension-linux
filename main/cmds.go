@@ -116,7 +116,7 @@ func uninstall(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (
 		ctx = ctx.With("path", dataDir)
 		ctx.Log("event", "removing data dir", "path", dataDir)
 		if err := os.RemoveAll(dataDir); err != nil {
-			return "", errors.Wrap(err, "failed to delete data dir")
+			return "", errors.Wrap(err, "failed to delete data directory")
 		}
 		ctx.Log("event", "removed data dir")
 	}
@@ -128,9 +128,9 @@ func enablePre(ctx *log.Context, seqNum int) error {
 	// exit if this sequence number (a snapshot of the configuration) is already
 	// processed. if not, save this sequence number before proceeding.
 	if shouldExit, err := checkAndSaveSeqNum(ctx, seqNum, mostRecentSequence); err != nil {
-		return errors.Wrap(err, "failed to process seqnum")
+		return errors.Wrap(err, "failed to process sequence number")
 	} else if shouldExit {
-		ctx.Log("event", "exit", "message", "this script configuration is already processed, will not run again")
+		ctx.Log("event", "exit", "message", "the script configuration has already been processed, will not run again")
 		os.Exit(0)
 	}
 	return nil
@@ -200,7 +200,7 @@ func checkAndSaveSeqNum(ctx log.Logger, seq int, mrseqPath string) (shouldExit b
 		return true, nil
 	}
 	if err := seqnum.Set(mrseqPath, seq); err != nil {
-		return false, errors.Wrap(err, "failed to save the sequence number")
+		return false, errors.Wrap(err, "failed to save sequence number")
 	}
 	ctx.Log("event", "seqnum saved", "path", mrseqPath)
 	return false, nil
@@ -233,7 +233,7 @@ func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) error {
 	for i, f := range cfg.fileUrls() {
 		ctx := ctx.With("file", i)
 		ctx.Log("event", "download start")
-		if err := downloadAndProcessURL(ctx, f, dir, cfg.StorageAccountName, cfg.StorageAccountKey, cfg.publicSettings.SkipDos2Unix); err != nil {
+		if err := downloadAndProcessURL(ctx, f, dir, &cfg); err != nil {
 			ctx.Log("event", "download failed", "error", err)
 			return errors.Wrapf(err, "failed to download file[%d]", i)
 		}
@@ -310,7 +310,7 @@ func writeTempScript(script, dir string, skipDosToUnix bool) (string, string, er
 	if skipDosToUnix == false {
 		err = postProcessFile(cmd)
 		if err != nil {
-			return "", "", errors.Wrap(err, "failed to post process file")
+			return "", "", errors.Wrap(err, "failed to post-process script.sh")
 		}
 		dos2unix = 0
 	}
@@ -322,7 +322,7 @@ func decodeScript(script string) (string, string, error) {
 	// scripts must be base64 encoded
 	s, err := base64.StdEncoding.DecodeString(script)
 	if err != nil {
-		return "", "", errors.Wrap(err, "failed to base64 decode script")
+		return "", "", errors.Wrap(err, "failed to decode script")
 	}
 
 	// scripts may be gzip'ed

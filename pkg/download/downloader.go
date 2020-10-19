@@ -2,6 +2,7 @@ package download
 
 import (
 	"fmt"
+	"github.com/Azure/custom-script-extension-linux/pkg/urlutil"
 	"io"
 	"net"
 	"net/http"
@@ -15,6 +16,11 @@ type Downloader interface {
 	// GetRequest returns a new GET request for the resource.
 	GetRequest() (*http.Request, error)
 }
+
+const (
+	MsiDownload404ErrorString = "please ensure that the blob location in the fileUri setting exists, and the specified Managed Identity has read permissions to the storage blob"
+	MsiDownload403ErrorString = "please ensure that the specified Managed Identity has read permissions to the storage blob"
+)
 
 var (
 	// httpClient is the default client to be used in downloading files from
@@ -36,19 +42,31 @@ var (
 // Download retrieves a response body and checks the response status code to see
 // if it is 200 OK and then returns the response body. It issues a new request
 // every time called. It is caller's responsibility to close the response body.
-func Download(d Downloader) (io.ReadCloser, error) {
+func Download(d Downloader) (int, io.ReadCloser, error) {
 	req, err := d.GetRequest()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create the request")
+		return -1, nil, errors.Wrapf(err, "failed to create http request")
 	}
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, errors.Wrapf(err, "http request failed")
+		err = urlutil.RemoveUrlFromErr(err)
+		return -1, nil, errors.Wrapf(err, "http request failed")
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: got=%d expected=%d", resp.StatusCode, http.StatusOK)
+	if resp.StatusCode == http.StatusOK {
+		return resp.StatusCode, resp.Body, nil
 	}
-	return resp.Body, nil
+
+	err = fmt.Errorf("unexpected status code: actual=%d expected=%d", resp.StatusCode, http.StatusOK)
+	switch d.(type) {
+	case *blobWithMsiToken:
+		switch resp.StatusCode {
+		case http.StatusNotFound:
+			return resp.StatusCode, nil, errors.Wrapf(err, MsiDownload404ErrorString)
+		case http.StatusForbidden:
+			return resp.StatusCode, nil, errors.Wrapf(err, MsiDownload403ErrorString)
+		}
+	}
+	return resp.StatusCode, nil, err
 }

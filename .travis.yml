@@ -13,6 +13,7 @@ install:
   - sudo npm install -g azure-cli
   - go get -u golang.org/x/lint/golint
   - go get -u github.com/ahmetalpbalkan/govvv
+  - go get -u -d github.com/Azure/azure-extension-foundation/...
 before_script:
   - docker version
   - docker info

@@ -1,5 +1,6 @@
 <?xml version='1.0' encoding='utf-8' ?>
 <ExtensionImage xmlns="http://schemas.microsoft.com/windowsazure">
+<<<<<<< HEAD
   <ProviderNameSpace>Microsoft.CPlat.Core</ProviderNameSpace>
   <Type>RunCommandLinux</Type>
   <Version>1.0.1</Version>

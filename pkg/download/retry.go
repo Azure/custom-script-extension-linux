@@ -1,8 +1,10 @@
 package download
 
 import (
+	"fmt"
 	"io"
 	"math"
+	"net/http"
 	"time"
 
 	"github.com/go-kit/kit/log"
@@ -29,27 +31,51 @@ const (
 // closed on failures). If the retries do not succeed, the last error is returned.
 //
 // It sleeps in exponentially increasing durations between retries.
-func WithRetries(ctx *log.Context, d Downloader, sf SleepFunc) (io.ReadCloser, error) {
+func WithRetries(ctx *log.Context, downloaders []Downloader, sf SleepFunc) (io.ReadCloser, error) {
 	var lastErr error
-	for n := 0; n < expRetryN; n++ {
-		ctx := ctx.With("retry", n)
-		out, err := Download(d)
-		if err == nil {
-			return out, nil
-		}
-		lastErr = err
-		ctx.Log("error", err)
+	for _, d := range downloaders {
+		for n := 0; n < expRetryN; n++ {
+			ctx := ctx.With("retry", n)
+			status, out, err := Download(d)
+			if err == nil {
+				return out, nil
+			}
 
-		if out != nil { // we are not going to read this response body
-			out.Close()
-		}
+			lastErr = err
+			ctx.Log("error", err)
 
-		if n != expRetryN-1 {
-			// have more retries to go, sleep before retrying
-			slp := expRetryK * time.Duration(int(math.Pow(float64(expRetryM), float64(n))))
-			ctx.Log("sleep", slp)
-			sf(slp)
+			if out != nil { // we are not going to read this response body
+				out.Close()
+			}
+
+			// status == -1 the value when there was no http request
+			if status != -1 && !isTransientHttpStatusCode(status) {
+				ctx.Log("info", fmt.Sprintf("downloader %T returned %v, skipping retries", d, status))
+				break
+			}
+
+			if n != expRetryN-1 {
+				// have more retries to go, sleep before retrying
+				slp := expRetryK * time.Duration(int(math.Pow(float64(expRetryM), float64(n))))
+				ctx.Log("sleep", slp)
+				sf(slp)
+			}
 		}
 	}
 	return nil, lastErr
+}
+
+func isTransientHttpStatusCode(statusCode int) bool {
+	switch statusCode {
+	case
+		http.StatusRequestTimeout,      // 408
+		http.StatusTooManyRequests,     // 429
+		http.StatusInternalServerError, // 500
+		http.StatusBadGateway,          // 502
+		http.StatusServiceUnavailable,  // 503
+		http.StatusGatewayTimeout:      // 504
+		return true // timeout and too many requests
+	default:
+		return false
+	}
 }
