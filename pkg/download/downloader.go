@@ -2,7 +2,7 @@ package download
 
 import (
 	"fmt"
-	"github.com/Azure/custom-script-extension-linux/pkg/urlutil"
+	"github.com/koralski/run-command-extension-linux/pkg/urlutil"
 	"io"
 	"net"
 	"net/http"

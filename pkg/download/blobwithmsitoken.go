@@ -105,7 +105,7 @@ func IsAzureStorageBlobUri(url string) bool {
 
 	host := parsedUrl.Host
 
-	for validBlobDomain, _ := range azureBlobDomains {
+	for validBlobDomain := range azureBlobDomains {
 		if strings.Contains(host, validBlobDomain) {
 			return true
 		}

@@ -11,6 +11,7 @@ import (
 	"github.com/koralski/run-command-extension-linux/pkg/blobutil"
 	"github.com/koralski/run-command-extension-linux/pkg/download"
 	"github.com/koralski/run-command-extension-linux/pkg/preprocess"
+	"github.com/koralski/run-command-extension-linux/pkg/urlutil"
 	"github.com/pkg/errors"
 	"os"
 )
