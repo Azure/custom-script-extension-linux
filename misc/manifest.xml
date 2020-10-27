@@ -1,9 +1,8 @@
 <?xml version='1.0' encoding='utf-8' ?>
 <ExtensionImage xmlns="http://schemas.microsoft.com/windowsazure">
-<<<<<<< HEAD
   <ProviderNameSpace>Microsoft.CPlat.Core</ProviderNameSpace>
-  <Type>RunCommandLinux</Type>
-  <Version>1.0.1</Version>
+  <Type>RunCommandHandlerLinux</Type>
+  <Version>1.0.0</Version>
   <Label>Microsoft Azure Run Command Extension for Linux Virtual Machines</Label>
   <HostingResources>VmRole</HostingResources>
   <MediaLink></MediaLink>
@@ -12,5 +11,5 @@
   <IsJsonExtension>true</IsJsonExtension>
   <SupportedOS>Linux</SupportedOS>
   <CompanyName>Microsoft</CompanyName>
-  <!--%REGIONS%-->
+  <SupportsMultipleExtensions>true</SupportsMultipleExtensions>
 </ExtensionImage>

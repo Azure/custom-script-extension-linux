@@ -1,7 +1,7 @@
 BINDIR=bin
 BIN=run-command-extension
 BUNDLEDIR=bundle
-BUNDLE=run-command-extension.zip
+BUNDLE=run-command-handler.zip
 
 bundle: clean binary
 	@mkdir -p $(BUNDLEDIR)
