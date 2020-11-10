@@ -40,7 +40,7 @@ func Exec(cmd, workdir string, stdout, stderr io.WriteCloser) (int, error) {
 // to ./stdout and ./stderr files (truncates files if exists, creates them if not
 // with 0600/-rw------- permissions).
 //
-// Ideally, we execute commands only once per sequence number in run-command-extension,
+// Ideally, we execute commands only once per sequence number in run-command-handler,
 // and save their output under /var/lib/waagent/<dir>/download/<seqnum>/*.
 func ExecCmdInDir(cmd, workdir string) error {
 	outFn, errFn := logPaths(workdir)

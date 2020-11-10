@@ -13,7 +13,7 @@ import (
 var (
 	// dataDir is where we store the downloaded files, logs and state for
 	// the extension handler
-	dataDir = "/var/lib/waagent/run-command"
+	dataDir = "/var/lib/waagent/run-command-handler"
 
 	// seqNumFile holds the processed highest sequence number to make
 	// sure we do not run the command more than once for the same sequence

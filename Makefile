@@ -1,5 +1,5 @@
 BINDIR=bin
-BIN=run-command-extension
+BIN=run-command-handler
 BUNDLEDIR=bundle
 BUNDLE=run-command-handler.zip
 

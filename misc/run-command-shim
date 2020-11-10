@@ -2,9 +2,9 @@
 
 set -euo pipefail
 readonly SCRIPT_DIR=$(dirname "$0")
-readonly LOG_DIR="/var/log/azure/run-command"
+readonly LOG_DIR="/var/log/azure/run-command-handler"
 readonly LOG_FILE=handler.log
-readonly HANDLER_BIN="run-command-extension"
+readonly HANDLER_BIN="run-command-handler"
 
 
 # status_file returns the .status file path we are supposed to write

@@ -7,13 +7,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"os"
+
 	"github.com/go-kit/kit/log"
 	"github.com/koralski/run-command-extension-linux/pkg/blobutil"
 	"github.com/koralski/run-command-extension-linux/pkg/download"
 	"github.com/koralski/run-command-extension-linux/pkg/preprocess"
 	"github.com/koralski/run-command-extension-linux/pkg/urlutil"
 	"github.com/pkg/errors"
-	"os"
 )
 
 // downloadAndProcessURL downloads using the specified downloader and saves it to the
@@ -29,7 +30,7 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handl
 		return fmt.Errorf("[REDACTED] is not a valid url")
 	}
 
-	dl, err := getDownloaders(url, cfg.StorageAccountName, cfg.StorageAccountKey, cfg.ManagedIdentity)
+	dl, err := getDownloaders(url, "" /*cfg.StorageAccountName*/, "" /*cfg.StorageAccountKey*/, nil /* cfg.ManagedIdentity*/)
 	if err != nil {
 		return err
 	}
@@ -40,9 +41,7 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handl
 		return err
 	}
 
-	if cfg.SkipDos2Unix == false {
-		err = postProcessFile(fp)
-	}
+	err = postProcessFile(fp)
 	return errors.Wrapf(err, "failed to post-process '%s'", fn)
 }
 

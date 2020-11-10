@@ -15,26 +15,61 @@ const (
   "title": "Run Command - Public Settings",
   "type": "object",
   "properties": {
-    "commandToExecute": {
-      "description": "Command to be executed",
-      "type": "string"
-    },
-    "script": {
-      "description": "Script to be executed",
-      "type": "string"
-    },
-    "skipDos2Unix": {
-      "description": "Skip DOS2UNIX and BOM removal for download files and script",
-      "type": "boolean"
-    },
-    "fileUris": {
-      "description": "List of files to be downloaded",
-      "type": "array",
-      "items": {
-        "type": "string",
-        "format": "uri"
+    "source": {
+      "description": "Source of the script to be executed",
+      "type": "object",
+      "properties": {
+        "script": {
+          "description": "Script to be executed",
+          "type": "string"
+        },
+        "scriptUri": {
+          "description": "ScriptUri specify the script source download location",
+          "type": "string",
+          "format": "uri"
+        }
       }
     },
+    "parameters": {
+      "description": "List of parameters",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Property name",
+            "type": "string"
+          },
+          "value": {
+            "description": "Property value",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "runAsUser": {
+      "description": "User name to run the script",
+      "type": "string"
+    },
+    "outputBlobUri": {
+      "description": "Output storage blob to write the script console output stream",
+      "type": "string",
+      "format": "uri"
+    },
+    "errorBlobUri": {
+      "description": "Error storage blob to write the script error stream",
+      "type": "string",
+      "format": "uri"
+    },
+    "timeoutInSeconds": {
+      "description": "Time limit to execute the script",
+      "type": "integer"
+    },
+    "asyncExecution": {
+      "description": "Async script execution",
+      "type": "boolean"
+    },
+
     "timestamp": {
       "description": "An integer, intended to trigger re-execution of the script when changed",
       "type": "integer"
@@ -48,45 +83,36 @@ const (
   "title": "Run Command - Protected Settings",
   "type": "object",
   "properties": {
-    "commandToExecute": {
-      "description": "Command to be executed",
+    "runAsPassword": {
+      "description": "User password",
       "type": "string"
     },
-    "fileUris": {
-      "description": "List of files to be downloaded",
+    "sourceSASToken": {
+      "description": "SAS token to access the scriptUri blob",
+      "type": "string"
+    },
+    "outputBlobSASToken": {
+      "description": "SAS token to access the outputBlobUri blob",
+      "type": "string"
+    },
+    "errorBlobSASToken": {
+      "description": "SAS token to access the errorBlobUri blob",
+      "type": "string"
+    },
+    "protectedParameters": {
+      "description": "List of parameters",
       "type": "array",
       "items": {
-        "type": "string",
-        "format": "uri"
-      }
-    },
-    "script": {
-      "description": "Script to be executed",
-      "type": "string"
-    },
-    "storageAccountName": {
-      "description": "Name of the Azure Storage Account (3-24 characters of lowercase letters or digits)",
-      "type": "string",
-      "pattern": "^[a-z0-9]{3,24}$"
-    },
-    "storageAccountKey": {
-      "description": "Key for the Azure Storage Account (a base64 encoded string)",
-      "type": "string",
-      "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$"
-    },
-    "managedIdentity": {
-      "description": "Setting to use Managed Service Identity to try to download fileUri from azure blob",
-      "type": "object",
-      "properties": {
-        "objectId": {
-          "description": "Object id that identifies the user created managed identity",
-          "type": "string",
-          "pattern": "^(?:[0-9A-Fa-f]{8}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{12})$"
-        },
-        "clientId": {
-          "description": "Client id that identifies the user created managed identity",
-          "type": "string",
-          "pattern": "^(?:[0-9A-Fa-f]{8}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{12})$"
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Property name",
+            "type": "string"
+          },
+          "value": {
+            "description": "Property value",
+            "type": "string"
+          }
         }
       }
     }

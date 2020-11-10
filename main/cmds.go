@@ -64,12 +64,8 @@ func install(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (st
 		return "", errors.Wrap(err, "failed to create data dir")
 	}
 
-	// If the file mrseq does not exists it is for two possible reasons.
-	//  1. The extension has never been installed on this VMs before
-	//  2. The extension is upgraded from < v2.0.5, which did not use mrseq
-	//
-	// If it is (2) attempt to migrate to mrseq.  Find the latest settings
-	// file, and set the sequence to it.
+	// If the file mrseq does not exists
+	//  the extension has never been installed on this VMs before
 	if _, err := os.Stat(mostRecentSequence); os.IsNotExist(err) {
 		migrateToMostRecentSequence(ctx, h, seqNum)
 	}
@@ -218,24 +214,16 @@ func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) error {
 	ctx.Log("event", "created output directory")
 
 	dos2unix := 1
-	if cfg.publicSettings.SkipDos2Unix {
-		dos2unix = 0
-	}
 
-	// - download files
-	ctx.Log("files", len(cfg.fileUrls()))
-	if len(cfg.publicSettings.FileURLs) > 0 {
-		telemetry("scenario", fmt.Sprintf("public-fileUrls;dos2unix=%d", dos2unix), true, 0*time.Millisecond)
-	} else if len(cfg.protectedSettings.FileURLs) > 0 {
-		telemetry("scenario", fmt.Sprintf("protected-fileUrls;dos2unix=%d", dos2unix), true, 0*time.Millisecond)
-	}
-
-	for i, f := range cfg.fileUrls() {
-		ctx := ctx.With("file", i)
+	// - download scriptURI
+	scriptURI := cfg.scriptUri()
+	ctx.Log("scriptUri", scriptURI)
+	if scriptURI != "" {
+		telemetry("scenario", fmt.Sprintf("source.scriptUri;dos2unix=%d", dos2unix), true, 0*time.Millisecond)
 		ctx.Log("event", "download start")
-		if err := downloadAndProcessURL(ctx, f, dir, &cfg); err != nil {
+		if err := downloadAndProcessURL(ctx, scriptURI, dir, &cfg); err != nil {
 			ctx.Log("event", "download failed", "error", err)
-			return errors.Wrapf(err, "failed to download file[%d]", i)
+			return errors.Wrapf(err, "failed to download file %s", scriptURI)
 		}
 		ctx.Log("event", "download complete", "output", dir)
 	}
@@ -249,28 +237,17 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (err error) {
 	var scenario string
 	var scenarioInfo string
 
-	// So many ways to execute a command!
-	if cfg.publicSettings.CommandToExecute != "" {
-		ctx.Log("event", "executing public commandToExecute", "output", dir)
-		cmd = cfg.publicSettings.CommandToExecute
-		scenario = "public-commandToExecute"
-	} else if cfg.protectedSettings.CommandToExecute != "" {
-		ctx.Log("event", "executing protected commandToExecute", "output", dir)
-		cmd = cfg.protectedSettings.CommandToExecute
-		scenario = "protected-commandToExecute"
-	} else if cfg.publicSettings.Script != "" {
-		ctx.Log("event", "executing public script", "output", dir)
-		if cmd, scenarioInfo, err = writeTempScript(cfg.publicSettings.Script, dir, cfg.publicSettings.SkipDos2Unix); err != nil {
-			return
-		}
+	// If script is specified - use it directly for command
+	if cfg.script() != "" {
+		cmd = cfg.script()
 		scenario = fmt.Sprintf("public-script;%s", scenarioInfo)
-	} else if cfg.protectedSettings.Script != "" {
-		ctx.Log("event", "executing protected script", "output", dir)
-		if cmd, scenarioInfo, err = writeTempScript(cfg.protectedSettings.Script, dir, cfg.publicSettings.SkipDos2Unix); err != nil {
-			return
-		}
-		scenario = fmt.Sprintf("protected-script;%s", scenarioInfo)
+	} else if cfg.scriptUri() != "" {
+		// If scriptUri is specified then cmd should start it
+		cmd = fmt.Sprintf("%s/script.sh", dir)
+		scenario = "public-scriptUri"
 	}
+
+	ctx.Log("event", "prepare command", "cmd", cmd)
 
 	begin := time.Now()
 	err = ExecCmdInDir(cmd, dir)
@@ -287,7 +264,7 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (err error) {
 	return nil
 }
 
-func writeTempScript(script, dir string, skipDosToUnix bool) (string, string, error) {
+func writeTempScript(script, dir string) (string, string, error) {
 	if len(script) > maxScriptSize {
 		return "", "", fmt.Errorf("The script's length (%d) exceeded the maximum allowed length of %d!", len(script), maxScriptSize)
 	}
@@ -307,13 +284,11 @@ func writeTempScript(script, dir string, skipDosToUnix bool) (string, string, er
 	f.Close()
 
 	dos2unix := 1
-	if skipDosToUnix == false {
-		err = postProcessFile(cmd)
-		if err != nil {
-			return "", "", errors.Wrap(err, "failed to post-process script.sh")
-		}
-		dos2unix = 0
+	err = postProcessFile(cmd)
+	if err != nil {
+		return "", "", errors.Wrap(err, "failed to post-process script.sh")
 	}
+	dos2unix = 0
 	return cmd, fmt.Sprintf("%s;dos2unix=%d", info, dos2unix), nil
 }
 

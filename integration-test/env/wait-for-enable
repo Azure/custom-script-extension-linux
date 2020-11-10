@@ -8,7 +8,7 @@
 log(){ echo "[wait] time=$(date --rfc-3339=s | sed 's/ /T/') $@">&2; }
 
 sleep 1
-bin="bin/run-command-extension"
+bin="bin/run-command-handler"
 while true; do
     out="$(ps aux)"
     if [[ "$out" == **"$bin"** ]]; then
