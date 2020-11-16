@@ -216,7 +216,7 @@ func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) error {
 	dos2unix := 1
 
 	// - download scriptURI
-	scriptURI := cfg.scriptUri()
+	scriptURI := cfg.scriptURI()
 	ctx.Log("scriptUri", scriptURI)
 	if scriptURI != "" {
 		telemetry("scenario", fmt.Sprintf("source.scriptUri;dos2unix=%d", dos2unix), true, 0*time.Millisecond)
@@ -241,7 +241,7 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (err error) {
 	if cfg.script() != "" {
 		cmd = cfg.script()
 		scenario = fmt.Sprintf("public-script;%s", scenarioInfo)
-	} else if cfg.scriptUri() != "" {
+	} else if cfg.scriptURI() != "" {
 		// If scriptUri is specified then cmd should start it
 		cmd = fmt.Sprintf("%s/script.sh", dir)
 		scenario = "public-scriptUri"

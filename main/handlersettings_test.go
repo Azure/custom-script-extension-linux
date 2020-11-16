@@ -10,7 +10,7 @@ func Test_handlerSettingsValidate(t *testing.T) {
 
 	// scriptUri and script both specified
 	require.Equal(t, errSourceNotSpecified, handlerSettings{
-		publicSettings{Source: scriptSource{Script: "foo", ScriptURI: "bar"}},
+		publicSettings{Source: &scriptSource{Script: "foo", ScriptURI: "bar"}},
 		protectedSettings{},
 	}.validate())
 
@@ -74,7 +74,7 @@ func Test_handlerSettingsValidate(t *testing.T) {
 
 func Test_scriptUri(t *testing.T) {
 	testSubject := handlerSettings{
-		publicSettings{Source: scriptSource{ScriptURI: "bar"}},
+		publicSettings{Source: &scriptSource{ScriptURI: "bar"}},
 		protectedSettings{},
 	}
 

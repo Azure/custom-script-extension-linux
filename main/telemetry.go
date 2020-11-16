@@ -31,8 +31,8 @@ type telemetryParameterBool struct {
 }
 
 type telemetryEvent struct {
-	EventId    int           `json:"eventId"`
-	ProviderId string        `json:"providerId"`
+	EventID    int           `json:"eventId"`
+	ProviderID string        `json:"providerId"`
 	Parameters []interface{} `json:"parameters"`
 }
 
@@ -106,8 +106,8 @@ func getTelemetryFileName() string {
 
 func newTelemetryEvent(name, version, operation, message string, isSuccess bool, duration time.Duration) telemetryEvent {
 	return telemetryEvent{
-		EventId:    1,
-		ProviderId: "69B669B9-4AF8-4C50-BDC4-6006FA76E975",
+		EventID:    1,
+		ProviderID: "69B669B9-4AF8-4C50-BDC4-6006FA76E975",
 		Parameters: []interface{}{
 			telemetryParameterString{
 				Name:  "Name",

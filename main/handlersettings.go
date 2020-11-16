@@ -9,9 +9,6 @@ import (
 )
 
 var (
-	// 	errStoragePartialCredentials    = errors.New("both 'storageAccountName' and 'storageAccountKey' must be specified")
-	// 	errUsingBothKeyAndMsi           = errors.New("'storageAccountName' or 'storageAccountKey' must not be specified with 'managedServiceIdentity'")
-	// 	errUsingBothClientIdAndObjectId = errors.New("only one of 'clientId' or 'objectId' must be specified with 'managedServiceIdentity'")
 	errSourceNotSpecified = errors.New("Either 'source.script' or 'source.scriptUri' has to be specified")
 )
 
@@ -21,48 +18,28 @@ type handlerSettings struct {
 	protectedSettings
 }
 
-func (s *handlerSettings) script() string {
+func (s handlerSettings) script() string {
 	return s.publicSettings.Source.Script
 }
 
-func (s *handlerSettings) scriptUri() string {
+func (s handlerSettings) scriptURI() string {
 	return s.publicSettings.Source.ScriptURI
 }
 
 // validate makes logical validation on the handlerSettings which already passed
 // the schema validation.
-func (h handlerSettings) validate() error {
+func (s handlerSettings) validate() error {
 
-	if (h.publicSettings.Source.Script == "") == (h.publicSettings.Source.ScriptURI == "") {
+	if s.publicSettings.Source == nil || (s.publicSettings.Source.Script == "") == (s.publicSettings.Source.ScriptURI == "") {
 		return errSourceNotSpecified
 	}
-
-	// 	if (h.protectedSettings.StorageAccountName != "") !=
-	// 		(h.protectedSettings.StorageAccountKey != "") {
-	// 		return errStoragePartialCredentials
-	// 	}
-
-	// 	if h.protectedSettings.StorageAccountKey != "" || h.protectedSettings.StorageAccountName != "" /*&& h.protectedSettings.ManagedIdentity != nil*/ {
-	// 		return errUsingBothKeyAndMsi
-	// 	}
-
-	// 	if h.protectedSettings.ManagedIdentity != nil {
-	// 		if h.protectedSettings.ManagedIdentity.ClientId != "" && h.protectedSettings.ManagedIdentity.ObjectId != "" {
-	// 			return errUsingBothClientIdAndObjectId
-	// 		}
-	// 	}
-
 	return nil
 }
 
 // publicSettings is the type deserialized from public configuration section of
 // the extension handler. This should be in sync with publicSettingsSchema.
 type publicSettings struct {
-	// SkipDos2Unix     bool     `json:"skipDos2Unix"`
-	// CommandToExecute string   `json:"commandToExecute"`
-	//FileURLs []string `json:"fileUris"`
-
-	Source           scriptSource          `json:"source"`
+	Source           *scriptSource         `json:"source"`
 	Parameters       []parameterDefinition `json:"parameters"`
 	RunAsUser        string                `json:"runAsUser"`
 	OutputBlobURI    string                `json:"outputBlobUri"`
@@ -74,12 +51,6 @@ type publicSettings struct {
 // protectedSettings is the type decoded and deserialized from protected
 // configuration section. This should be in sync with protectedSettingsSchema.
 type protectedSettings struct {
-	// CommandT+oExecute   string   `json:"commandToExecute"`
-	//FileURLs []string `json:"fileUris"`
-	//StorageAccountName string   `json:"storageAccountName"`
-	//StorageAccountKey  string   `json:"storageAccountKey"`
-	//ManagedIdentity    *clientOrObjectId `json:"managedIdentity"`
-
 	RunAsPassword       string                `json:"runAsPassword"`
 	SourceSASToken      string                `json:"sourceSASToken"`
 	OutputBlobSASToken  string                `json:"outputBlobSASToken"`
@@ -96,15 +67,6 @@ type parameterDefinition struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
 }
-
-type clientOrObjectId struct {
-	ObjectId string `json:"objectId"`
-	ClientId string `json:"clientId"`
-}
-
-// func (self *clientOrObjectId) isEmpty() bool {
-// 	return self.ClientId == "" && self.ObjectId == ""
-// }
 
 // parseAndValidateSettings reads configuration from configFolder, decrypts it,
 // runs JSON-schema and logical validation on it and returns it back.

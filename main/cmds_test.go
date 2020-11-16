@@ -117,7 +117,7 @@ func Test_downloadScriptUri(t *testing.T) {
 		dir,
 		handlerSettings{
 			publicSettings: publicSettings{
-				Source: scriptSource{ScriptURI: srv.URL + "/bytes/10"},
+				Source: &scriptSource{ScriptURI: srv.URL + "/bytes/10"},
 			},
 		})
 	require.Nil(t, err)
