@@ -7,20 +7,20 @@ import (
 	"testing"
 
 	"github.com/Azure/azure-docker-extension/pkg/vmextension"
-	"github.com/Azure/azure-docker-extension/pkg/vmextension/status"
+	"github.com/Azure/azure-extension-platform/pkg/status"
 	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_statusMsg(t *testing.T) {
-	require.Equal(t, "Enable succeeded", statusMsg(cmdEnable, status.StatusSuccess, ""))
-	require.Equal(t, "Enable succeeded: msg", statusMsg(cmdEnable, status.StatusSuccess, "msg"))
+	require.Equal(t, "Enable succeeded", status.StatusMsg(cmdEnable.name, status.StatusSuccess, ""))
+	require.Equal(t, "Enable succeeded: msg", status.StatusMsg(cmdEnable.name, status.StatusSuccess, "msg"))
 
-	require.Equal(t, "Enable failed", statusMsg(cmdEnable, status.StatusError, ""))
-	require.Equal(t, "Enable failed: msg", statusMsg(cmdEnable, status.StatusError, "msg"))
+	require.Equal(t, "Enable failed", status.StatusMsg(cmdEnable.name, status.StatusError, ""))
+	require.Equal(t, "Enable failed: msg", status.StatusMsg(cmdEnable.name, status.StatusError, "msg"))
 
-	require.Equal(t, "Enable in progress", statusMsg(cmdEnable, status.StatusTransitioning, ""))
-	require.Equal(t, "Enable in progress: msg", statusMsg(cmdEnable, status.StatusTransitioning, "msg"))
+	require.Equal(t, "Enable in progress", status.StatusMsg(cmdEnable.name, status.StatusTransitioning, ""))
+	require.Equal(t, "Enable in progress: msg", status.StatusMsg(cmdEnable.name, status.StatusTransitioning, "msg"))
 }
 
 func Test_reportStatus_fails(t *testing.T) {

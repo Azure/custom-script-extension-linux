@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-docker-extension/pkg/vmextension"
-	"github.com/Azure/azure-docker-extension/pkg/vmextension/status"
+	"github.com/Azure/azure-extension-platform/pkg/status"
 	"github.com/go-kit/kit/log"
 )
 
@@ -59,14 +59,14 @@ func main() {
 		}
 	}
 	// execute the subcommand
-	reportStatus(ctx, hEnv, seqNum, status.StatusTransitioning, cmd, "")
+	reportStatus(ctx, hEnv, uint(seqNum), status.StatusTransitioning, cmd, "")
 	msg, err := cmd.f(ctx, hEnv, seqNum)
 	if err != nil {
 		ctx.Log("event", "failed to handle", "error", err)
-		reportStatus(ctx, hEnv, seqNum, status.StatusError, cmd, err.Error()+msg)
+		reportStatus(ctx, hEnv, uint(seqNum), status.StatusError, cmd, err.Error()+msg)
 		os.Exit(cmd.failExitCode)
 	}
-	reportStatus(ctx, hEnv, seqNum, status.StatusSuccess, cmd, msg)
+	reportStatus(ctx, hEnv, uint(seqNum), status.StatusSuccess, cmd, msg)
 	ctx.Log("event", "end")
 }
 

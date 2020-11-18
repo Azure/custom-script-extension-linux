@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/koralski/run-command-extension-linux",
-	"GoVersion": "go1.6",
-	"GodepVersion": "v74",
+	"GoVersion": "go1.10",
+	"GodepVersion": "v80",
 	"Packages": [
 		"./..."
 	],
@@ -12,9 +12,8 @@
 			"Rev": "0dd2f199467db78e91d28c30d8595d1bcaf776de"
 		},
 		{
-			"ImportPath": "github.com/Azure/azure-docker-extension/pkg/vmextension/status",
-			"Comment": "1.1.1606092330-20-g0dd2f19",
-			"Rev": "0dd2f199467db78e91d28c30d8595d1bcaf776de"
+			"ImportPath": "github.com/Azure/azure-extension-platform/pkg/status",
+			"Rev": "f6e2ea0b563e57006b6cab34c91f08bddecc147a"
 		},
 		{
 			"ImportPath": "github.com/Azure/azure-sdk-for-go/storage",
