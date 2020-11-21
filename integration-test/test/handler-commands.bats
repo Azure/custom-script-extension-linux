@@ -33,7 +33,10 @@ teardown(){
      diff="$(container_diff)"; echo "$diff"
     [[ "$diff" = *"A /var/lib/waagent/Extension/status/0.status"* ]]
     status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
-    echo "$status_file"; [[ "$status_file" = *'Enable failed'* ]]
+    echo "$status_file"
+    [[ "$status_file" = *'Execution failed'* ]]
+    [[ "$status_file" = *'Running'* ]]
+    [[ "$status_file" = *"invalid configuration: Either 'source.script' or 'source.scriptUri'"* ]]
 }
 
 @test "handler command: enable - validates json schema" {
@@ -63,45 +66,10 @@ teardown(){
     echo "stderr=$stderr" && [[ "$stderr" = "HelloStderr" ]]
 
     status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
-    echo "status_file=$status_file"; [[ "$status_file" = *'Enable succeeded: \n[stdout]\nHelloStdout\n\n[stderr]\nHelloStderr\n'* ]]
-}
-
-@test "handler command: enable - base64 encoded script captures stdout/stderr into file and .status" {
-    mk_container sh -c "fake-waagent install && fake-waagent enable && wait-for-enable"
-    push_settings '
-    {
-        "source": {"script": "echo HelloStdout>&1; echo HelloStderr>&2"}
-    }' ''
-    run start_container
-    echo "$output"
-
-    # Validate contents of stdout/stderr files
-    stdout="$(container_read_file /var/lib/waagent/run-command-handler/download/0/stdout)"
-    echo "stdout=$stdout" && [[ "$stdout" = "HelloStdout" ]]
-    stderr="$(container_read_file /var/lib/waagent/run-command-handler/download/0/stderr)"
-    echo "stderr=$stderr" && [[ "$stderr" = "HelloStderr" ]]
-
-    status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
-    echo "status_file=$status_file"; [[ "$status_file" = *'Enable succeeded: \n[stdout]\nHelloStdout\n\n[stderr]\nHelloStderr\n'* ]]
-}
-
-@test "handler command: enable - base64 encoded and gzip'ed script captures stdout/stderr into file and .status" {
-    mk_container sh -c "fake-waagent install && fake-waagent enable && wait-for-enable"
-    push_settings '
-    {
-        "source": {"script": "echo HelloStdout>&1; echo HelloStderr>&2"}
-    }' ''
-    run start_container
-    echo "$output"
-
-    # Validate contents of stdout/stderr files
-    stdout="$(container_read_file /var/lib/waagent/run-command-handler/download/0/stdout)"
-    echo "stdout=$stdout" && [[ "$stdout" = "HelloStdout" ]]
-    stderr="$(container_read_file /var/lib/waagent/run-command-handler/download/0/stderr)"
-    echo "stderr=$stderr" && [[ "$stderr" = "HelloStderr" ]]
-
-    status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
-    echo "status_file=$status_file"; [[ "$status_file" = *'Enable succeeded: \n[stdout]\nHelloStdout\n\n[stderr]\nHelloStderr\n'* ]]
+    echo "status_file=$status_file"
+    [[ "$status_file" = *'Execution succeeded'* ]]
+    [[ "$status_file" = *'HelloStdout'* ]]
+    [[ "$status_file" = *'HelloStderr'* ]]
 }
 
 @test "handler command: enable - captures stdout/stderr into .status on error" {
@@ -116,7 +84,9 @@ teardown(){
     echo "$output"
 
     status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
-    echo "status_file=$status_file"; [[ "$status_file" = *'Enable succeeded: \n[stdout]\n\n[stderr]\nls: cannot access'* ]]
+    echo "status_file=$status_file"
+    [[ "$status_file" = *'Execution succeeded'* ]]
+    [[ "$status_file" = *'ls: cannot access'* ]]
 }
 
 @test "handler command: enable - doesn't process the same sequence number again" {
@@ -153,7 +123,9 @@ teardown(){
     echo "$output"
 
     status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
-    echo "status_file=$status_file"; [[ "$status_file" = *'Enable succeeded: \n[stdout]\nHello\n\n[stderr]\n'* ]]
+    echo "status_file=$status_file"
+    [[ "$status_file" = *'Execution succeeded'* ]]
+    [[ "$status_file" = *'Hello'* ]]
 }
 
 @test "handler command: enable - downloads files" {
@@ -227,7 +199,8 @@ teardown(){
 
     # validate .status file still reads "Enable succeeded"
     status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
-    echo "$status_file"; [[ "$status_file" = *'Enable succeeded'* ]]
+    echo "$status_file"
+    [[ "$status_file" = *'Execution succeeded'* ]]
 }
 
 @test "handler command: uninstall - deletes the data dir" {

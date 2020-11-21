@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Azure/azure-docker-extension/pkg/vmextension"
 	"github.com/Azure/azure-extension-platform/pkg/status"
@@ -59,14 +60,30 @@ func main() {
 		}
 	}
 	// execute the subcommand
-	reportStatus(ctx, hEnv, uint(seqNum), status.StatusTransitioning, cmd, "")
+	instanceView := RunCommandInstanceView{
+		ExecutionState:   Running,
+		ExecutionMessage: "Execution in progress",
+		ExitCode:         0,
+		Output:           "",
+		Error:            "",
+		StartTime:        time.Now().UTC().Format(time.RFC3339),
+		EndTime:          "",
+	}
+	//reportStatus(ctx, hEnv, uint(seqNum), status.StatusTransitioning, cmd, "")
+	reportInstanceView(ctx, hEnv, uint(seqNum), status.StatusTransitioning, cmd, &instanceView)
 	msg, err := cmd.f(ctx, hEnv, seqNum)
 	if err != nil {
 		ctx.Log("event", "failed to handle", "error", err)
-		reportStatus(ctx, hEnv, uint(seqNum), status.StatusError, cmd, err.Error()+msg)
+		//reportStatus(ctx, hEnv, uint(seqNum), status.StatusError, cmd, err.Error()+msg)
+		instanceView.ExecutionMessage = "Execution failed: " + err.Error()
+		reportInstanceView(ctx, hEnv, uint(seqNum), status.StatusTransitioning, cmd, &instanceView)
 		os.Exit(cmd.failExitCode)
 	}
-	reportStatus(ctx, hEnv, uint(seqNum), status.StatusSuccess, cmd, msg)
+	instanceView.ExecutionMessage = "Execution succeeded"
+	instanceView.ExecutionState = Succeeded
+	instanceView.Output = msg
+	reportInstanceView(ctx, hEnv, uint(seqNum), status.StatusSuccess, cmd, &instanceView)
+	//reportStatus(ctx, hEnv, uint(seqNum), status.StatusSuccess, cmd, msg)
 	ctx.Log("event", "end")
 }
 

@@ -17,7 +17,7 @@ func reportStatus(ctx *log.Context, hEnv vmextension.HandlerEnvironment, seqNum 
 		ctx.Log("status", "not reported for operation (by design)")
 		return nil
 	}
-	s := status.New(t, c.name, status.StatusMsg(c.name, t, msg))
+	s := status.New(t, c.name, msg)
 	if err := s.Save(hEnv.HandlerEnvironment.StatusFolder, seqNum); err != nil {
 		ctx.Log("event", "failed to save handler status", "error", err)
 		return errors.Wrap(err, "failed to save handler status")

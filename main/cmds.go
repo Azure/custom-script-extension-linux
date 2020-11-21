@@ -266,7 +266,7 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (err error) {
 
 func writeTempScript(script, dir string) (string, string, error) {
 	if len(script) > maxScriptSize {
-		return "", "", fmt.Errorf("The script's length (%d) exceeded the maximum allowed length of %d!", len(script), maxScriptSize)
+		return "", "", fmt.Errorf("The script's length (%d) exceeded the maximum allowed length of %d", len(script), maxScriptSize)
 	}
 
 	s, info, err := decodeScript(script)
