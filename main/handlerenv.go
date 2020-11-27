@@ -1,4 +1,4 @@
-package vmextension
+package main
 
 import (
 	"encoding/json"

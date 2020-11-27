@@ -8,7 +8,6 @@ RUN apt-get -qqy update && \
 # Create the directories and files that need to be present
 RUN mkdir -p /var/lib/waagent && \
         mkdir -p /var/lib/waagent/Extension/config && \
-        touch /var/lib/waagent/Extension/config/0.settings && \
         mkdir -p /var/lib/waagent/Extension/status && \
         mkdir -p /var/log/azure/Extension/VE.RS.ION
 

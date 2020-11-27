@@ -72,6 +72,39 @@ teardown(){
     [[ "$status_file" = *'HelloStderr'* ]]
 }
 
+@test "handler command (multiconfig): enable - captures stdout/stderr into file and .status" {
+    # export ConfigExtensionName=extname && export ConfigSequenceNumber=5 will be read from the extension to determine the settings file name
+    mk_container sh -c "export ConfigExtensionName=extname && export ConfigSequenceNumber=5 && fake-waagent install && fake-waagent enable && wait-for-enable "
+    push_settings '
+    {
+        "source": {
+            "script": "echo HelloStdout>&1; echo HelloStderr>&2"
+        }
+    }' '' 'extname.5.settings'
+    run start_container
+    echo "$output"
+
+    # Validate contents of stdout/stderr files
+    stdout="$(container_read_file /var/lib/waagent/run-command-handler/download/extname/5/stdout)"
+    echo "stdout=$stdout" && [[ "$stdout" = "HelloStdout" ]]
+    stderr="$(container_read_file /var/lib/waagent/run-command-handler/download/extname/5/stderr)"
+    echo "stderr=$stderr" && [[ "$stderr" = "HelloStderr" ]]
+
+    config_file="$(container_read_file /var/lib/waagent/Extension/config/extname.5.settings)"
+    echo "config_file=$config_file"
+    [[ "$config_file" = *'echo HelloStdout>&1; echo HelloStderr>&2'* ]]
+
+    status_file="$(container_read_file /var/lib/waagent/Extension/status/extname.5.status)"
+    echo "status_file=$status_file"
+    [[ "$status_file" = *'Execution succeeded'* ]]
+    [[ "$status_file" = *'HelloStdout'* ]]
+    [[ "$status_file" = *'HelloStderr'* ]]
+
+    mrseq_file="$(container_read_file /var/lib/waagent/extname.mrseq)"
+    echo "mrseq_file=$mrseq_file"
+    [[ "$mrseq_file" = '5' ]]
+}
+
 @test "handler command: enable - captures stdout/stderr into .status on error" {
     mk_container sh -c "fake-waagent install && fake-waagent enable && wait-for-enable"
     push_settings '

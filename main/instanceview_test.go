@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/azure-docker-extension/pkg/vmextension"
 	"github.com/Azure/azure-extension-platform/pkg/status"
 	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/require"
@@ -47,12 +46,13 @@ func Test_reportInstanceView(t *testing.T) {
 	require.Nil(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	fakeEnv := vmextension.HandlerEnvironment{}
+	extName := "first"
+	fakeEnv := HandlerEnvironment{}
 	fakeEnv.HandlerEnvironment.StatusFolder = tmpDir
 
-	require.Nil(t, reportInstanceView(log.NewContext(log.NewNopLogger()), fakeEnv, 1, status.StatusSuccess, cmdEnable, &instanceView))
+	require.Nil(t, reportInstanceView(log.NewContext(log.NewNopLogger()), fakeEnv, extName, 1, StatusSuccess, cmdEnable, &instanceView))
 
-	path := filepath.Join(tmpDir, "1.status")
+	path := filepath.Join(tmpDir, extName+"."+"1.status")
 	b, err := ioutil.ReadFile(path)
 	require.Nil(t, err, ".status file exists")
 	require.NotEqual(t, 0, len(b), ".status file not empty")

@@ -45,7 +45,7 @@ load test_helper
 
 @test "meta: can create a .settings json with public/protected config" {
     tp="$mk_certs"
-    run mk_settings_json '' '{"commandToExecute":"touch /a.txt"}' "$tp"
+    run mk_settings_json '' '{"source":{script:"touch /a.txt"}}' "$tp"
     echo "$output"
     [ "$status" -eq 0 ]
 }

@@ -6,28 +6,15 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Azure/azure-docker-extension/pkg/vmextension"
-	"github.com/Azure/azure-extension-platform/pkg/status"
 	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/require"
 )
 
-func Test_statusMsg(t *testing.T) {
-	require.Equal(t, "Enable succeeded", status.StatusMsg(cmdEnable.name, status.StatusSuccess, ""))
-	require.Equal(t, "Enable succeeded: msg", status.StatusMsg(cmdEnable.name, status.StatusSuccess, "msg"))
-
-	require.Equal(t, "Enable failed", status.StatusMsg(cmdEnable.name, status.StatusError, ""))
-	require.Equal(t, "Enable failed: msg", status.StatusMsg(cmdEnable.name, status.StatusError, "msg"))
-
-	require.Equal(t, "Enable in progress", status.StatusMsg(cmdEnable.name, status.StatusTransitioning, ""))
-	require.Equal(t, "Enable in progress: msg", status.StatusMsg(cmdEnable.name, status.StatusTransitioning, "msg"))
-}
-
 func Test_reportStatus_fails(t *testing.T) {
-	fakeEnv := vmextension.HandlerEnvironment{}
+	fakeEnv := HandlerEnvironment{}
 	fakeEnv.HandlerEnvironment.StatusFolder = "/non-existing/dir/"
 
-	err := reportStatus(log.NewContext(log.NewNopLogger()), fakeEnv, 1, status.StatusSuccess, cmdEnable, "")
+	err := reportStatus(log.NewContext(log.NewNopLogger()), fakeEnv, "", 1, StatusSuccess, cmdEnable, "")
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "failed to save handler status")
 }
@@ -37,12 +24,13 @@ func Test_reportStatus_fileExists(t *testing.T) {
 	require.Nil(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	fakeEnv := vmextension.HandlerEnvironment{}
+	extName := "first"
+	fakeEnv := HandlerEnvironment{}
 	fakeEnv.HandlerEnvironment.StatusFolder = tmpDir
 
-	require.Nil(t, reportStatus(log.NewContext(log.NewNopLogger()), fakeEnv, 1, status.StatusError, cmdEnable, "FOO ERROR"))
+	require.Nil(t, reportStatus(log.NewContext(log.NewNopLogger()), fakeEnv, extName, 1, StatusError, cmdEnable, "FOO ERROR"))
 
-	path := filepath.Join(tmpDir, "1.status")
+	path := filepath.Join(tmpDir, "first.1.status")
 	b, err := ioutil.ReadFile(path)
 	require.Nil(t, err, ".status file exists")
 	require.NotEqual(t, 0, len(b), ".status file not empty")
@@ -54,11 +42,12 @@ func Test_reportStatus_checksIfShouldBeReported(t *testing.T) {
 		require.Nil(t, err)
 		defer os.RemoveAll(tmpDir)
 
-		fakeEnv := vmextension.HandlerEnvironment{}
+		extName := "first"
+		fakeEnv := HandlerEnvironment{}
 		fakeEnv.HandlerEnvironment.StatusFolder = tmpDir
-		require.Nil(t, reportStatus(log.NewContext(log.NewNopLogger()), fakeEnv, 2, status.StatusSuccess, c, ""))
+		require.Nil(t, reportStatus(log.NewContext(log.NewNopLogger()), fakeEnv, extName, 2, StatusSuccess, c, ""))
 
-		fp := filepath.Join(tmpDir, "2.status")
+		fp := filepath.Join(tmpDir, "first.2.status")
 		_, err = os.Stat(fp) // check if the .status file is there
 		if c.shouldReportStatus && err != nil {
 			t.Fatalf("cmd=%q should have reported status file=%q err=%v", c.name, fp, err)

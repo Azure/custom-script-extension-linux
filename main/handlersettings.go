@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 
-	"github.com/Azure/azure-docker-extension/pkg/vmextension"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 )
@@ -70,9 +69,9 @@ type parameterDefinition struct {
 
 // parseAndValidateSettings reads configuration from configFolder, decrypts it,
 // runs JSON-schema and logical validation on it and returns it back.
-func parseAndValidateSettings(ctx *log.Context, configFolder string) (h handlerSettings, _ error) {
-	ctx.Log("event", "reading configuration")
-	pubJSON, protJSON, err := readSettings(configFolder)
+func parseAndValidateSettings(ctx *log.Context, configFilePath string) (h handlerSettings, _ error) {
+	ctx.Log("event", "reading configuration from "+configFilePath)
+	pubJSON, protJSON, err := readSettings(configFilePath)
 	if err != nil {
 		return h, err
 	}
@@ -85,7 +84,7 @@ func parseAndValidateSettings(ctx *log.Context, configFolder string) (h handlerS
 	ctx.Log("event", "json schema valid")
 
 	ctx.Log("event", "parsing configuration json")
-	if err := vmextension.UnmarshalHandlerSettings(pubJSON, protJSON, &h.publicSettings, &h.protectedSettings); err != nil {
+	if err := UnmarshalHandlerSettings(pubJSON, protJSON, &h.publicSettings, &h.protectedSettings); err != nil {
 		return h, errors.Wrap(err, "json parsing error")
 	}
 	ctx.Log("event", "parsed configuration json")
@@ -98,11 +97,11 @@ func parseAndValidateSettings(ctx *log.Context, configFolder string) (h handlerS
 	return h, nil
 }
 
-// readSettings uses specified configFolder (comes from HandlerEnvironment) to
+// readSettings uses specified configFilePath (comes from HandlerEnvironment) to
 // decrypt and parse the public/protected settings of the extension handler into
 // JSON objects.
-func readSettings(configFolder string) (pubSettingsJSON, protSettingsJSON map[string]interface{}, err error) {
-	pubSettingsJSON, protSettingsJSON, err = vmextension.ReadSettings(configFolder)
+func readSettings(configFilePath string) (pubSettingsJSON, protSettingsJSON map[string]interface{}, err error) {
+	pubSettingsJSON, protSettingsJSON, err = ReadSettings(configFilePath)
 	err = errors.Wrapf(err, "error reading extension configuration")
 	return
 }

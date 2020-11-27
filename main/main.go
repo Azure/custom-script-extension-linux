@@ -3,11 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-docker-extension/pkg/vmextension"
-	"github.com/Azure/azure-extension-platform/pkg/status"
 	"github.com/go-kit/kit/log"
 )
 
@@ -19,7 +18,7 @@ var (
 	// seqNumFile holds the processed highest sequence number to make
 	// sure we do not run the command more than once for the same sequence
 	// number. Stored under dataDir.
-	seqNumFile = "seqnum"
+	//seqNumFile = "seqnum"
 
 	// most recent sequence, which was previously traced by seqNumFile. This was
 	// incorrect. The correct way is mrseq.  This file is auto-preserved by the agent.
@@ -27,7 +26,14 @@ var (
 
 	// downloadDir is where we store the downloaded files in the "{downloadDir}/{seqnum}/file"
 	// format and the logs as "{downloadDir}/{seqnum}/std(out|err)". Stored under dataDir
+	// multiconfig support - when extName is set we use {downloadDir}/{extName}/...
 	downloadDir = "download"
+
+	// configSequenceNumber environment variable should be set by VMAgent to sequence number
+	configSequenceNumber = "ConfigSequenceNumber"
+
+	// configExtensionName environment variable should be set by VMAgent to extension name
+	configExtensionName = "ConfigExtensionName"
 )
 
 func main() {
@@ -39,16 +45,37 @@ func main() {
 	ctx = ctx.With("operation", strings.ToLower(cmd.name))
 
 	// parse extension environment
-	hEnv, err := vmextension.GetHandlerEnv()
+	hEnv, err := GetHandlerEnv()
 	if err != nil {
 		ctx.Log("message", "failed to parse handlerenv", "error", err)
 		os.Exit(cmd.failExitCode)
 	}
-	seqNum, err := vmextension.FindSeqNumConfig(hEnv.HandlerEnvironment.ConfigFolder)
-	if err != nil {
-		ctx.Log("messsage", "failed to find sequence number", "error", err)
+
+	// Multiconfig support: Agent should set env variables for the extension name and sequence number
+	seqNum := -1
+	seqNumVariable := os.Getenv(configSequenceNumber)
+	if seqNumVariable != "" {
+		seqNum, err = strconv.Atoi(seqNumVariable)
+		if err != nil {
+			ctx.Log("message", "failed to parse env variable ConfigSequenceNumber:"+seqNumVariable, "error", err)
+			os.Exit(cmd.failExitCode)
+		}
+	}
+	// Read the seqNum from latest config file in case VMAgent did not set it as env variable
+	if seqNum == -1 {
+		seqNum, err = FindSeqNumConfig(hEnv.HandlerEnvironment.ConfigFolder)
+		if err != nil {
+			ctx.Log("messsage", "failed to find sequence number", "error", err)
+		}
 	}
 	ctx = ctx.With("seq", seqNum)
+
+	extName := os.Getenv(configExtensionName)
+	if extName != "" {
+		ctx = ctx.With("extensionName", extName)
+		downloadDir = downloadDir + "/" + extName
+		mostRecentSequence = extName + "." + mostRecentSequence
+	}
 
 	// check sub-command preconditions, if any, before executing
 	ctx.Log("event", "start")
@@ -59,7 +86,6 @@ func main() {
 			os.Exit(cmd.failExitCode)
 		}
 	}
-	// execute the subcommand
 	instanceView := RunCommandInstanceView{
 		ExecutionState:   Running,
 		ExecutionMessage: "Execution in progress",
@@ -69,21 +95,21 @@ func main() {
 		StartTime:        time.Now().UTC().Format(time.RFC3339),
 		EndTime:          "",
 	}
-	//reportStatus(ctx, hEnv, uint(seqNum), status.StatusTransitioning, cmd, "")
-	reportInstanceView(ctx, hEnv, uint(seqNum), status.StatusTransitioning, cmd, &instanceView)
-	msg, err := cmd.f(ctx, hEnv, seqNum)
+	reportInstanceView(ctx, hEnv, extName, seqNum, StatusTransitioning, cmd, &instanceView)
+
+	// execute the subcommand
+	stdout, stderr, err := cmd.f(ctx, hEnv, extName, seqNum)
 	if err != nil {
 		ctx.Log("event", "failed to handle", "error", err)
-		//reportStatus(ctx, hEnv, uint(seqNum), status.StatusError, cmd, err.Error()+msg)
 		instanceView.ExecutionMessage = "Execution failed: " + err.Error()
-		reportInstanceView(ctx, hEnv, uint(seqNum), status.StatusTransitioning, cmd, &instanceView)
+		reportInstanceView(ctx, hEnv, extName, seqNum, StatusTransitioning, cmd, &instanceView)
 		os.Exit(cmd.failExitCode)
 	}
 	instanceView.ExecutionMessage = "Execution succeeded"
 	instanceView.ExecutionState = Succeeded
-	instanceView.Output = msg
-	reportInstanceView(ctx, hEnv, uint(seqNum), status.StatusSuccess, cmd, &instanceView)
-	//reportStatus(ctx, hEnv, uint(seqNum), status.StatusSuccess, cmd, msg)
+	instanceView.Output = stdout
+	instanceView.Error = stderr
+	reportInstanceView(ctx, hEnv, extName, seqNum, StatusSuccess, cmd, &instanceView)
 	ctx.Log("event", "end")
 }
 

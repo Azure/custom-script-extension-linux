@@ -99,7 +99,9 @@ EOF
 
 push_settings() { # creates and copies 0.settings file with given public settings ($1) and ($2) values.
     set -e
-
+    # $1 public settings
+    # $2 protected settings
+    # $3 [optional] settings file name
     if [ -n "$2" ]; then
         cert_tp="$(mk_certs)"
         push_certs "$cert_tp"
@@ -107,7 +109,7 @@ push_settings() { # creates and copies 0.settings file with given public setting
 
     cfg_file="$(save_tmp_file "$(mk_settings_json "$1" "$2" "$cert_tp") ")"
     echo ".settings: $(cat "$cfg_file")" >&2
-    copy_config "$cfg_file"
+    copy_config "$cfg_file" $3
     echo ".settings file pushed to container." >&2
 }
 
@@ -118,9 +120,15 @@ save_tmp_file(){ # saves $1 into a temporary file and returns its path
     echo "$fp"
 }
 
-copy_config() { # places specified settings file ($1) into container as 0.settings
+copy_config() { # places specified settings file ($1) into container as 0.settings or extname.seqno.settings
     set -e
-    echo "Copying $1 to container as 0.settings." >&2
-    docker cp "$1" "$TEST_CONTAINER:/var/lib/waagent/Extension/config/0.settings"
+    source_file="$1"
+    destination_file="$2"
+
+    # Default to 0.setting if $2 is not set
+    if [ -z "$destination_file" ]; then destination_file="0.settings"; fi    
+
+    echo "Copying $source_file to container as $destination_file" >&2
+    docker cp "$source_file" "$TEST_CONTAINER:/var/lib/waagent/Extension/config/$destination_file"
     echo "Copied settings into container.">&2
 }

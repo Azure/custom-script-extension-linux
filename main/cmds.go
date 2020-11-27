@@ -11,9 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Azure/azure-docker-extension/pkg/vmextension"
 	"github.com/go-kit/kit/log"
-	"github.com/koralski/run-command-extension-linux/pkg/seqnum"
 	"github.com/pkg/errors"
 )
 
@@ -21,7 +19,7 @@ const (
 	maxScriptSize = 256 * 1024
 )
 
-type cmdFunc func(ctx *log.Context, hEnv vmextension.HandlerEnvironment, seqNum int) (msg string, err error)
+type cmdFunc func(ctx *log.Context, hEnv HandlerEnvironment, extName string, seqNum int) (stdout string, stderr string, err error)
 type preFunc func(ctx *log.Context, seqNum int) error
 
 type cmd struct {
@@ -54,28 +52,28 @@ var (
 	}
 )
 
-func noop(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (string, error) {
+func noop(ctx *log.Context, h HandlerEnvironment, extName string, seqNum int) (string, string, error) {
 	ctx.Log("event", "noop")
-	return "", nil
+	return "", "", nil
 }
 
-func install(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (string, error) {
+func install(ctx *log.Context, h HandlerEnvironment, extName string, seqNum int) (string, string, error) {
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		return "", errors.Wrap(err, "failed to create data dir")
+		return "", "", errors.Wrap(err, "failed to create data dir")
 	}
 
 	// If the file mrseq does not exists
 	//  the extension has never been installed on this VMs before
-	if _, err := os.Stat(mostRecentSequence); os.IsNotExist(err) {
-		migrateToMostRecentSequence(ctx, h, seqNum)
-	}
+	// if _, err := os.Stat(mostRecentSequence); os.IsNotExist(err) {
+	// 	migrateToMostRecentSequence(ctx, h, seqNum)
+	// }
 
 	ctx.Log("event", "created data dir", "path", dataDir)
 	ctx.Log("event", "installed")
-	return "", nil
+	return "", "", nil
 }
 
-func migrateToMostRecentSequence(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) {
+func migrateToMostRecentSequence(ctx *log.Context, h HandlerEnvironment, seqNum int) {
 	// The status folder is used instead of the settings because the settings file is written
 	// by the agent before install is called.  As a result, the extension cannot determine if this
 	// is a new install or an upgrade.
@@ -89,7 +87,7 @@ func migrateToMostRecentSequence(ctx *log.Context, h vmextension.HandlerEnvironm
 	// do not have invent another method.  The CustomScript extension should have been using this
 	// from the beginning, but it was not.
 	//
-	computedSeqNum, err := vmextension.FindSeqNumStatus(h.HandlerEnvironment.StatusFolder)
+	computedSeqNum, err := FindSeqNumStatus(h.HandlerEnvironment.StatusFolder)
 	if err != nil {
 		// If there was an error, the sequence number is zero.
 		ctx.Log("event", "migrate to mrseq", "error", err)
@@ -107,17 +105,17 @@ func migrateToMostRecentSequence(ctx *log.Context, h vmextension.HandlerEnvironm
 	fout.WriteString(fmt.Sprintf("%v", computedSeqNum))
 }
 
-func uninstall(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (string, error) {
+func uninstall(ctx *log.Context, h HandlerEnvironment, extName string, seqNum int) (string, string, error) {
 	{ // a new context scope with path
 		ctx = ctx.With("path", dataDir)
 		ctx.Log("event", "removing data dir", "path", dataDir)
 		if err := os.RemoveAll(dataDir); err != nil {
-			return "", errors.Wrap(err, "failed to delete data directory")
+			return "", "", errors.Wrap(err, "failed to delete data directory")
 		}
 		ctx.Log("event", "removed data dir")
 	}
 	ctx.Log("event", "uninstalled")
-	return "", nil
+	return "", "", nil
 }
 
 func enablePre(ctx *log.Context, seqNum int) error {
@@ -139,16 +137,21 @@ func min(a, b int) int {
 	return b
 }
 
-func enable(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (string, error) {
+func enable(ctx *log.Context, h HandlerEnvironment, extName string, seqNum int) (string, string, error) {
 	// parse the extension handler settings (not available prior to 'enable')
-	cfg, err := parseAndValidateSettings(ctx, h.HandlerEnvironment.ConfigFolder)
+	configFile := fmt.Sprintf("%d.settings", seqNum)
+	if extName != "" {
+		configFile = extName + "." + configFile
+	}
+	configPath := filepath.Join(h.HandlerEnvironment.ConfigFolder, configFile)
+	cfg, err := parseAndValidateSettings(ctx, configPath)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to get configuration")
+		return "", "", errors.Wrap(err, "failed to get configuration")
 	}
 
 	dir := filepath.Join(dataDir, downloadDir, fmt.Sprintf("%d", seqNum))
 	if err := downloadFiles(ctx, dir, cfg); err != nil {
-		return "", errors.Wrap(err, "processing file downloads failed")
+		return "", "", errors.Wrap(err, "processing file downloads failed")
 	}
 
 	// execute the command, save its error
@@ -174,11 +177,9 @@ func enable(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (str
 		ctx.Log("event", "enable script failed")
 	}
 
-	msg := fmt.Sprintf("\n[stdout]\n%s\n[stderr]\n%s", string(stdoutTail), string(stderrTail))
-
 	// Always report nil for error because extension should not fail if script throws error
-	// Error still will be reported in the message
-	return msg, nil
+	// Execution error still will be reported in the error stream
+	return string(stdoutTail), string(stderrTail), nil
 }
 
 // checkAndSaveSeqNum checks if the given seqNum is already processed
@@ -186,7 +187,7 @@ func enable(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (str
 // otherwise saves the given seqNum into seqNumFile returns false.
 func checkAndSaveSeqNum(ctx log.Logger, seq int, mrseqPath string) (shouldExit bool, _ error) {
 	ctx.Log("event", "comparing seqnum", "path", mrseqPath)
-	smaller, err := seqnum.IsSmallerThan(mrseqPath, seq)
+	smaller, err := IsSmallerThan(mrseqPath, seq)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to check sequence number")
 	}
@@ -195,7 +196,7 @@ func checkAndSaveSeqNum(ctx log.Logger, seq int, mrseqPath string) (shouldExit b
 		// sequence number.
 		return true, nil
 	}
-	if err := seqnum.Set(mrseqPath, seq); err != nil {
+	if err := Set(mrseqPath, seq); err != nil {
 		return false, errors.Wrap(err, "failed to save sequence number")
 	}
 	ctx.Log("event", "seqnum saved", "path", mrseqPath)

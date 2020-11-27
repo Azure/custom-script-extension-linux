@@ -77,33 +77,34 @@ func Test_checkAndSaveSeqNum(t *testing.T) {
 	require.True(t, shouldExit)
 }
 
-// func Test_runCmd_success(t *testing.T) {
-// 	dir, err := ioutil.TempDir("", "")
-// 	require.Nil(t, err)
-// 	defer os.RemoveAll(dir)
+func Test_runCmd_success(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
 
-// 	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
-// 		publicSettings: publicSettings{CommandToExecute: "date"},
-// 	}), "command should run successfully")
+	err = runCmd(log.NewNopLogger(), dir, handlerSettings{
+		publicSettings: publicSettings{Source: &scriptSource{Script: "date"}},
+	})
+	require.Nil(t, err, "command should run successfully")
 
-// 	// check stdout stderr files
-// 	_, err = os.Stat(filepath.Join(dir, "stdout"))
-// 	require.Nil(t, err, "stdout should exist")
-// 	_, err = os.Stat(filepath.Join(dir, "stderr"))
-// 	require.Nil(t, err, "stderr should exist")
-// }
+	// check stdout stderr files
+	_, err = os.Stat(filepath.Join(dir, "stdout"))
+	require.Nil(t, err, "stdout should exist")
+	_, err = os.Stat(filepath.Join(dir, "stderr"))
+	require.Nil(t, err, "stderr should exist")
+}
 
-// func Test_runCmd_fail(t *testing.T) {
-// 	dir, err := ioutil.TempDir("", "")
-// 	require.Nil(t, err)
-// 	defer os.RemoveAll(dir)
+func Test_runCmd_fail(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
 
-// 	err = runCmd(log.NewNopLogger(), dir, handlerSettings{
-// 		publicSettings: publicSettings{CommandToExecute: "non-existing-cmd"},
-// 	})
-// 	require.NotNil(t, err, "command terminated with exit status")
-// 	require.Contains(t, err.Error(), "failed to execute command")
-// }
+	err = runCmd(log.NewNopLogger(), dir, handlerSettings{
+		publicSettings: publicSettings{Source: &scriptSource{Script: "non-existing-cmd"}},
+	})
+	require.NotNil(t, err, "command terminated with exit status")
+	require.Contains(t, err.Error(), "failed to execute command")
+}
 
 func Test_downloadScriptUri(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")

@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Azure/azure-docker-extension/pkg/vmextension"
-	"github.com/Azure/azure-extension-platform/pkg/status"
 	"github.com/go-kit/kit/log"
 )
 
@@ -55,7 +53,7 @@ func (instanceView RunCommandInstanceView) marshal() ([]byte, error) {
 // status.
 //
 // If an error occurs reporting the status, it will be logged and returned.
-func reportInstanceView(ctx *log.Context, hEnv vmextension.HandlerEnvironment, seqNum uint, t status.StatusType, c cmd, instanceview *RunCommandInstanceView) error {
+func reportInstanceView(ctx *log.Context, hEnv HandlerEnvironment, extName string, seqNum int, t StatusType, c cmd, instanceview *RunCommandInstanceView) error {
 	if !c.shouldReportStatus {
 		ctx.Log("status", "not reported for operation (by design)")
 		return nil
@@ -64,7 +62,7 @@ func reportInstanceView(ctx *log.Context, hEnv vmextension.HandlerEnvironment, s
 	if err != nil {
 		return err
 	}
-	return reportStatus(ctx, hEnv, seqNum, t, c, msg)
+	return reportStatus(ctx, hEnv, extName, seqNum, t, c, msg)
 }
 
 func serializeInstanceView(instanceview *RunCommandInstanceView) (string, error) {
