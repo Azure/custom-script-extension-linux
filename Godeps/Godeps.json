@@ -12,10 +12,6 @@
 			"Rev": "0dd2f199467db78e91d28c30d8595d1bcaf776de"
 		},
 		{
-			"ImportPath": "github.com/Azure/azure-extension-platform/pkg/status",
-			"Rev": "f6e2ea0b563e57006b6cab34c91f08bddecc147a"
-		},
-		{
 			"ImportPath": "github.com/Azure/azure-sdk-for-go/storage",
 			"Comment": "v3.1.0-beta-18-g87de771",
 			"Rev": "87de771fcdf5ec4341f3842f74b5bb98652b10f7"

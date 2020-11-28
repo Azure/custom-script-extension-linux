@@ -72,6 +72,7 @@ type StatusItem struct {
 	Status       Status `json:"status"`
 }
 
+// StatusType reports the execution status
 type StatusType string
 
 const (

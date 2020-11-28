@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/azure-extension-platform/pkg/status"
 	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/require"
 )
@@ -57,10 +56,10 @@ func Test_reportInstanceView(t *testing.T) {
 	require.Nil(t, err, ".status file exists")
 	require.NotEqual(t, 0, len(b), ".status file not empty")
 
-	var r status.StatusReport
+	var r StatusReport
 	json.Unmarshal(b, &r)
 	require.Equal(t, 1, len(r))
-	require.Equal(t, status.StatusSuccess, r[0].Status.Status)
+	require.Equal(t, StatusSuccess, r[0].Status.Status)
 	require.Equal(t, cmdEnable.name, r[0].Status.Operation)
 
 	msg, _ := serializeInstanceView(&instanceView)

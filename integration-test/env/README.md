@@ -11,6 +11,6 @@ integration testing Docker image.
     ├── HandlerManifest.json    <-- docker image build pushes it here
     ├── HandlerEnvironment.json <-- the extension reads this
     ├── bin/                    <-- docker image build pushes the extension binary here
-    ├── config/                 <-- tests push 0.settings file here
-    └── status/                 <-- extension should write here
+    ├── config/                 <-- tests push [{extName}.]{seqNo}.settings file here
+    └── status/                 <-- extension should write here [{extName}.]{seqNo}.status
 ```
