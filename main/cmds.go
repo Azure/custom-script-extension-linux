@@ -196,7 +196,7 @@ func checkAndSaveSeqNum(ctx log.Logger, seq int, mrseqPath string) (shouldExit b
 		// sequence number.
 		return true, nil
 	}
-	if err := Set(mrseqPath, seq); err != nil {
+	if err := SaveSeqNum(mrseqPath, seq); err != nil {
 		return false, errors.Wrap(err, "failed to save sequence number")
 	}
 	ctx.Log("event", "seqnum saved", "path", mrseqPath)

@@ -17,7 +17,7 @@ load test_helper
 @test "meta: can start the test container" {
     run in_tmp_container fake-waagent
     echo "$output"
-    [ "$output" = "Usage: /sbin/fake-waagent <handlerCommand>" ]
+    [[ "$output" = *'Usage: /sbin/fake-waagent <handlerCommand>'* ]]
     [ "$status" -eq 1 ]
 }
 

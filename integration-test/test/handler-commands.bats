@@ -10,6 +10,97 @@ teardown(){
     rm -rf "$certs_dir"
 }
 
+@test "multiconfig: run two extensions in parallel" {
+    mk_container sh -c "fake-waagent install && fake-waagent enable extname 5 && fake-waagent enable second 0 && wait-for-enable "
+    push_settings '
+    {
+        "source": {
+            "script": "echo HelloStdout>&1; echo HelloStderr>&2; sleep 2"
+        }
+    }' '' 'extname.5.settings'
+    push_settings '
+    {
+        "source": {
+            "script": "echo SecondOutput>&1; echo SecondError>&2; sleep 2"
+        }
+    }' '' 'second.0.settings'
+    run start_container
+    echo "$output"
+
+    # Validate contents of stdout/stderr files
+    stdout="$(container_read_file /var/lib/waagent/run-command-handler/download/extname/5/stdout)"
+    echo "stdout=$stdout" && [[ "$stdout" = "HelloStdout" ]]
+    stderr="$(container_read_file /var/lib/waagent/run-command-handler/download/extname/5/stderr)"
+    echo "stderr=$stderr" && [[ "$stderr" = "HelloStderr" ]]
+
+    config_file="$(container_read_file /var/lib/waagent/Extension/config/extname.5.settings)"
+    echo "config_file=$config_file"
+    [[ "$config_file" = *'echo HelloStdout>&1; echo HelloStderr>&2'* ]]
+
+    status_file="$(container_read_file /var/lib/waagent/Extension/status/extname.5.status)"
+    echo "status_file=$status_file"
+    [[ "$status_file" = *'Execution succeeded'* ]]
+    [[ "$status_file" = *'HelloStdout'* ]]
+    [[ "$status_file" = *'HelloStderr'* ]]
+
+    mrseq_file="$(container_read_file /var/lib/waagent/extname.mrseq)"
+    echo "mrseq_file=$mrseq_file"
+    [[ "$mrseq_file" = '5' ]]
+
+        # Validate contents of stdout/stderr files for second extension
+    stdout="$(container_read_file /var/lib/waagent/run-command-handler/download/second/0/stdout)"
+    echo "stdout=$stdout" && [[ "$stdout" = "SecondOutput" ]]
+    stderr="$(container_read_file /var/lib/waagent/run-command-handler/download/second/0/stderr)"
+    echo "stderr=$stderr" && [[ "$stderr" = "SecondError" ]]
+
+    config_file="$(container_read_file /var/lib/waagent/Extension/config/second.0.settings)"
+    echo "config_file=$config_file"
+    [[ "$config_file" = *'echo SecondOutput>&1; echo SecondError>&2'* ]]
+
+    status_file="$(container_read_file /var/lib/waagent/Extension/status/second.0.status)"
+    echo "status_file=$status_file"
+    [[ "$status_file" = *'Execution succeeded'* ]]
+    [[ "$status_file" = *'SecondOutput'* ]]
+    [[ "$status_file" = *'SecondError'* ]]
+
+    mrseq_file="$(container_read_file /var/lib/waagent/second.mrseq)"
+    echo "mrseq_file=$mrseq_file"
+    [[ "$mrseq_file" = '0' ]]
+}
+
+@test "multiconfig: captures stdout/stderr into file and extName.seqNo.status" {
+    # export ConfigExtensionName=extname && export ConfigSequenceNumber=5 will be read from the extension to determine the settings file name
+    mk_container sh -c "fake-waagent install && fake-waagent enable extname 5 && wait-for-enable "
+    push_settings '
+    {
+        "source": {
+            "script": "echo HelloStdout>&1; echo HelloStderr>&2"
+        }
+    }' '' 'extname.5.settings'
+    run start_container
+    echo "$output"
+
+    # Validate contents of stdout/stderr files
+    stdout="$(container_read_file /var/lib/waagent/run-command-handler/download/extname/5/stdout)"
+    echo "stdout=$stdout" && [[ "$stdout" = "HelloStdout" ]]
+    stderr="$(container_read_file /var/lib/waagent/run-command-handler/download/extname/5/stderr)"
+    echo "stderr=$stderr" && [[ "$stderr" = "HelloStderr" ]]
+
+    config_file="$(container_read_file /var/lib/waagent/Extension/config/extname.5.settings)"
+    echo "config_file=$config_file"
+    [[ "$config_file" = *'echo HelloStdout>&1; echo HelloStderr>&2'* ]]
+
+    status_file="$(container_read_file /var/lib/waagent/Extension/status/extname.5.status)"
+    echo "status_file=$status_file"
+    [[ "$status_file" = *'Execution succeeded'* ]]
+    [[ "$status_file" = *'HelloStdout'* ]]
+    [[ "$status_file" = *'HelloStderr'* ]]
+
+    mrseq_file="$(container_read_file /var/lib/waagent/extname.mrseq)"
+    echo "mrseq_file=$mrseq_file"
+    [[ "$mrseq_file" = '5' ]]
+}
+
 @test "handler command: install - creates the data dir" {
     run in_container fake-waagent install
     echo "$output"
@@ -70,39 +161,6 @@ teardown(){
     [[ "$status_file" = *'Execution succeeded'* ]]
     [[ "$status_file" = *'HelloStdout'* ]]
     [[ "$status_file" = *'HelloStderr'* ]]
-}
-
-@test "handler command (multiconfig): enable - captures stdout/stderr into file and .status" {
-    # export ConfigExtensionName=extname && export ConfigSequenceNumber=5 will be read from the extension to determine the settings file name
-    mk_container sh -c "export ConfigExtensionName=extname && export ConfigSequenceNumber=5 && fake-waagent install && fake-waagent enable && wait-for-enable "
-    push_settings '
-    {
-        "source": {
-            "script": "echo HelloStdout>&1; echo HelloStderr>&2"
-        }
-    }' '' 'extname.5.settings'
-    run start_container
-    echo "$output"
-
-    # Validate contents of stdout/stderr files
-    stdout="$(container_read_file /var/lib/waagent/run-command-handler/download/extname/5/stdout)"
-    echo "stdout=$stdout" && [[ "$stdout" = "HelloStdout" ]]
-    stderr="$(container_read_file /var/lib/waagent/run-command-handler/download/extname/5/stderr)"
-    echo "stderr=$stderr" && [[ "$stderr" = "HelloStderr" ]]
-
-    config_file="$(container_read_file /var/lib/waagent/Extension/config/extname.5.settings)"
-    echo "config_file=$config_file"
-    [[ "$config_file" = *'echo HelloStdout>&1; echo HelloStderr>&2'* ]]
-
-    status_file="$(container_read_file /var/lib/waagent/Extension/status/extname.5.status)"
-    echo "status_file=$status_file"
-    [[ "$status_file" = *'Execution succeeded'* ]]
-    [[ "$status_file" = *'HelloStdout'* ]]
-    [[ "$status_file" = *'HelloStderr'* ]]
-
-    mrseq_file="$(container_read_file /var/lib/waagent/extname.mrseq)"
-    echo "mrseq_file=$mrseq_file"
-    [[ "$mrseq_file" = '5' ]]
 }
 
 @test "handler command: enable - captures stdout/stderr into .status on error" {

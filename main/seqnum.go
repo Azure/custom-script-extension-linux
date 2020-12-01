@@ -17,15 +17,17 @@ const (
 	chmod = os.FileMode(0600)
 )
 
+// FindSeqNumConfig gets the laster seq no from config files
 func FindSeqNumConfig(path string) (int, error) {
 	return FindSeqNum(path, ".settings")
 }
 
+// FindSeqNumStatus gets the laster seq no from status files
 func FindSeqNumStatus(path string) (int, error) {
 	return FindSeqNum(path, ".status")
 }
 
-// FindSeqnum finds the file with the highest number under configFolder
+// FindSeqNum finds the file with the highest number under configFolder
 // named like 0.settings, 1.settings so on.
 func FindSeqNum(path, ext string) (int, error) {
 	g, err := filepath.Glob(filepath.Join(path, fmt.Sprintf("*%s", ext)))
@@ -42,15 +44,15 @@ func FindSeqNum(path, ext string) (int, error) {
 		seqs = append(seqs, i)
 	}
 	if len(seqs) == 0 {
-		return 0, fmt.Errorf("Can't find out seqnum from %s, not enough files.", path)
+		return 0, fmt.Errorf("Can't find out seqnum from %s, not enough files", path)
 	}
 	sort.Sort(sort.Reverse(sort.IntSlice(seqs)))
 	return seqs[0], nil
 }
 
-// Set replaces the stored sequence number in file, or creates a new file at
+// SaveSeqNum replaces the stored sequence number in file, or creates a new file at
 // path if it does not exist.
-func Set(path string, num int) error {
+func SaveSeqNum(path string, num int) error {
 	b := []byte(fmt.Sprintf("%v", num))
 	return errors.Wrap(ioutil.WriteFile(path, b, chmod), "seqnum: failed to write")
 }

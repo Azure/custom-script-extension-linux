@@ -1,14 +1,27 @@
 #!/bin/bash
+# Usage: fake-agent <command> [extName] [seqNo]
+#   command - install, enable, disable, update, uninstall
+#   extName - (optional) extension name for multiconfig scenario
+#   seqNo   - (optional) sequence number for multiconfig scenario
 set -euo pipefail
 IFS=$'\n\t'
 readonly SCRIPT_DIR=$(realpath $(dirname $(readlink -f $0)))
 
-if [ "$#" -ne 1 ]; then
+if [ "$#" -ne 1 ] && [ "$#" -ne 3 ]; then
 	echo "Usage: $0 <handlerCommand>" >&2
+	echo "       handlerCommand  -  install | enable | disable | update | uninstall" >&2
 	exit 1
 fi
 
-echo "== fake-waagent ==" >&2
+if [ "$#" -eq 3 ]; then
+    echo "Extension name set to: $2" >&2
+    echo "Sequence number set to: $3" >&2
+    export ConfigExtensionName=$2
+    export ConfigSequenceNumber=$3
+fi
+
+
+echo "== fake-waagent $1 ==" >&2
 manifest_path="${SCRIPT_DIR}/Extension/HandlerManifest.json"
 
 if [[ ! -f "$manifest_path" ]]; then

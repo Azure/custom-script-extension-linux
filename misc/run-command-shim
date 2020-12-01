@@ -1,43 +1,41 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -e -o pipefail
 readonly SCRIPT_DIR=$(dirname "$0")
 readonly LOG_DIR="/var/log/azure/run-command-handler"
 readonly LOG_FILE=handler.log
 readonly HANDLER_BIN="run-command-handler"
 
+# in multiconfig case $ConfigExtensionName and $ConfigSequenceNumber should be set by the agent
+readonly EXTENSION_NAME=$ConfigExtensionName
+readonly SEQNO=$ConfigSequenceNumber
+echo "ConfigExtensionName: $EXTENSION_NAME"
+echo "ConfigSequenceNumber: $SEQNO"
 
 # status_file returns the .status file path we are supposed to write
 # by determining the highest sequence number from ./config/*.settings files.
-# in multiconfig case $ConfigExtensionName and $ConfigSequenceNumber should be set by the agent
 status_file_path() {
-        # normally we would need to find this config_dir by parsing the
-        # HandlerEnvironment.json, but we are in a bash script here,
-        # so assume it's at ../config/.
-        config_dir=$(readlink -f "${SCRIPT_DIR}/../config")
-        status_dir=$(readlink -f "${SCRIPT_DIR}/../status")
-        config_file=$(ls $config_dir | grep -E ^[0-9]+.settings$ | sort -n | tail -n 1)
-        if [ -f "$config_file" ]; then
-            echo "Cannot locate the config file.">&2
-            exit 1
-        fi
-        status_file=$(echo $config_file | sed s/settings/status/)
-
         # multiconfig support: status file name should be "extname.seqNo.status"
-        if [ -n "${ConfigExtensionName-}" ] && [ -n "${ConfigSequenceNumber-}" ]; then
-            status_file=$(echo $ConfigExtensionName.$ConfigSequenceNumber.status)
+        if [ -n "$EXTENSION_NAME" ] && [ -n "$ConfigSequenceNumber" ]; then
+            status_file=$(echo $EXTENSION_NAME.$SEQNO.status)
+        else
+            # normally we would need to find this config_dir by parsing the
+            # HandlerEnvironment.json, but we are in a bash script here,
+            # so assume it's at ../config/.
+            config_dir=$(readlink -f "${SCRIPT_DIR}/../config")
+            status_dir=$(readlink -f "${SCRIPT_DIR}/../status")
+            config_file=$(ls $config_dir | grep -E ^[0-9]+.settings$ | sort -n | tail -n 1)
+            if [ -f "$config_file" ]; then
+                echo "Cannot locate the config file.">&2
+                exit 1
+            fi
+            status_file=$(echo $config_file | sed s/settings/status/)
         fi
 
         readlink -f "$status_dir/$status_file"
 }
 
 write_status() {
-    if [ -n "${ConfigExtensionName-}" ] && [ -n "${ConfigSequenceNumber-}" ]; then
-        echo "ConfigExtensionName: $ConfigExtensionName"
-        echo "ConfigSequenceNumber: $ConfigSequenceNumber"
-    else
-        echo "ConfigExtensionName and ConfigSequenceNumber are not set"
-    fi
 	status_file="$(status_file_path)"
 	if [ -f "$status_file" ]; then
 		echo "Not writing a placeholder status file, already exists: $status_file"
@@ -121,15 +119,16 @@ cmd="$1"
 
 if [[ "$cmd" == "enable" ]]; then
     # for 'enable' command, write a .status file first, then double fork
-    # to detach from the  handler process tree to avoid getting terminated 
+    # to detach from the handler process tree to avoid getting terminated 
     # after the 15-minute extension enabling timeout.
     write_status
     check_binary_write_lock
     set -x
-    nohup "$bin" $@ &
+    # & will execute the binary on the backgraound and will not block current shell execution
+    nohup "$bin" "$cmd" &
 else
     # execute the handler process as a child process
     check_binary_write_lock
     set -x
-    "$bin" $@
+    "$bin" "$cmd"
 fi
