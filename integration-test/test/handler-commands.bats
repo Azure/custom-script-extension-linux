@@ -39,7 +39,7 @@ teardown(){
 
     status_file="$(container_read_file /var/lib/waagent/Extension/status/extname.5.status)"
     echo "status_file=$status_file"
-    [[ "$status_file" = *'Execution succeeded'* ]]
+    [[ "$status_file" = *'Execution completed'* ]]
     [[ "$status_file" = *'HelloStdout'* ]]
     [[ "$status_file" = *'HelloStderr'* ]]
 
@@ -59,7 +59,7 @@ teardown(){
 
     status_file="$(container_read_file /var/lib/waagent/Extension/status/second.0.status)"
     echo "status_file=$status_file"
-    [[ "$status_file" = *'Execution succeeded'* ]]
+    [[ "$status_file" = *'Execution completed'* ]]
     [[ "$status_file" = *'SecondOutput'* ]]
     [[ "$status_file" = *'SecondError'* ]]
 
@@ -92,7 +92,7 @@ teardown(){
 
     status_file="$(container_read_file /var/lib/waagent/Extension/status/extname.5.status)"
     echo "status_file=$status_file"
-    [[ "$status_file" = *'Execution succeeded'* ]]
+    [[ "$status_file" = *'Execution completed'* ]]
     [[ "$status_file" = *'HelloStdout'* ]]
     [[ "$status_file" = *'HelloStderr'* ]]
 
@@ -158,7 +158,7 @@ teardown(){
 
     status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
     echo "status_file=$status_file"
-    [[ "$status_file" = *'Execution succeeded'* ]]
+    [[ "$status_file" = *'Execution completed'* ]]
     [[ "$status_file" = *'HelloStdout'* ]]
     [[ "$status_file" = *'HelloStderr'* ]]
 }
@@ -176,7 +176,7 @@ teardown(){
 
     status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
     echo "status_file=$status_file"
-    [[ "$status_file" = *'Execution succeeded'* ]]
+    [[ "$status_file" = *'Execution completed'* ]]
     [[ "$status_file" = *'ls: cannot access'* ]]
 }
 
@@ -215,7 +215,7 @@ teardown(){
 
     status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
     echo "status_file=$status_file"
-    [[ "$status_file" = *'Execution succeeded'* ]]
+    [[ "$status_file" = *'Execution completed'* ]]
     [[ "$status_file" = *'Hello'* ]]
 }
 
@@ -291,7 +291,7 @@ teardown(){
     # validate .status file still reads "Enable succeeded"
     status_file="$(container_read_file /var/lib/waagent/Extension/status/0.status)"
     echo "$status_file"
-    [[ "$status_file" = *'Execution succeeded'* ]]
+    [[ "$status_file" = *'Execution completed'* ]]
 }
 
 @test "handler command: uninstall - deletes the data dir" {

@@ -8,6 +8,7 @@
     "disableCommand": "bin/run-command-shim disable",
     "rebootAfterInstall": false,
     "reportHeartbeat": false,
-    "updateMode": "UpdateWithInstall"
+    "updateMode": "UpdateWithInstall",
+    "supportsMultipleExtensions": "true"
   }
 }]

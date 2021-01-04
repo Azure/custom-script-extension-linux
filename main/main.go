@@ -24,6 +24,9 @@ var (
 	// incorrect. The correct way is mrseq.  This file is auto-preserved by the agent.
 	mostRecentSequence = "mrseq"
 
+	// Filename where active process keeps track of process id and process start time
+	pidFilePath = "pidstart"
+
 	// downloadDir is where we store the downloaded files in the "{downloadDir}/{seqnum}/file"
 	// format and the logs as "{downloadDir}/{seqnum}/std(out|err)". Stored under dataDir
 	// multiconfig support - when extName is set we use {downloadDir}/{extName}/...
@@ -75,6 +78,7 @@ func main() {
 		ctx = ctx.With("extensionName", extName)
 		downloadDir = downloadDir + "/" + extName
 		mostRecentSequence = extName + "." + mostRecentSequence
+		pidFilePath = extName + "." + pidFilePath
 	}
 
 	// check sub-command preconditions, if any, before executing
@@ -95,20 +99,23 @@ func main() {
 		StartTime:        time.Now().UTC().Format(time.RFC3339),
 		EndTime:          "",
 	}
+
 	reportInstanceView(ctx, hEnv, extName, seqNum, StatusTransitioning, cmd, &instanceView)
 
 	// execute the subcommand
-	stdout, stderr, err := cmd.f(ctx, hEnv, extName, seqNum)
+	stdout, stderr, err := cmd.invoke(ctx, hEnv, &instanceView, extName, seqNum)
 	if err != nil {
 		ctx.Log("event", "failed to handle", "error", err)
 		instanceView.ExecutionMessage = "Execution failed: " + err.Error()
+		instanceView.EndTime = time.Now().UTC().Format(time.RFC3339)
 		reportInstanceView(ctx, hEnv, extName, seqNum, StatusTransitioning, cmd, &instanceView)
 		os.Exit(cmd.failExitCode)
 	}
-	instanceView.ExecutionMessage = "Execution succeeded"
+	instanceView.ExecutionMessage = "Execution completed"
 	instanceView.ExecutionState = Succeeded
 	instanceView.Output = stdout
 	instanceView.Error = stderr
+	instanceView.EndTime = time.Now().UTC().Format(time.RFC3339)
 	reportInstanceView(ctx, hEnv, extName, seqNum, StatusSuccess, cmd, &instanceView)
 	ctx.Log("event", "end")
 }

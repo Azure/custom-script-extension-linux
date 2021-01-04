@@ -82,7 +82,7 @@ func Test_runCmd_success(t *testing.T) {
 	require.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	err = runCmd(log.NewNopLogger(), dir, handlerSettings{
+	err = runCmd(log.NewContext(log.NewNopLogger()), dir, &handlerSettings{
 		publicSettings: publicSettings{Source: &scriptSource{Script: "date"}},
 	})
 	require.Nil(t, err, "command should run successfully")
@@ -99,7 +99,7 @@ func Test_runCmd_fail(t *testing.T) {
 	require.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	err = runCmd(log.NewNopLogger(), dir, handlerSettings{
+	err = runCmd(log.NewContext(log.NewNopLogger()), dir, &handlerSettings{
 		publicSettings: publicSettings{Source: &scriptSource{Script: "non-existing-cmd"}},
 	})
 	require.NotNil(t, err, "command terminated with exit status")
@@ -116,7 +116,7 @@ func Test_downloadScriptUri(t *testing.T) {
 
 	err = downloadFiles(log.NewContext(log.NewNopLogger()),
 		dir,
-		handlerSettings{
+		&handlerSettings{
 			publicSettings: publicSettings{
 				Source: &scriptSource{ScriptURI: srv.URL + "/bytes/10"},
 			},

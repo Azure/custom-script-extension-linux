@@ -19,11 +19,11 @@ const (
 	maxScriptSize = 256 * 1024
 )
 
-type cmdFunc func(ctx *log.Context, hEnv HandlerEnvironment, extName string, seqNum int) (stdout string, stderr string, err error)
+type cmdFunc func(ctx *log.Context, hEnv HandlerEnvironment, report *RunCommandInstanceView, extName string, seqNum int) (stdout string, stderr string, err error)
 type preFunc func(ctx *log.Context, seqNum int) error
 
 type cmd struct {
-	f                  cmdFunc // associated function
+	invoke             cmdFunc // associated function
 	name               string  // human readable string
 	shouldReportStatus bool    // determines if running this should log to a .status file
 	pre                preFunc // executed before any status is reported
@@ -41,23 +41,31 @@ var (
 
 	cmdInstall   = cmd{install, "Install", false, nil, 52}
 	cmdEnable    = cmd{enable, "Enable", true, enablePre, 3}
+	cmdDisable   = cmd{disable, "Disable", true, nil, 3}
+	cmdUpdate    = cmd{update, "Update", true, nil, 3}
 	cmdUninstall = cmd{uninstall, "Uninstall", false, nil, 3}
 
 	cmds = map[string]cmd{
 		"install":   cmdInstall,
-		"uninstall": cmdUninstall,
 		"enable":    cmdEnable,
-		"update":    {noop, "Update", true, nil, 3},
-		"disable":   {noop, "Disable", true, nil, 3},
+		"disable":   cmdDisable,
+		"update":    cmdUpdate,
+		"uninstall": cmdUninstall,
 	}
 )
 
-func noop(ctx *log.Context, h HandlerEnvironment, extName string, seqNum int) (string, string, error) {
-	ctx.Log("event", "noop")
+func update(ctx *log.Context, h HandlerEnvironment, report *RunCommandInstanceView, extName string, seqNum int) (string, string, error) {
+	ctx.Log("event", "update")
 	return "", "", nil
 }
 
-func install(ctx *log.Context, h HandlerEnvironment, extName string, seqNum int) (string, string, error) {
+func disable(ctx *log.Context, h HandlerEnvironment, report *RunCommandInstanceView, extName string, seqNum int) (string, string, error) {
+	ctx.Log("event", "disable")
+	KillPreviousExtension(ctx, pidFilePath)
+	return "", "", nil
+}
+
+func install(ctx *log.Context, h HandlerEnvironment, report *RunCommandInstanceView, extName string, seqNum int) (string, string, error) {
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
 		return "", "", errors.Wrap(err, "failed to create data dir")
 	}
@@ -105,7 +113,7 @@ func migrateToMostRecentSequence(ctx *log.Context, h HandlerEnvironment, seqNum 
 	fout.WriteString(fmt.Sprintf("%v", computedSeqNum))
 }
 
-func uninstall(ctx *log.Context, h HandlerEnvironment, extName string, seqNum int) (string, string, error) {
+func uninstall(ctx *log.Context, h HandlerEnvironment, report *RunCommandInstanceView, extName string, seqNum int) (string, string, error) {
 	{ // a new context scope with path
 		ctx = ctx.With("path", dataDir)
 		ctx.Log("event", "removing data dir", "path", dataDir)
@@ -137,7 +145,7 @@ func min(a, b int) int {
 	return b
 }
 
-func enable(ctx *log.Context, h HandlerEnvironment, extName string, seqNum int) (string, string, error) {
+func enable(ctx *log.Context, h HandlerEnvironment, report *RunCommandInstanceView, extName string, seqNum int) (string, string, error) {
 	// parse the extension handler settings (not available prior to 'enable')
 	configFile := fmt.Sprintf("%d.settings", seqNum)
 	if extName != "" {
@@ -150,12 +158,19 @@ func enable(ctx *log.Context, h HandlerEnvironment, extName string, seqNum int) 
 	}
 
 	dir := filepath.Join(dataDir, downloadDir, fmt.Sprintf("%d", seqNum))
-	if err := downloadFiles(ctx, dir, cfg); err != nil {
+	if err := downloadFiles(ctx, dir, &cfg); err != nil {
 		return "", "", errors.Wrap(err, "processing file downloads failed")
 	}
 
+	// AsyncExecution requested by customer means the extension should report successful extension deployment to complete the provisioning state
+	// Later the full extension output will be reported
+	if cfg.AsyncExecution {
+		ctx.Log("message", "anycExecution is true - report success")
+		reportInstanceView(ctx, h, extName, seqNum, StatusSuccess, cmd{nil, "Enable", true, nil, 3}, report)
+	}
+
 	// execute the command, save its error
-	runErr := runCmd(ctx, dir, cfg)
+	runErr := runCmd(ctx, dir, &cfg)
 
 	// collect the logs if available
 	stdoutF, stderrF := logPaths(dir)
@@ -205,7 +220,7 @@ func checkAndSaveSeqNum(ctx log.Logger, seq int, mrseqPath string) (shouldExit b
 
 // downloadFiles downloads the files specified in cfg into dir (creates if does
 // not exist) and takes storage credentials specified in cfg into account.
-func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) error {
+func downloadFiles(ctx *log.Context, dir string, cfg *handlerSettings) error {
 	// - prepare the output directory for files and the command output
 	// - create the directory if missing
 	ctx.Log("event", "creating output directory", "path", dir)
@@ -222,7 +237,7 @@ func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) error {
 	if scriptURI != "" {
 		telemetry("scenario", fmt.Sprintf("source.scriptUri;dos2unix=%d", dos2unix), true, 0*time.Millisecond)
 		ctx.Log("event", "download start")
-		if err := downloadAndProcessURL(ctx, scriptURI, dir, &cfg); err != nil {
+		if err := downloadAndProcessURL(ctx, scriptURI, dir, cfg); err != nil {
 			ctx.Log("event", "download failed", "error", err)
 			return errors.Wrapf(err, "failed to download file %s", scriptURI)
 		}
@@ -232,7 +247,7 @@ func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) error {
 }
 
 // runCmd runs the command (extracted from cfg) in the given dir (assumed to exist).
-func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (err error) {
+func runCmd(ctx *log.Context, dir string, cfg *handlerSettings) (err error) {
 	ctx.Log("event", "executing command", "output", dir)
 	var cmd string
 	var scenario string
@@ -250,8 +265,16 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (err error) {
 
 	ctx.Log("event", "prepare command", "cmd", cmd)
 
+	// We need to kill previous extension process if exists before staring a new one.
+	KillPreviousExtension(ctx, pidFilePath)
+
+	// Store the active process id and start time in case its a long running process that needs to be killed later
+	// If process exited successfully the pid file is deleted
+	SaveCurrentPidAndStartTime(pidFilePath)
+	defer DeleteCurrentPidAndStartTime(pidFilePath)
+
 	begin := time.Now()
-	err = ExecCmdInDir(cmd, dir)
+	err = ExecCmdInDir(ctx, cmd, dir, cfg)
 	elapsed := time.Now().Sub(begin)
 	isSuccess := err == nil
 
