@@ -22,5 +22,11 @@ func IsValidUrl(urlstring string) bool {
 	if parseError == nil && u.Scheme != "" && u.Host != "" {
 		return true
 	}
+	// try again with trimmed string
+	urlstringTrimmed := strings.Trim(urlstring, "\"")
+	u, parseError = url.Parse(urlstringTrimmed)
+	if parseError == nil && u.Scheme != "" && u.Host != "" {
+		return true
+	}
 	return false
 }

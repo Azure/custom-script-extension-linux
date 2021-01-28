@@ -1,7 +1,13 @@
 package download
 
 import (
+	"fmt"
+	"net"
+	"net/http"
+	"net/url"
+	"regexp"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -25,4 +31,30 @@ func Test_urlDownload_GetRequest_goodURL(t *testing.T) {
 	r, err := d.GetRequest()
 	require.Nil(t, err, u)
 	require.NotNil(t, r, u)
+}
+
+func Test_simulateDialTcpTimeout(t *testing.T) {
+	oldHttpClient := httpClient
+	httpClient = &http.Client{
+		Transport: &http.Transport{
+			Dial: (&net.Dialer{
+				Timeout:   1 * time.Nanosecond,
+				KeepAlive: 30 * time.Second,
+			}).Dial,
+			Proxy:                 http.ProxyFromEnvironment,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ResponseHeaderTimeout: 20 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		}}
+	defer func() {
+		httpClient = oldHttpClient
+	}()
+
+	u := "https://bhbrahmastorage.blob.core.windows.net/vmappcontainer/goland"
+	url, _ := url.Parse(u)
+	d := NewURLDownload(u)
+	_, _, err := Download(d)
+	// fmt.Println(err.Error())
+	require.Error(t, err)
+	require.Regexp(t, regexp.MustCompile(fmt.Sprintf("dial tcp %s: i/o timeout", url.Host)), err.Error())
 }
