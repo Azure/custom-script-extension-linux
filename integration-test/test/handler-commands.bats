@@ -10,6 +10,36 @@ teardown(){
     rm -rf "$certs_dir"
 }
 
+@test "multiconfig: partial status report" {
+    # export ConfigExtensionName=extname && export ConfigSequenceNumber=5 will be read from the extension to determine the settings file name
+    mk_container sh -c "fake-waagent install && fake-waagent enable extname 5 && wait-for-enable "
+    push_settings '
+    {
+        "source": {
+            "script": "echo First Part; sleep 31; cp /var/lib/waagent/Extension/status/extname.5.status /var/lib/waagent/Extension/status/partial.status ;echo Second Part"
+        }
+    }' '' 'extname.5.settings'
+    run start_container
+    echo "$output" && [[ "$output" = *'report partial status'* ]]
+
+    # Validate contents of stdout/stderr files
+    stdout="$(container_read_file /var/lib/waagent/run-command-handler/download/extname/5/stdout)"
+    echo "stdout=$stdout" && [[ "$stdout" = *'First Part'* ]]
+    echo "stdout=$stdout" && [[ "$stdout" = *'Second Part'* ]]
+
+    status_file="$(container_read_file /var/lib/waagent/Extension/status/extname.5.status)"
+    echo "status_file=$status_file"
+    [[ "$status_file" = *'Execution completed'* ]]
+    [[ "$status_file" = *'First Part'* ]]
+    [[ "$status_file" = *'Second Part'* ]]
+
+    partial_status_file="$(container_read_file /var/lib/waagent/Extension/status/partial.status)"
+    echo "partial_status_file=$partial_status_file"
+    [[ "$partial_status_file" = *'Execution in progress'* ]]
+    [[ "$partial_status_file" = *'First Part'* ]]
+    [[ "$partial_status_file" != *'Second Part'* ]]
+}
+
 @test "multiconfig: run two extensions in parallel" {
     mk_container sh -c "fake-waagent install && fake-waagent enable extname 5 && fake-waagent enable second 0 && wait-for-enable "
     push_settings '

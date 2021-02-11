@@ -108,7 +108,7 @@ func main() {
 		ctx.Log("event", "failed to handle", "error", err)
 		instanceView.ExecutionMessage = "Execution failed: " + err.Error()
 		instanceView.EndTime = time.Now().UTC().Format(time.RFC3339)
-		reportInstanceView(ctx, hEnv, extName, seqNum, StatusTransitioning, cmd, &instanceView)
+		reportInstanceView(ctx, hEnv, extName, seqNum, StatusSuccess, cmd, &instanceView)
 		os.Exit(cmd.failExitCode)
 	}
 	instanceView.ExecutionMessage = "Execution completed"

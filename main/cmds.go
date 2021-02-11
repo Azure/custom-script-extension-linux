@@ -164,24 +164,41 @@ func enable(ctx *log.Context, h HandlerEnvironment, report *RunCommandInstanceVi
 
 	// AsyncExecution requested by customer means the extension should report successful extension deployment to complete the provisioning state
 	// Later the full extension output will be reported
+	statusToReport := StatusTransitioning
 	if cfg.AsyncExecution {
 		ctx.Log("message", "anycExecution is true - report success")
-		reportInstanceView(ctx, h, extName, seqNum, StatusSuccess, cmd{nil, "Enable", true, nil, 3}, report)
+		statusToReport = StatusSuccess
+		reportInstanceView(ctx, h, extName, seqNum, statusToReport, cmd{nil, "Enable", true, nil, 3}, report)
 	}
+
+	stdoutF, stderrF := logPaths(dir)
+
+	// Implement ticker to update extension status periodically
+	ticker := time.NewTicker(30 * time.Second)
+	done := make(chan bool)
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				ctx.Log("event", "report partial status")
+				stdoutTail, stderrTail := getOutput(ctx, stdoutF, stderrF)
+				report.Output = stdoutTail
+				report.Error = stderrTail
+				reportInstanceView(ctx, h, extName, seqNum, statusToReport, cmd{nil, "Enable", true, nil, 3}, report)
+			}
+		}
+	}()
 
 	// execute the command, save its error
 	runErr := runCmd(ctx, dir, &cfg)
 
+	ticker.Stop()
+	done <- true
+
 	// collect the logs if available
-	stdoutF, stderrF := logPaths(dir)
-	stdoutTail, err := tailFile(stdoutF, maxTailLen)
-	if err != nil {
-		ctx.Log("message", "error tailing stdout logs", "error", err)
-	}
-	stderrTail, err := tailFile(stderrF, maxTailLen)
-	if err != nil {
-		ctx.Log("message", "error tailing stderr logs", "error", err)
-	}
+	stdoutTail, stderrTail := getOutput(ctx, stdoutF, stderrF)
 
 	isSuccess := runErr == nil
 	telemetry("Output", "-- stdout/stderr omitted from telemetry pipeline --", isSuccess, 0)
@@ -194,7 +211,20 @@ func enable(ctx *log.Context, h HandlerEnvironment, report *RunCommandInstanceVi
 
 	// Always report nil for error because extension should not fail if script throws error
 	// Execution error still will be reported in the error stream
-	return string(stdoutTail), string(stderrTail), nil
+	return stdoutTail, stderrTail, nil
+}
+
+func getOutput(ctx *log.Context, stdoutFileName string, stderrFileName string) (string, string) {
+	// collect the logs if available
+	stdoutTail, err := tailFile(stdoutFileName, maxTailLen)
+	if err != nil {
+		ctx.Log("message", "error tailing stdout logs", "error", err)
+	}
+	stderrTail, err := tailFile(stderrFileName, maxTailLen)
+	if err != nil {
+		ctx.Log("message", "error tailing stderr logs", "error", err)
+	}
+	return string(stdoutTail), string(stderrTail)
 }
 
 // checkAndSaveSeqNum checks if the given seqNum is already processed

@@ -32,8 +32,7 @@ func Exec(ctx *log.Context, cmd, workdir string, stdout, stderr io.WriteCloser, 
 		commandContext, cancel := context.WithTimeout(context.Background(), time.Duration(1)*time.Second)
 		defer cancel()
 		command = exec.CommandContext(commandContext, "/bin/bash", "-c", cmd)
-		fmt.Println(commandContext)
-		fmt.Println("Command created with TIMEOUT = ", cfg.publicSettings.TimeoutInSeconds)
+		ctx.Log("message", "Execute with TimeoutInSeconds="+strconv.Itoa(cfg.publicSettings.TimeoutInSeconds))
 	} else {
 		command = exec.Command("/bin/bash", "-c", cmd)
 	}
@@ -41,7 +40,7 @@ func Exec(ctx *log.Context, cmd, workdir string, stdout, stderr io.WriteCloser, 
 	// If RunAsUser is set by customer we need to execute the script under that user
 	// Password is not needed because extension process runs under root and has permission to execute under different user
 	if cfg.publicSettings.RunAsUser != "" {
-		ctx.Log("event", "executing command", "user", cfg.publicSettings.RunAsUser)
+		ctx.Log("message", "RunAsUser="+cfg.publicSettings.RunAsUser)
 		runAsUser, err := user.Lookup(cfg.publicSettings.RunAsUser)
 		if err != nil {
 			return exitCode, err
@@ -60,14 +59,12 @@ func Exec(ctx *log.Context, cmd, workdir string, stdout, stderr io.WriteCloser, 
 	command.Stderr = stderr
 	err := command.Run()
 	if err != nil {
-		//executionMessage = err.Error()
-		//fmt.Println("err = " + executionMessage)
 		exitErr, ok := err.(*exec.ExitError)
 		if ok {
 			if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
 				exitCode = status.ExitStatus()
 				if status.Signaled() { // Timed out
-					fmt.Println("TIMEOUT: ", err)
+					ctx.Log("message", "Timeout:"+err.Error())
 				}
 				return exitCode, fmt.Errorf("command terminated with exit status=%d", exitCode)
 			}
@@ -84,18 +81,20 @@ func Exec(ctx *log.Context, cmd, workdir string, stdout, stderr io.WriteCloser, 
 // Ideally, we execute commands only once per sequence number in run-command-handler,
 // and save their output under /var/lib/waagent/<dir>/download/<seqnum>/*.
 func ExecCmdInDir(ctx *log.Context, cmd, workdir string, cfg *handlerSettings) error {
-	outFn, errFn := logPaths(workdir)
 
-	outF, err := os.OpenFile(outFn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	stdoutFileName, stderrFileName := logPaths(workdir)
+
+	outF, err := os.OpenFile(stdoutFileName, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if err != nil {
 		return errors.Wrapf(err, "failed to open stdout file")
 	}
-	errF, err := os.OpenFile(errFn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	errF, err := os.OpenFile(stderrFileName, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if err != nil {
 		return errors.Wrapf(err, "failed to open stderr file")
 	}
 
 	_, err = Exec(ctx, cmd, workdir, outF, errF, cfg)
+
 	return err
 }
 
