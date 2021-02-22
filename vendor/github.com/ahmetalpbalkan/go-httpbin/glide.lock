@@ -1,0 +1,51 @@
+hash: 09ca2e335bb4d2607ccbfb105bc73dbc72e1ff1ed4a4f4d8ef346822cb8fbc07
+updated: 2020-09-21T12:06:57.23507818+09:00
+imports:
+- name: github.com/andybalholm/brotli
+  version: b60f0d972eeb79a5fba5fb60f1e0568bc8c97e42
+- name: github.com/gorilla/context
+  version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
+- name: github.com/gorilla/mux
+  version: 392c28fe23e1c45ddba891b0320b3b5df220beea
+- name: github.com/pkg/errors
+  version: ba968bfe8b2f7e042a574c888954fccecfa385b4
+testImports:
+- name: github.com/davecgh/go-spew
+  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
+  subpackages:
+  - spew
+- name: github.com/pmezard/go-difflib
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  subpackages:
+  - difflib
+- name: github.com/stretchr/testify
+  version: f35b8ab0b5a2cef36673838d662e249dd9c94686
+  subpackages:
+  - assert
+  - require
+- name: golang.org/x/net
+  version: 62affa334b73ec65ed44a326519ac12c421905e3
+  subpackages:
+  - html
+  - html/atom
+  - html/charset
+- name: golang.org/x/text
+  version: a8b4671254579a87fadf9f7fa577dc7368e9d009
+  subpackages:
+  - encoding
+  - encoding/charmap
+  - encoding/htmlindex
+  - encoding/internal
+  - encoding/internal/identifier
+  - encoding/japanese
+  - encoding/korean
+  - encoding/simplifiedchinese
+  - encoding/traditionalchinese
+  - encoding/unicode
+  - internal/language
+  - internal/language/compact
+  - internal/tag
+  - internal/utf8internal
+  - language
+  - runes
+  - transform

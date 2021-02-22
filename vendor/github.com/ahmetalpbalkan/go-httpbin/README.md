@@ -1,7 +1,7 @@
 # go-httpbin
 
-[![Read GoDoc](https://godoc.org/github.com/ahmetalpbalkan/go-httpbin?status.svg)](https://godoc.org/github.com/ahmetalpbalkan/go-httpbin)
-[![Build Status](https://travis-ci.org/ahmetalpbalkan/go-httpbin.svg?branch=master)](https://travis-ci.org/ahmetalpbalkan/go-httpbin)
+[![Read GoDoc](https://godoc.org/github.com/ahmetb/go-httpbin?status.svg)](https://godoc.org/github.com/ahmetb/go-httpbin)
+[![Build Status](https://travis-ci.org/ahmetb/go-httpbin.svg?branch=master)](https://travis-ci.org/ahmetb/go-httpbin)
 
 A Go handler that lets you test your HTTP client, retry logic, streaming behavior, timeouts etc.
 with the endpoints of [httpbin.org][ht] locally in a [`net/http/httptest.Server`][hts].
@@ -18,7 +18,7 @@ This way, you can write tests without relying on an external dependency like [ht
 - `/redirect/:n` 302 Redirects _n_ times.
 - `/absolute-redirect/:n` 302 Absolute redirects _n_ times.
 - `/redirect-to?url=foo` 302 Redirects to the _foo_ URL.
-- `/stream/:n` Streams _n_ lines of JSON objects
+- `/stream/:n` Streams _n_ lines of JSON objects.
 - `/delay/:n` Delays responding for _min(n, 10)_ seconds.
 - `/bytes/:n` Generates _n_ random bytes of binary data, accepts optional _seed_ integer parameter.
 - `/cookies` Returns the cookies.
@@ -28,6 +28,20 @@ This way, you can write tests without relying on an external dependency like [ht
   an optional initial _delay_, then optionally returns with the given status _code_.
 - `/cache` Returns 200 unless an If-Modified-Since or If-None-Match header is provided, when it returns a 304.
 - `/cache/:n` Sets a Cache-Control header for _n_ seconds.
+- `/gzip` Returns gzip-encoded data.
+- `/deflate` Returns deflate-encoded data.
+- `/brotli` Returns brotli-encoded data.
+- `/robots.txt` Returns some robots.txt rules.
+- `/deny` Denied by robots.txt file.
+- `/basic-auth/:user/:passwd` Challenges HTTP Basic Auth.
+- `/hidden-basic-auth/:user/:passwd` Challenges HTTP Basic Auth and returns 404 on failure.
+- `/html` Returns some HTML.
+- `/xml` Returns some XML.
+- `/image/gif` Returns page containing an animated GIF image.
+- `/image/png` Returns page containing a PNG image.
+- `/image/jpeg` Returns page containing a JPEG image.
+
+
 
 ## How to use
 
@@ -39,7 +53,7 @@ package main
 import (
     "log"
     "net/http"
-    "github.com/ahmetalpbalkan/go-httpbin"
+    "github.com/ahmetb/go-httpbin"
 )
 
 func main() {
@@ -58,7 +72,7 @@ import (
     "net/http"
     "net/http/httptest"
 
-    "github.com/ahmetalpbalkan/go-httpbin"
+    "github.com/ahmetb/go-httpbin"
 )
 
 func TestDownload(t *testing.T) {
@@ -73,6 +87,23 @@ func TestDownload(t *testing.T) {
     // test whatever you are going to test...
 }
 ```
+
+go-httpbin works from the command line as well:
+
+```
+$ go get github.com/ahmetb/go-httpbin/cmd/httpbin
+$ $GOPATH/bin/httpbin -host :8080
+```
+
+# Development
+
+You must have the following tools installed on your system:
+
+- [Glide](https://github.com/Masterminds/glide) 0.12.0 or above
+- [Go](https://golang.org/) 1.7 or above
+
+To get started, simply run `glide install` to install all the dependencies of this package.
+Then, run `go test $(glide nv)` to test it.
 
 # License
 
@@ -94,7 +125,7 @@ limitations under the License.
 
 # Authors
 
-- Ahmet Alp Balkan ([@ahmetalpbalkan][tw])
+- Ahmet Alp Balkan ([@ahmetb][tw])
 
 [ht]: https://httpbin.org/
 [hts]: https://godoc.org/net/http/httptest#Server

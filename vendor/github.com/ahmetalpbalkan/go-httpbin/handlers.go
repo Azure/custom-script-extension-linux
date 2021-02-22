@@ -3,15 +3,26 @@
 package httpbin
 
 import (
+	"compress/flate"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/color"
+	"image/gif"
+	"image/jpeg"
+	"image/png"
 	"io"
+	"io/ioutil"
+	"math"
 	"math/rand"
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/andybalholm/brotli"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 )
@@ -30,28 +41,59 @@ var (
 
 // GetMux returns the mux with handlers for httpbin endpoints registered.
 func GetMux() *mux.Router {
+
 	r := mux.NewRouter()
-	r.HandleFunc(`/ip`, IPHandler).Methods("GET")
-	r.HandleFunc(`/user-agent`, UserAgentHandler).Methods("GET")
-	r.HandleFunc(`/headers`, HeadersHandler).Methods("GET")
-	r.HandleFunc(`/get`, GetHandler).Methods("GET")
-	r.HandleFunc(`/redirect/{n:[\d]+}`, RedirectHandler).Methods("GET")
-	r.HandleFunc(`/absolute-redirect/{n:[\d]+}`, AbsoluteRedirectHandler).Methods("GET")
-	r.HandleFunc(`/redirect-to`, RedirectToHandler).Methods("GET").Queries("url", "{url:.+}")
-	r.HandleFunc(`/status/{code:[\d]+}`, StatusHandler).Methods("GET")
-	r.HandleFunc(`/bytes/{n:[\d]+}`, BytesHandler).Methods("GET")
-	r.HandleFunc(`/delay/{n:\d+(\.\d+)?}`, DelayHandler).Methods("GET")
-	r.HandleFunc(`/stream/{n:[\d]+}`, StreamHandler).Methods("GET")
-	r.HandleFunc(`/dos2unix`, Dos2UnixHandler).Methods("GET")
-	r.HandleFunc(`/drip`, DripHandler).Methods("GET").Queries(
+	r.HandleFunc(`/`, HomeHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/ip`, IPHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/user-agent`, UserAgentHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/headers`, HeadersHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/get`, GetHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/post`, PostHandler).Methods(http.MethodPost)
+	r.HandleFunc(`/redirect/{n:[\d]+}`, RedirectHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/absolute-redirect/{n:[\d]+}`, AbsoluteRedirectHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/redirect-to`, RedirectToHandler).Methods(http.MethodGet, http.MethodHead).Queries("url", "{url:.+}")
+	r.HandleFunc(`/status/{code:[\d]+}`, StatusHandler)
+	r.HandleFunc(`/bytes/{n:[\d]+}`, BytesHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/delay/{n:\d+(?:\.\d+)?}`, DelayHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/stream/{n:[\d]+}`, StreamHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/drip`, DripHandler).Methods(http.MethodGet, http.MethodHead).Queries(
 		"numbytes", `{numbytes:\d+}`,
-		"duration", `{duration:\d+(\.\d+)?}`)
-	r.HandleFunc(`/cookies`, CookiesHandler).Methods("GET")
-	r.HandleFunc(`/cookies/set`, SetCookiesHandler).Methods("GET")
-	r.HandleFunc(`/cookies/delete`, DeleteCookiesHandler).Methods("GET")
-	r.HandleFunc(`/cache`, CacheHandler).Methods("GET")
-	r.HandleFunc(`/cache/{n:[\d]+}`, SetCacheHandler).Methods("GET")
+		"duration", `{duration:\d+(?:\.\d+)?}`)
+	r.HandleFunc(`/cookies`, CookiesHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/cookies/set`, SetCookiesHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/cookies/delete`, DeleteCookiesHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/cache`, CacheHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/cache/{n:[\d]+}`, SetCacheHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/gzip`, GZIPHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/brotli`, BrotliHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/deflate`, DeflateHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/html`, HTMLHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/xml`, XMLHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/robots.txt`, RobotsTXTHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/deny`, DenyHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/basic-auth/{u}/{p}`, BasicAuthHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/hidden-basic-auth/{u}/{p}`, HiddenBasicAuthHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/image/gif`, GIFHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/image/png`, PNGHandler).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc(`/image/jpeg`, JPEGHandler).Methods(http.MethodGet, http.MethodHead)
 	return r
+}
+
+// HomeHandler serves static HTML content for the index page.
+func HomeHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, `<!DOCTYPE html>
+	<html lang="en">
+	<head>
+		<title>go-httpbin</title>
+	<head>
+	<body>
+		<h1>go-httpbin</h1>
+		<p>
+			<a href="https://github.com/ahmetb/go-httpbin">
+				Read documentation &rarr;
+			</a>
+	</body>
+	</html>`)
 }
 
 // IPHandler returns Origin IP.
@@ -60,10 +102,6 @@ func IPHandler(w http.ResponseWriter, r *http.Request) {
 	if err := writeJSON(w, ipResponse{h}); err != nil {
 		writeErrorJSON(w, errors.Wrap(err, "failed to write json")) // TODO handle this error in writeJSON(w,v)
 	}
-}
-
-func Dos2UnixHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("#!/bin/sh\r\necho 'Hello, world!'\r\n"))
 }
 
 // UserAgentHandler returns user agent.
@@ -88,6 +126,38 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 		headersResponse: headersResponse{getHeaders(r)},
 		ipResponse:      ipResponse{h},
 		Args:            flattenValues(r.URL.Query()),
+	}
+
+	if err := writeJSON(w, v); err != nil {
+		writeErrorJSON(w, errors.Wrap(err, "failed to write json"))
+	}
+}
+
+// PostHandler accept a post and echo its data back
+func PostHandler(w http.ResponseWriter, r *http.Request) {
+	h, _, _ := net.SplitHostPort(r.RemoteAddr)
+
+	data, err := parseData(r)
+	if err != nil {
+		writeErrorJSON(w, errors.Wrap(err, "failed to read body"))
+		return
+	}
+
+	var jsonPayload interface{}
+	if strings.Contains(r.Header.Get("Content-Type"), "json") {
+		err := json.Unmarshal(data, &jsonPayload)
+		if err != nil {
+			writeErrorJSON(w, errors.Wrap(err, "failed to read body"))
+			return
+		}
+	}
+
+	v := postResponse{
+		headersResponse: headersResponse{getHeaders(r)},
+		ipResponse:      ipResponse{h},
+		Args:            flattenValues(r.URL.Query()),
+		Data:            string(data),
+		JSON:            jsonPayload,
 	}
 
 	if err := writeJSON(w, v); err != nil {
@@ -334,4 +404,279 @@ func SetCacheHandler(w http.ResponseWriter, r *http.Request) {
 	n, _ := strconv.Atoi(mux.Vars(r)["n"]) // shouldn't fail due to route pattern
 	w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", n))
 	GetHandler(w, r)
+}
+
+// GZIPHandler returns a GZIP-encoded response
+func GZIPHandler(w http.ResponseWriter, r *http.Request) {
+	h, _, _ := net.SplitHostPort(r.RemoteAddr)
+
+	v := gzipResponse{
+		headersResponse: headersResponse{getHeaders(r)},
+		ipResponse:      ipResponse{h},
+		Gzipped:         true,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Content-Encoding", "gzip")
+	ww := gzip.NewWriter(w)
+	defer ww.Close() // flush
+	if err := writeJSON(ww, v); err != nil {
+		writeErrorJSON(w, errors.Wrap(err, "failed to write json"))
+	}
+}
+
+// DeflateHandler returns a DEFLATE-encoded response.
+func DeflateHandler(w http.ResponseWriter, r *http.Request) {
+	h, _, _ := net.SplitHostPort(r.RemoteAddr)
+
+	v := deflateResponse{
+		headersResponse: headersResponse{getHeaders(r)},
+		ipResponse:      ipResponse{h},
+		Deflated:        true,
+	}
+
+	w.Header().Set("Content-Encoding", "deflate")
+	ww, _ := flate.NewWriter(w, flate.BestCompression)
+	defer ww.Close() // flush
+	if err := writeJSON(ww, v); err != nil {
+		writeErrorJSON(w, errors.Wrap(err, "failed to write json"))
+	}
+}
+
+// BrotliHandler returns a Brotli-encoded response
+func BrotliHandler(w http.ResponseWriter, r *http.Request) {
+	h, _, _ := net.SplitHostPort(r.RemoteAddr)
+
+	v := brotliResponse{
+		headersResponse: headersResponse{getHeaders(r)},
+		ipResponse:      ipResponse{h},
+		Compressed:      true,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Content-Encoding", "br")
+	ww := brotli.NewWriter(w)
+	defer ww.Close() // flush
+	if err := writeJSON(ww, v); err != nil {
+		writeErrorJSON(w, errors.Wrap(err, "failed to write json"))
+	}
+}
+
+// RobotsTXTHandler returns a robots.txt response.
+func RobotsTXTHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
+	fmt.Fprint(w, "User-agent: *\nDisallow: /deny\n")
+}
+
+// DenyHandler returns a plain-text response.
+func DenyHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
+	fmt.Fprint(w, `
+          .-''''''-.
+        .' _      _ '.
+       /   O      O   \
+      :                :
+      |                |
+      :       __       :
+       \  .-"'  '"-.  /
+        '.          .'
+          '-......-'
+     YOU SHOULDN'T BE HERE
+`)
+}
+
+// BasicAuthHandler challenges with given username and password.
+func BasicAuthHandler(w http.ResponseWriter, r *http.Request) {
+	basicAuthHandler(w, r, http.StatusUnauthorized)
+}
+
+// HiddenBasicAuthHandler challenges with given username and password and
+// returns 404 if authentication fails.
+func HiddenBasicAuthHandler(w http.ResponseWriter, r *http.Request) {
+	basicAuthHandler(w, r, http.StatusNotFound)
+}
+
+func basicAuthHandler(w http.ResponseWriter, r *http.Request, status int) {
+	user := mux.Vars(r)["u"]
+	pass := mux.Vars(r)["p"]
+
+	inUser, inPass, ok := r.BasicAuth()
+	if !ok || inUser != user || inPass != pass {
+		w.WriteHeader(status)
+	} else {
+		v := basicAuthResponse{
+			Authenticated: true,
+			User:          user,
+		}
+		if err := writeJSON(w, v); err != nil {
+			writeErrorJSON(w, errors.Wrap(err, "failed to write json"))
+		}
+	}
+}
+
+// HTMLHandler returns some HTML response.
+func HTMLHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	fmt.Fprint(w, htmlData)
+}
+
+// XMLHandler returns some XML response.
+func XMLHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/xml")
+	fmt.Fprint(w, xmlData)
+}
+
+type circle struct {
+	X, Y, R float64
+}
+
+func (c *circle) Brightness(x, y float64) uint8 {
+	var dx, dy float64 = c.X - x, c.Y - y
+	d := math.Sqrt(dx*dx+dy*dy) / c.R
+	if d > 1 {
+		return 0
+	}
+	return 255
+}
+
+// GIFHandler returns an animated GIF image.
+// Source: http://tech.nitoyon.com/en/blog/2016/01/07/go-animated-gif-gen/
+func GIFHandler(rw http.ResponseWriter, r *http.Request) {
+	var w, h int = 240, 240
+	var hw, hh float64 = float64(w / 2), float64(h / 2)
+	circles := []*circle{{}, {}, {}}
+
+	var palette = []color.Color{
+		color.RGBA{0x00, 0x00, 0x00, 0xff},
+		color.RGBA{0x00, 0x00, 0xff, 0xff},
+		color.RGBA{0x00, 0xff, 0x00, 0xff},
+		color.RGBA{0x00, 0xff, 0xff, 0xff},
+		color.RGBA{0xff, 0x00, 0x00, 0xff},
+		color.RGBA{0xff, 0x00, 0xff, 0xff},
+		color.RGBA{0xff, 0xff, 0x00, 0xff},
+		color.RGBA{0xff, 0xff, 0xff, 0xff},
+	}
+
+	var images []*image.Paletted
+	var delays []int
+	steps := 20
+	for step := 0; step < steps; step++ {
+		img := image.NewPaletted(image.Rect(0, 0, w, h), palette)
+		images = append(images, img)
+		delays = append(delays, 0)
+
+		θ := 2.0 * math.Pi / float64(steps) * float64(step)
+		for i, circle := range circles {
+			θ0 := 2 * math.Pi / 3 * float64(i)
+			circle.X = hw - 40*math.Sin(θ0) - 20*math.Sin(θ0+θ)
+			circle.Y = hh - 40*math.Cos(θ0) - 20*math.Cos(θ0+θ)
+			circle.R = 50
+		}
+
+		for x := 0; x < w; x++ {
+			for y := 0; y < h; y++ {
+				img.Set(x, y, color.RGBA{
+					circles[0].Brightness(float64(x), float64(y)),
+					circles[1].Brightness(float64(x), float64(y)),
+					circles[2].Brightness(float64(x), float64(y)),
+					255,
+				})
+			}
+		}
+	}
+
+	gif.EncodeAll(rw, &gif.GIF{
+		Image: images,
+		Delay: delays,
+	})
+}
+
+// JPEGHandler returns a JPEG image.
+func JPEGHandler(w http.ResponseWriter, r *http.Request) {
+	jpeg.Encode(w, getImg(), nil)
+}
+
+// PNGHandler returns a PNG image.
+func PNGHandler(w http.ResponseWriter, r *http.Request) {
+	png.Encode(w, getImg())
+}
+
+func getImg() image.Image {
+	const n = 512
+	img := image.NewRGBA(image.Rect(0, 0, n, n))
+	abs := func(n int) int {
+		if n < 0 {
+			return -n
+		}
+		return n
+	}
+	sq := func(i int) int { return i * i }
+
+	for x := 0; x <= n; x++ {
+		for y := 0; y <= n; y++ {
+			if x == n/2 && y == n/2 {
+				continue
+			}
+			d := math.Sqrt(float64(sq(abs(x-n/2)) + sq(abs(y-n/2))))
+			if d > n/2 {
+				continue
+			}
+
+			sin := float64(y-n/2) / d
+			deg := math.Asin(sin)/math.Pi*359.0 + 180
+			sec := int(deg) / 60
+
+			var fix, mod *uint8
+			var inc bool
+
+			c := color.RGBA{0, 0, 0, 0xFF}
+			switch sec {
+			case 0:
+				fix, mod = &c.R, &c.G
+				inc = true
+			case 1:
+				fix, mod = &c.G, &c.R
+				inc = false
+			case 2:
+				fix, mod = &c.G, &c.B
+				inc = true
+			case 3:
+				fix, mod = &c.B, &c.G
+				inc = false
+			case 4:
+				fix, mod = &c.B, &c.R
+				inc = true
+			case 5:
+				fix, mod = &c.R, &c.B
+				inc = false
+			default:
+				panic(fmt.Sprintf("deg=%f sec=%d", deg, sec))
+			}
+
+			v := uint8((int(deg) % 60) * 255.0 / 60.0)
+			*fix = 255
+			if inc {
+				*mod = v
+			} else {
+				*mod = 255 - v
+			}
+			img.Set(x, y, c)
+
+		}
+	}
+	return img
+}
+
+func parseData(r *http.Request) ([]byte, error) {
+	if r.Body == nil {
+		return nil, nil
+	}
+	defer r.Body.Close()
+
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }
