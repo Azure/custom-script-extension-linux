@@ -8,10 +8,10 @@ import (
 
 	"path/filepath"
 
+	"fmt"
+
 	"github.com/stretchr/testify/require"
 )
-
-import "fmt"
 
 const testDataDir = "testdata"
 

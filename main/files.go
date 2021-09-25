@@ -7,13 +7,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"os"
+
 	"github.com/Azure/custom-script-extension-linux/pkg/blobutil"
 	"github.com/Azure/custom-script-extension-linux/pkg/download"
 	"github.com/Azure/custom-script-extension-linux/pkg/preprocess"
 	"github.com/Azure/custom-script-extension-linux/pkg/urlutil"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
-	"os"
 )
 
 // downloadAndProcessURL downloads using the specified downloader and saves it to the

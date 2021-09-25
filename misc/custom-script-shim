@@ -4,8 +4,11 @@ set -euo pipefail
 readonly SCRIPT_DIR=$(dirname "$0")
 readonly LOG_DIR="/var/log/azure/custom-script"
 readonly LOG_FILE=handler.log
-readonly HANDLER_BIN="custom-script-extension"
-
+readonly ARCHITECTURE=$(uname -p)
+HANDLER_BIN="custom-script-extension"
+if [ $ARCHITECTURE == "arm64" ] || [ $ARCHITECTURE == "aarch64" ]; then
+     HANDLER_BIN="custom-script-extension-arm64";
+fi
 
 # status_file returns the .status file path we are supposed to write
 # by determining the highest sequence number from ./config/*.settings files.

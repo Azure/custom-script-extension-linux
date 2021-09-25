@@ -1,4 +1,4 @@
-package vmextension
+package main
 
 import (
 	"bytes"
@@ -7,9 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
-
 	"os/exec"
+	"path/filepath"
 )
 
 const (
@@ -18,11 +17,11 @@ const (
 
 type handlerSettingsFile struct {
 	RuntimeSettings []struct {
-		HandlerSettings handlerSettings `json:"handlerSettings"`
+		HandlerSettings handlerSettingsCommon `json:"handlerSettings"`
 	} `json:"runtimeSettings"`
 }
 
-type handlerSettings struct {
+type handlerSettingsCommon struct {
 	PublicSettings          map[string]interface{} `json:"publicSettings"`
 	ProtectedSettingsBase64 string                 `json:"protectedSettings"`
 	SettingsCertThumbprint  string                 `json:"protectedSettingsCertThumbprint"`
@@ -41,17 +40,14 @@ func settingsPath(configFolder string) (string, error) {
 // ReadSettings locates the .settings file and returns public settings
 // JSON, and protected settings JSON (by decrypting it with the keys in
 // configFolder).
-func ReadSettings(configFolder string) (public, protected map[string]interface{}, _ error) {
-	cf, err := settingsPath(configFolder)
-	if err != nil {
-		return nil, nil, fmt.Errorf("canot locate settings file: %v", err)
-	}
-	hs, err := parseHandlerSettingsFile(cf)
+func ReadSettings(configFilePath string) (public, protected map[string]interface{}, _ error) {
+	hs, err := parseHandlerSettingsFile(configFilePath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error parsing settings file: %v", err)
 	}
 
 	public = hs.PublicSettings
+	configFolder := filepath.Dir(configFilePath)
 	if err := unmarshalProtectedSettings(configFolder, hs, &protected); err != nil {
 		return nil, nil, fmt.Errorf("failed to parse protected settings: %v", err)
 	}
@@ -86,7 +82,7 @@ func unmarshalSettings(in interface{}, v interface{}) error {
 
 // parseHandlerSettings parses a handler settings file (e.g. 0.settings) and
 // returns it as a structured object.
-func parseHandlerSettingsFile(path string) (h handlerSettings, _ error) {
+func parseHandlerSettingsFile(path string) (h handlerSettingsCommon, _ error) {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		return h, fmt.Errorf("Error reading %s: %v", path, err)
@@ -108,7 +104,7 @@ func parseHandlerSettingsFile(path string) (h handlerSettings, _ error) {
 // unmarshalProtectedSettings decodes the protected settings from handler
 // runtime settings JSON file, decrypts it using the certificates and unmarshals
 // into the given struct v.
-func unmarshalProtectedSettings(configFolder string, hs handlerSettings, v interface{}) error {
+func unmarshalProtectedSettings(configFolder string, hs handlerSettingsCommon, v interface{}) error {
 	if hs.ProtectedSettingsBase64 == "" {
 		return nil
 	}

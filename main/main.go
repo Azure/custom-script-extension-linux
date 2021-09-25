@@ -3,10 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
-	"github.com/Azure/azure-docker-extension/pkg/vmextension"
-	"github.com/Azure/azure-docker-extension/pkg/vmextension/status"
 	"github.com/go-kit/kit/log"
 )
 
@@ -27,6 +26,9 @@ var (
 	// downloadDir is where we store the downloaded files in the "{downloadDir}/{seqnum}/file"
 	// format and the logs as "{downloadDir}/{seqnum}/std(out|err)". Stored under dataDir
 	downloadDir = "download"
+
+	// configSequenceNumber environment variable should be set by VMAgent to sequence number
+	configSequenceNumber = "ConfigSequenceNumber"
 )
 
 func main() {
@@ -38,14 +40,30 @@ func main() {
 	ctx = ctx.With("operation", strings.ToLower(cmd.name))
 
 	// parse extension environment
-	hEnv, err := vmextension.GetHandlerEnv()
+	hEnv, err := GetHandlerEnv()
 	if err != nil {
 		ctx.Log("message", "failed to parse handlerenv", "error", err)
 		os.Exit(cmd.failExitCode)
 	}
-	seqNum, err := vmextension.FindSeqNumConfig(hEnv.HandlerEnvironment.ConfigFolder)
-	if err != nil {
-		ctx.Log("messsage", "failed to find sequence number", "error", err)
+
+	seqNum := -1
+	// Agent should set env variable sequence number
+	seqNumVariable := os.Getenv(configSequenceNumber)
+	if seqNumVariable != "" {
+		seqNum, err = strconv.Atoi(seqNumVariable)
+		if err != nil {
+			ctx.Log("message", "failed to parse env variable ConfigSequenceNumber:"+seqNumVariable, "error", err)
+			os.Exit(cmd.failExitCode)
+		}
+	}
+
+	// Read the seqNum from latest config file in case VMAgent did not set it as env variable (old agent versions)
+	if seqNum == -1 {
+		seqNum, err = FindSeqNumConfig(hEnv.HandlerEnvironment.ConfigFolder)
+		if err != nil {
+			ctx.Log("messsage", "failed to find sequence number", "error", err)
+			os.Exit(cmd.failExitCode)
+		}
 	}
 	ctx = ctx.With("seq", seqNum)
 
@@ -59,14 +77,14 @@ func main() {
 		}
 	}
 	// execute the subcommand
-	reportStatus(ctx, hEnv, seqNum, status.StatusTransitioning, cmd, "")
+	reportStatus(ctx, hEnv, seqNum, StatusTransitioning, cmd, "")
 	msg, err := cmd.f(ctx, hEnv, seqNum)
 	if err != nil {
 		ctx.Log("event", "failed to handle", "error", err)
-		reportStatus(ctx, hEnv, seqNum, status.StatusError, cmd, err.Error()+msg)
+		reportStatus(ctx, hEnv, seqNum, StatusError, cmd, err.Error()+msg)
 		os.Exit(cmd.failExitCode)
 	}
-	reportStatus(ctx, hEnv, seqNum, status.StatusSuccess, cmd, msg)
+	reportStatus(ctx, hEnv, seqNum, StatusSuccess, cmd, msg)
 	ctx.Log("event", "end")
 }
 

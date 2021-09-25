@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Azure/azure-docker-extension/pkg/vmextension"
 	"github.com/Azure/custom-script-extension-linux/pkg/seqnum"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
@@ -21,7 +20,7 @@ const (
 	maxScriptSize = 256 * 1024
 )
 
-type cmdFunc func(ctx *log.Context, hEnv vmextension.HandlerEnvironment, seqNum int) (msg string, err error)
+type cmdFunc func(ctx *log.Context, hEnv HandlerEnvironment, seqNum int) (msg string, err error)
 type preFunc func(ctx *log.Context, seqNum int) error
 
 type cmd struct {
@@ -54,12 +53,12 @@ var (
 	}
 )
 
-func noop(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (string, error) {
+func noop(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) {
 	ctx.Log("event", "noop")
 	return "", nil
 }
 
-func install(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (string, error) {
+func install(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) {
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
 		return "", errors.Wrap(err, "failed to create data dir")
 	}
@@ -79,7 +78,7 @@ func install(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (st
 	return "", nil
 }
 
-func migrateToMostRecentSequence(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) {
+func migrateToMostRecentSequence(ctx *log.Context, h HandlerEnvironment, seqNum int) {
 	// The status folder is used instead of the settings because the settings file is written
 	// by the agent before install is called.  As a result, the extension cannot determine if this
 	// is a new install or an upgrade.
@@ -93,7 +92,7 @@ func migrateToMostRecentSequence(ctx *log.Context, h vmextension.HandlerEnvironm
 	// do not have invent another method.  The CustomScript extension should have been using this
 	// from the beginning, but it was not.
 	//
-	computedSeqNum, err := vmextension.FindSeqNumStatus(h.HandlerEnvironment.StatusFolder)
+	computedSeqNum, err := FindSeqNumStatus(h.HandlerEnvironment.StatusFolder)
 	if err != nil {
 		// If there was an error, the sequence number is zero.
 		ctx.Log("event", "migrate to mrseq", "error", err)
@@ -111,7 +110,7 @@ func migrateToMostRecentSequence(ctx *log.Context, h vmextension.HandlerEnvironm
 	fout.WriteString(fmt.Sprintf("%v", computedSeqNum))
 }
 
-func uninstall(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (string, error) {
+func uninstall(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) {
 	{ // a new context scope with path
 		ctx = ctx.With("path", dataDir)
 		ctx.Log("event", "removing data dir", "path", dataDir)
@@ -143,9 +142,9 @@ func min(a, b int) int {
 	return b
 }
 
-func enable(ctx *log.Context, h vmextension.HandlerEnvironment, seqNum int) (string, error) {
+func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) {
 	// parse the extension handler settings (not available prior to 'enable')
-	cfg, err := parseAndValidateSettings(ctx, h.HandlerEnvironment.ConfigFolder)
+	cfg, err := parseAndValidateSettings(ctx, h.HandlerEnvironment.ConfigFolder, seqNum)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get configuration")
 	}
