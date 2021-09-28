@@ -32,7 +32,7 @@ You can add CustomScript extension to your VM using:
 :information_source: Please read the [Using the Azure Custom Script Extension with Linux
 Virtual Machines][doc] page for detailed usage instructions.
 
-[doc]: https://docs.microsoft.com/azure/virtual-machines/virtual-machines-linux-extensions-customscript
+[doc]: https://docs.microsoft.com/en-us/azure/virtual-machines/extensions/custom-script-linux
 
 # Custom Script Extension Reference Guide
 
