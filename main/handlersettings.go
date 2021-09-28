@@ -2,8 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"path/filepath"
 
-	"github.com/Azure/azure-docker-extension/pkg/vmextension"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 )
@@ -20,8 +21,8 @@ var (
 
 // handlerSettings holds the configuration of the extension handler.
 type handlerSettings struct {
-	publicSettings
-	protectedSettings
+	publicSettings    `json:"publicSettings"`
+	protectedSettings `json:"protectedSettings"`
 }
 
 func (s *handlerSettings) commandToExecute() string {
@@ -112,9 +113,9 @@ func (self *clientOrObjectId) isEmpty() bool {
 
 // parseAndValidateSettings reads configuration from configFolder, decrypts it,
 // runs JSON-schema and logical validation on it and returns it back.
-func parseAndValidateSettings(ctx *log.Context, configFolder string) (h handlerSettings, _ error) {
+func parseAndValidateSettings(ctx *log.Context, configFolder string, seqNum int) (h handlerSettings, _ error) {
 	ctx.Log("event", "reading configuration")
-	pubJSON, protJSON, err := readSettings(configFolder)
+	pubJSON, protJSON, err := readSettings(configFolder, seqNum)
 	if err != nil {
 		return h, err
 	}
@@ -127,7 +128,7 @@ func parseAndValidateSettings(ctx *log.Context, configFolder string) (h handlerS
 	ctx.Log("event", "json schema valid")
 
 	ctx.Log("event", "parsing configuration json")
-	if err := vmextension.UnmarshalHandlerSettings(pubJSON, protJSON, &h.publicSettings, &h.protectedSettings); err != nil {
+	if err := UnmarshalHandlerSettings(pubJSON, protJSON, &h.publicSettings, &h.protectedSettings); err != nil {
 		return h, errors.Wrap(err, "json parsing error")
 	}
 	ctx.Log("event", "parsed configuration json")
@@ -143,8 +144,9 @@ func parseAndValidateSettings(ctx *log.Context, configFolder string) (h handlerS
 // readSettings uses specified configFolder (comes from HandlerEnvironment) to
 // decrypt and parse the public/protected settings of the extension handler into
 // JSON objects.
-func readSettings(configFolder string) (pubSettingsJSON, protSettingsJSON map[string]interface{}, err error) {
-	pubSettingsJSON, protSettingsJSON, err = vmextension.ReadSettings(configFolder)
+func readSettings(configFolder string, seqNum int) (pubSettingsJSON, protSettingsJSON map[string]interface{}, err error) {
+	cf := filepath.Join(configFolder, fmt.Sprintf("%d%s", seqNum, ".settings"))
+	pubSettingsJSON, protSettingsJSON, err = ReadSettings(cf)
 	err = errors.Wrapf(err, "error reading extension configuration")
 	return
 }
