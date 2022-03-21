@@ -177,6 +177,13 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) 
 		ctx.Log("event", "enable failed")
 	}
 
+	err = cleanUpSettings(h.HandlerEnvironment.ConfigFolder)
+	if err != nil {
+		ctx.Log("message", "error clearing config folder")
+	} else {
+		ctx.Log("message", "config folder cleared successfully")
+	}
+
 	msg := fmt.Sprintf("\n[stdout]\n%s\n[stderr]\n%s", string(stdoutTail), string(stderrTail))
 	return msg, runErr
 }

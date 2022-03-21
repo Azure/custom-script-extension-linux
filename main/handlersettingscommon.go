@@ -140,3 +140,14 @@ func unmarshalProtectedSettings(configFolder string, hs handlerSettingsCommon, v
 	}
 	return nil
 }
+
+// cleanUpSettings clears out the settings file [ex: 0.settings] to ensure no
+// protected settings are logged in VM
+func cleanUpSettings(configFolder string) error {
+	settingFile, err := settingsPath(configFolder)
+	clear := []byte("")
+	if err != nil {
+		err = ioutil.WriteFile(settingFile, clear, 0644)
+	}
+	return err
+}
