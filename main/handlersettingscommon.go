@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -141,13 +142,24 @@ func unmarshalProtectedSettings(configFolder string, hs handlerSettingsCommon, v
 	return nil
 }
 
-// cleanUpSettings clears out the settings file [ex: 0.settings] to ensure no
+// cleanUpSettings replaces the protected settings for all settings files [ex: 0.settings, etc] to ensure no
 // protected settings are logged in VM
 func cleanUpSettings(configFolder string) error {
-	settingFile, err := settingsPath(configFolder)
-	clear := []byte("")
+	configDir, err := ioutil.ReadDir(configFolder)
 	if err != nil {
-		err = ioutil.WriteFile(settingFile, clear, 0644)
+		return err
 	}
-	return err
+
+	for _, file := range configDir {
+		if strings.Compare(filepath.Ext(file.Name()), settingsFileSuffix) == 0 { //checking if its a settings file
+			content := []byte("")
+
+			err = ioutil.WriteFile(file.Name(), content, 0644)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

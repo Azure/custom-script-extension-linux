@@ -2,9 +2,15 @@ package main
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strconv"
 	"testing"
+
+	"github.com/Azure/custom-script-extension-linux/vendor/github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
-import "github.com/stretchr/testify/require"
 
 func Test_handlerSettingsValidate(t *testing.T) {
 	// commandToExecute not specified
@@ -193,4 +199,47 @@ func Test_toJSONUmarshallForManagedIdentity(t *testing.T) {
 	require.Equal(t, protSettings.ManagedIdentity.ObjectId, "41b403aa-c364-4240-a7ff-d85fb6cd7232")
 	h = handlerSettings{publicSettings{}, *protSettings}
 	require.Error(t, h.validate(), "settings should be invalid")
+}
+
+func Test_protectedSettingsTest(t *testing.T) {
+	//set up test direcotry + test files
+	testFolderPath := "/config"
+	settingsExtensionName := ".settings"
+	//testFolderPath := ext.HandlerEnv.ConfigFolder
+
+	err := createTestFiles(testFolderPath, settingsExtensionName)
+	assert.NoError(t, err)
+
+	err = cleanUpSettings(testFolderPath)
+	assert.NoError(t, err)
+
+	fileName := ""
+	for i := 0; i < 3; i++ {
+		fileName = filepath.Join(testFolderPath, strconv.FormatInt(int64(i), 10)+settingsExtensionName)
+		content, err := ioutil.ReadFile(fileName)
+		assert.NoError(t, err)
+		assert.Equal(t, len(content), 0)
+	}
+
+	// cleanup
+	defer os.RemoveAll(testFolderPath)
+}
+
+func createTestFiles(folderPath, settingsExtensionName string) error {
+	fileName := ""
+	//create test directories
+	for i := 0; i < 3; i++ {
+		fileName = filepath.Join(folderPath, strconv.FormatInt(int64(i), 10)+settingsExtensionName)
+		err := os.MkdirAll(fileName, os.ModeDir)
+		if err != nil {
+			return err
+		}
+		testContent := []byte("badcontent")
+		err = ioutil.WriteFile(fileName, testContent, 0777)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
