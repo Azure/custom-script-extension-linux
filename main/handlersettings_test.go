@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/Azure/custom-script-extension-linux/vendor/github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -205,7 +205,6 @@ func Test_protectedSettingsTest(t *testing.T) {
 	//set up test direcotry + test files
 	testFolderPath := "/config"
 	settingsExtensionName := ".settings"
-	//testFolderPath := ext.HandlerEnv.ConfigFolder
 
 	err := createTestFiles(testFolderPath, settingsExtensionName)
 	assert.NoError(t, err)
@@ -228,18 +227,17 @@ func Test_protectedSettingsTest(t *testing.T) {
 func createTestFiles(folderPath, settingsExtensionName string) error {
 	fileName := ""
 	//create test directories
+	testContent := []byte("beep boop")
 	for i := 0; i < 3; i++ {
 		fileName = filepath.Join(folderPath, strconv.FormatInt(int64(i), 10)+settingsExtensionName)
-		err := os.MkdirAll(fileName, os.ModeDir)
+		file, err := os.Create(fileName)
 		if err != nil {
 			return err
 		}
-		testContent := []byte("badcontent")
-		err = ioutil.WriteFile(fileName, testContent, 0777)
-		if err != nil {
+		size, err := file.Write(testContent)
+		if err != nil || size == 0 {
 			return err
 		}
 	}
-
 	return nil
 }

@@ -149,17 +149,15 @@ func cleanUpSettings(configFolder string) error {
 	if err != nil {
 		return err
 	}
-
+	content := []byte("")
 	for _, file := range configDir {
 		if strings.Compare(filepath.Ext(file.Name()), settingsFileSuffix) == 0 { //checking if its a settings file
-			content := []byte("")
-
-			err = ioutil.WriteFile(file.Name(), content, 0644)
+			filePath := filepath.Join(configFolder, file.Name())
+			err = ioutil.WriteFile(filePath, content, 0644)
 			if err != nil {
 				return err
 			}
 		}
 	}
-
 	return nil
 }
