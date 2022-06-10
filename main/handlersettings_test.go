@@ -225,6 +225,10 @@ func Test_protectedSettingsTest(t *testing.T) {
 }
 
 func createTestFiles(folderPath, settingsExtensionName string) error {
+	err := os.MkdirAll(folderPath, os.ModeDir)
+	if err != nil {
+		return err
+	}
 	fileName := ""
 	//create test directories
 	testContent := []byte("beep boop")
