@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -201,17 +202,19 @@ func Test_toJSONUmarshallForManagedIdentity(t *testing.T) {
 	require.Error(t, h.validate(), "settings should be invalid")
 }
 
-func Test_protectedSettingsTest(t *testing.T) {
-	//set up test direcotry + test files
+func Test_protectedSettings(t *testing.T) {
+	//set up test files
 	testFolderPath := "/config"
 	settingsExtensionName := ".settings"
+	ctx := log.NewContext(log.NewSyncLogger(log.NewLogfmtLogger(
+		os.Stdout))).With("time", log.DefaultTimestamp).With("version", VersionString())
 
 	err := createTestFiles(testFolderPath, settingsExtensionName)
 	assert.NoError(t, err)
 
-	err = cleanUpSettings(testFolderPath)
-	assert.NoError(t, err)
+	cleanUpSettings(ctx, testFolderPath)
 
+	//verify that settings file were cleared
 	fileName := ""
 	for i := 0; i < 3; i++ {
 		fileName = filepath.Join(testFolderPath, strconv.FormatInt(int64(i), 10)+settingsExtensionName)
@@ -220,8 +223,44 @@ func Test_protectedSettingsTest(t *testing.T) {
 		assert.Equal(t, len(content), 0)
 	}
 
+	//verify that non settings file did not get cleared
+	fileName = filepath.Join(testFolderPath, "HandlerEnv.txt")
+	content, err := ioutil.ReadFile(fileName)
+	assert.NoError(t, err)
+	assert.Empty(t, len(content), 9)
+
 	// cleanup
 	defer os.RemoveAll(testFolderPath)
+}
+
+func Test_protectedSettingsFail(t *testing.T) {
+	//skipping file if it's open
+
+	//set up test files
+	testFolderPath := "/config"
+	settingsExtensionName := ".settings"
+	ctx := log.NewContext(log.NewSyncLogger(log.NewLogfmtLogger(
+		os.Stdout))).With("time", log.DefaultTimestamp).With("version", VersionString())
+
+	err := createTestFiles(testFolderPath, settingsExtensionName)
+	assert.NoError(t, err)
+
+	//file to open while test
+	fileName := filepath.Join(testFolderPath, "0.settings")
+	os.OpenFile(fileName, os.O_RDONLY, 444)
+
+	cleanUpSettings(ctx, testFolderPath)
+	for i := 0; i < 3; i++ {
+		fileName = filepath.Join(testFolderPath, strconv.FormatInt(int64(i), 10)+settingsExtensionName)
+		content, err := ioutil.ReadFile(fileName)
+		assert.NoError(t, err)
+		if i == 0 {
+			assert.Equal(t, len(content), 9)
+		} else {
+			assert.Equal(t, len(content), 0)
+		}
+	}
+
 }
 
 func createTestFiles(folderPath, settingsExtensionName string) error {
@@ -230,10 +269,15 @@ func createTestFiles(folderPath, settingsExtensionName string) error {
 		return err
 	}
 	fileName := ""
-	//create test directories
+
 	testContent := []byte("beep boop")
-	for i := 0; i < 3; i++ {
-		fileName = filepath.Join(folderPath, strconv.FormatInt(int64(i), 10)+settingsExtensionName)
+	for i := 0; i < 4; i++ {
+		if i < 3 {
+			fileName = filepath.Join(folderPath, strconv.FormatInt(int64(i), 10)+settingsExtensionName)
+		} else { //non settings file
+			fileName = filepath.Join(folderPath, "HandlerEnv.txt")
+		}
+
 		file, err := os.Create(fileName)
 		if err != nil {
 			return err
@@ -243,5 +287,6 @@ func createTestFiles(folderPath, settingsExtensionName string) error {
 			return err
 		}
 	}
+
 	return nil
 }

@@ -10,6 +10,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/go-kit/kit/log"
 )
 
 const (
@@ -144,10 +146,11 @@ func unmarshalProtectedSettings(configFolder string, hs handlerSettingsCommon, v
 
 // cleanUpSettings replaces the protected settings for all settings files [ex: 0.settings, etc] to ensure no
 // protected settings are logged in VM
-func cleanUpSettings(configFolder string) error {
+func cleanUpSettings(ctx *log.Context, configFolder string) {
 	configDir, err := ioutil.ReadDir(configFolder)
 	if err != nil {
-		return err
+		ctx.Log("message", "error clearing config file", "error", err)
+		return
 	}
 	content := []byte("")
 	for _, file := range configDir {
@@ -155,9 +158,10 @@ func cleanUpSettings(configFolder string) error {
 			filePath := filepath.Join(configFolder, file.Name())
 			err = ioutil.WriteFile(filePath, content, 0644)
 			if err != nil {
-				return err
+				ctx.Log("message", "error clearing %s, err %v", file.Name(), err)
+			} else {
+				ctx.Log("message", "%s cleared successfully", file.Name())
 			}
 		}
 	}
-	return nil
 }

@@ -130,12 +130,7 @@ func enablePre(ctx *log.Context, hEnv HandlerEnvironment, seqNum int) error {
 		return errors.Wrap(err, "failed to process sequence number")
 	} else if shouldExit {
 		ctx.Log("event", "exit", "message", "the script configuration has already been processed, will not run again")
-		err = cleanUpSettings(hEnv.HandlerEnvironment.ConfigFolder)
-		if err != nil {
-			ctx.Log("message", "error clearing config folder")
-		} else {
-			ctx.Log("message", "config folder cleared successfully")
-		}
+		cleanUpSettings(ctx, hEnv.HandlerEnvironment.ConfigFolder)
 		os.Exit(0)
 	}
 	return nil
@@ -183,12 +178,7 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) 
 		ctx.Log("event", "enable failed")
 	}
 
-	err = cleanUpSettings(h.HandlerEnvironment.ConfigFolder)
-	if err != nil {
-		ctx.Log("message", "error clearing config folder")
-	} else {
-		ctx.Log("message", "config folder cleared successfully")
-	}
+	cleanUpSettings(ctx, h.HandlerEnvironment.ConfigFolder)
 
 	msg := fmt.Sprintf("\n[stdout]\n%s\n[stderr]\n%s", string(stdoutTail), string(stderrTail))
 	return msg, runErr
