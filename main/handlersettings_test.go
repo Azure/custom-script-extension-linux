@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 
+	"github.com/Azure/azure-extension-platform/pkg/lockedfile"
 	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -245,9 +247,10 @@ func Test_protectedSettingsFail(t *testing.T) {
 	err := createTestFiles(testFolderPath, settingsExtensionName)
 	assert.NoError(t, err)
 
-	//file to open while test
 	fileName := filepath.Join(testFolderPath, "0.settings")
-	os.OpenFile(fileName, os.O_RDONLY, 444)
+
+	var lf lockedfile.ILockedFile
+	lf, err = lockedfile.New(fileName, time.Second)
 
 	cleanUpSettings(ctx, testFolderPath)
 	for i := 0; i < 3; i++ {
@@ -260,6 +263,9 @@ func Test_protectedSettingsFail(t *testing.T) {
 			assert.Equal(t, len(content), 0)
 		}
 	}
+
+	lf.Close()
+	defer os.RemoveAll(testFolderPath)
 
 }
 
