@@ -194,3 +194,13 @@ func Test_toJSONUmarshallForManagedIdentity(t *testing.T) {
 	h = handlerSettings{publicSettings{}, *protSettings}
 	require.Error(t, h.validate(), "settings should be invalid")
 }
+
+func Test_EnableWithUpgrade() {
+	//receives a script
+
+	//there is an update 
+
+	//make sure that script it run
+
+	// we woooo 
+}
