@@ -9,6 +9,9 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
+	"strings"
+
+	"github.com/go-kit/kit/log"
 )
 
 const (
@@ -139,4 +142,26 @@ func unmarshalProtectedSettings(configFolder string, hs handlerSettingsCommon, v
 		return fmt.Errorf("failed to unmarshal decrypted settings json: %v", err)
 	}
 	return nil
+}
+
+// cleanUpSettings replaces the protected settings for all settings files [ex: 0.settings, etc] to ensure no
+// protected settings are logged in VM
+func cleanUpSettings(ctx *log.Context, configFolder string) {
+	configDir, err := ioutil.ReadDir(configFolder)
+	if err != nil {
+		ctx.Log("message", "error clearing config file", "error", err)
+		return
+	}
+	content := []byte("")
+	for _, file := range configDir {
+		if strings.Compare(filepath.Ext(file.Name()), settingsFileSuffix) == 0 { //checking if its a settings file
+			filePath := filepath.Join(configFolder, file.Name())
+			err = ioutil.WriteFile(filePath, content, 0644)
+			if err != nil {
+				ctx.Log("message", "error clearing %s, err %v", file.Name(), err)
+			} else {
+				ctx.Log("message", "%s cleared successfully", file.Name())
+			}
+		}
+	}
 }
