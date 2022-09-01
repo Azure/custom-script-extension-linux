@@ -7,9 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
-	"time"
 
-	"github.com/Azure/azure-extension-platform/pkg/lockedfile"
 	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -229,44 +227,10 @@ func Test_protectedSettings(t *testing.T) {
 	fileName = filepath.Join(testFolderPath, "HandlerEnv.txt")
 	content, err := ioutil.ReadFile(fileName)
 	assert.NoError(t, err)
-	assert.Empty(t, len(content), 9)
+	assert.Equal(t, len(content), 9)
 
 	// cleanup
 	defer os.RemoveAll(testFolderPath)
-}
-
-func Test_protectedSettingsFail(t *testing.T) {
-	//skipping file if it's open
-
-	//set up test files
-	testFolderPath := "/config"
-	settingsExtensionName := ".settings"
-	ctx := log.NewContext(log.NewSyncLogger(log.NewLogfmtLogger(
-		os.Stdout))).With("time", log.DefaultTimestamp).With("version", VersionString())
-
-	err := createTestFiles(testFolderPath, settingsExtensionName)
-	assert.NoError(t, err)
-
-	fileName := filepath.Join(testFolderPath, "0.settings")
-
-	var lf lockedfile.ILockedFile
-	lf, err = lockedfile.New(fileName, time.Second)
-
-	cleanUpSettings(ctx, testFolderPath)
-	for i := 0; i < 3; i++ {
-		fileName = filepath.Join(testFolderPath, strconv.FormatInt(int64(i), 10)+settingsExtensionName)
-		content, err := ioutil.ReadFile(fileName)
-		assert.NoError(t, err)
-		if i == 0 {
-			assert.Equal(t, len(content), 9)
-		} else {
-			assert.Equal(t, len(content), 0)
-		}
-	}
-
-	lf.Close()
-	defer os.RemoveAll(testFolderPath)
-
 }
 
 func createTestFiles(folderPath, settingsExtensionName string) error {
