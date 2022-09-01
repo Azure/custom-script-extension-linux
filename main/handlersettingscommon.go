@@ -9,8 +9,6 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
-	"strings"
-	"strconv"
 	
 	"github.com/Azure/custom-script-extension-linux/pkg/seqnum"
 	"github.com/go-kit/kit/log"
@@ -146,18 +144,27 @@ func unmarshalProtectedSettings(configFolder string, hs handlerSettingsCommon, v
 	return nil
 }
 
-func checkNewSettings(ctx *log.Context, hEnv HandlerEnvironment, mrseqPath string) (bool, error) {
-	//get all files, and order them
-	configFolder, err := ioutil.ReadDir(hEnv.HandlerEnvironment.ConfigFolder)
+func checkNewSettings(ctx *log.Context, configFolder string, mrseqPath string) bool {
+	recentSeqNum, err := FindSeqNumConfig(configFolder)
 
 	if err != nil {
-		ctx.Log("message", "cannot get settings folder")
+		ctx.Log("message", "cannot get latest seq num from config folder")
 	}
-
-	topFile := configFolder[len(configFolder)-1].Name()
-	recentSeqNum, _ := strconv.Atoi(strings.TrimSuffix(topFile, ".settings"))
 
 	newSeq, err := seqnum.IsSmallerThan(mrseqPath, recentSeqNum)
 
-	return newSeq, err
+	if err != nil {
+		ctx.Log("message", "cannot compare most recent sequence number")
+	}
+
+	if newSeq {
+		ctx.Log("message", "saving most recent seq number...")
+		err := seqnum.Set(mrseqPath, recentSeqNum)
+		if err != nil {
+			ctx.Log("message", "couldn't update sequence number")
+		}
+	}
+
+
+	return newSeq
 }

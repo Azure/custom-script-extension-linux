@@ -130,11 +130,12 @@ func enablePre(ctx *log.Context, hEnv HandlerEnvironment, seqNum int) error {
 		return errors.Wrap(err, "failed to process sequence number")
 	} else if shouldExit {
 		//check if there's a new settings file. ex: ext updates and new script is passed in 
-	    newScript, err := checkNewSettings(ctx, hEnv, mostRecentSequence)
-		if !newScript || err != nil {
+		// and updates mostrecent seq number
+	    newScript := checkNewSettings(ctx, hEnv.HandlerEnvironment.ConfigFolder, mostRecentSequence)
+		if !newScript {
 			ctx.Log("event", "exit", "message", "the script configuration has already been processed, will not run again")
+			os.Exit(0)
 		} 
-		os.Exit(0)
 	}
 	return nil
 }

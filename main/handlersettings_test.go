@@ -195,12 +195,51 @@ func Test_toJSONUmarshallForManagedIdentity(t *testing.T) {
 	require.Error(t, h.validate(), "settings should be invalid")
 }
 
-func Test_EnableWithUpgrade() {
-	//receives a script
+func Test_EnableWithUpgrade(t *testing T) {
+	//set up logging
+	ctx := log.NewContext(log.NewSyncLogger(log.NewLogfmtLogger(
+		os.Stdout))).With("time", log.DefaultTimestamp).With("version", VersionString())
 
-	//there is an update 
 
-	//make sure that script it run
+	//create most recent sequence file, in this case we can set seq num to 1
+	// 0 - install, 1 - update (since it'll pull from status folder)
+	dataFolder := "/data"
+	err := os.MkdirAll(dataFolder, os.ModeDir)
+	if err != nil {
+		return err
+	}
+	seqNum := "1"
+	mrseqPath := filepath.Join(dataFolder, "mrs.txt")
+	mrseqFile := os.Create(mrseqPath)
+	if err != nil {
+		return err
+	}
+	size, err := file.Write(seqNum)
+	if err != nil || size == 0 {
+		return err
+	}
 
-	// we woooo 
+	//manually add a setting file 
+	//represents a new script being passed thru 
+	folderPath := "/config"
+	err := os.MkdirAll(folderPath, os.ModeDir)
+	if err != nil {
+		return err 
+	}
+	testContent := "beep boop"
+	fileName := filepath.Join(folderPath, "2.settings")
+	file, err := os.Create(fileName)
+	if err != nil {
+		return err
+	}
+	size, err := file.Write(testContent)
+	if err != nil || size == 0 {
+		return err
+	}
+
+	//compare the seq num from settings folder to the one saved in mrseq file
+	//if new num, update the number in file
+	check := checkNewSettings(ctx, hnv, mrseqPath) 
+
+	require.Equal(t, check, true)
 }
