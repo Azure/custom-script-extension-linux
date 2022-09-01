@@ -164,7 +164,6 @@ func checkNewSettings(ctx *log.Context, configFolder string, mrseqPath string) b
 			ctx.Log("message", "couldn't update sequence number")
 		}
 	}
-
-
+	
 	return newSeq
 }

@@ -3,8 +3,12 @@ package main
 import (
 	"encoding/json"
 	"testing"
+	"os"
+	"path/filepath"
+
+	"github.com/go-kit/kit/log"
+	"github.com/stretchr/testify/require"
 )
-import "github.com/stretchr/testify/require"
 
 func Test_handlerSettingsValidate(t *testing.T) {
 	// commandToExecute not specified
@@ -195,7 +199,7 @@ func Test_toJSONUmarshallForManagedIdentity(t *testing.T) {
 	require.Error(t, h.validate(), "settings should be invalid")
 }
 
-func Test_EnableWithUpgrade(t *testing T) {
+func Test_EnableWithUpgrade(t *testing.T) {
 	//set up logging
 	ctx := log.NewContext(log.NewSyncLogger(log.NewLogfmtLogger(
 		os.Stdout))).With("time", log.DefaultTimestamp).With("version", VersionString())
@@ -205,41 +209,27 @@ func Test_EnableWithUpgrade(t *testing T) {
 	// 0 - install, 1 - update (since it'll pull from status folder)
 	dataFolder := "/data"
 	err := os.MkdirAll(dataFolder, os.ModeDir)
-	if err != nil {
-		return err
-	}
-	seqNum := "1"
+	require.NoError(t, err, "error while creating folder")
+	seqNum := []byte("1")
 	mrseqPath := filepath.Join(dataFolder, "mrs.txt")
-	mrseqFile := os.Create(mrseqPath)
-	if err != nil {
-		return err
-	}
-	size, err := file.Write(seqNum)
-	if err != nil || size == 0 {
-		return err
-	}
+	mrseqFile, err := os.Create(mrseqPath)
+	require.NoError(t, err, "error while creating file")
+	_, err = mrseqFile.Write(seqNum)
+	require.NoError(t, err, "error while writing to file")
 
 	//manually add a setting file 
 	//represents a new script being passed thru 
-	folderPath := "/config"
-	err := os.MkdirAll(folderPath, os.ModeDir)
-	if err != nil {
-		return err 
-	}
-	testContent := "beep boop"
-	fileName := filepath.Join(folderPath, "2.settings")
-	file, err := os.Create(fileName)
-	if err != nil {
-		return err
-	}
-	size, err := file.Write(testContent)
-	if err != nil || size == 0 {
-		return err
-	}
+	configFolderPath := "/config"
+	err = os.MkdirAll(configFolderPath, os.ModeDir)
+	require.NoError(t, err, "error while creating folder")
+	fileName := filepath.Join(configFolderPath, "2.settings")
+	_, err = os.Create(fileName)
+	require.NoError(t, err, "error while creating folder")
+	
 
 	//compare the seq num from settings folder to the one saved in mrseq file
 	//if new num, update the number in file
-	check := checkNewSettings(ctx, hnv, mrseqPath) 
+	check := checkNewSettings(ctx, configFolderPath, mrseqPath) 
 
 	require.Equal(t, check, true)
 }
