@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"time"
 
+	logging "github.com/Azure/azure-extension-platform/pkg/logging"
+	settings "github.com/Azure/azure-extension-platform/pkg/settings"
 	"github.com/Azure/custom-script-extension-linux/pkg/seqnum"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
@@ -130,7 +132,8 @@ func enablePre(ctx *log.Context, hEnv HandlerEnvironment, seqNum int) error {
 		return errors.Wrap(err, "failed to process sequence number")
 	} else if shouldExit {
 		ctx.Log("event", "exit", "message", "the script configuration has already been processed, will not run again")
-		cleanUpSettings(ctx, hEnv.HandlerEnvironment.ConfigFolder)
+		el := logging.New(nil)
+		settings.CleanUpSettings(el, hEnv.HandlerEnvironment.ConfigFolder)
 		os.Exit(0)
 	}
 	return nil
@@ -178,7 +181,8 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) 
 		ctx.Log("event", "enable failed")
 	}
 
-	cleanUpSettings(ctx, h.HandlerEnvironment.ConfigFolder)
+	el := logging.New(nil)
+	settings.CleanUpSettings(el, h.HandlerEnvironment.ConfigFolder)
 
 	msg := fmt.Sprintf("\n[stdout]\n%s\n[stderr]\n%s", string(stdoutTail), string(stderrTail))
 	return msg, runErr

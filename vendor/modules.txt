@@ -3,10 +3,15 @@
 github.com/Azure/azure-extension-foundation/errorhelper
 github.com/Azure/azure-extension-foundation/httputil
 github.com/Azure/azure-extension-foundation/msi
-# github.com/Azure/azure-extension-platform v0.0.0-20220420225843-2f377a91f479
+# github.com/Azure/azure-extension-platform v0.0.0-20220913231409-868d66a2f29a
 ## explicit
-github.com/Azure/azure-extension-platform/pkg/constants
-github.com/Azure/azure-extension-platform/pkg/lockedfile
+github.com/Azure/azure-extension-platform/pkg/decrypt
+github.com/Azure/azure-extension-platform/pkg/extensionerrors
+github.com/Azure/azure-extension-platform/pkg/handlerenv
+github.com/Azure/azure-extension-platform/pkg/internal/crypto
+github.com/Azure/azure-extension-platform/pkg/logging
+github.com/Azure/azure-extension-platform/pkg/settings
+github.com/Azure/azure-extension-platform/pkg/utils
 # github.com/Azure/azure-sdk-for-go v3.1.0-beta.0.20160802173609-87de771fcdf5+incompatible
 ## explicit
 github.com/Azure/azure-sdk-for-go/storage
