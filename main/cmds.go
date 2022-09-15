@@ -181,6 +181,7 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) 
 		ctx.Log("event", "enable failed")
 	}
 
+	ctx.Log("event", "clear files", "message", "clearing setting files in config folder...")
 	el := logging.New(nil)
 	settings.CleanUpSettings(el, h.HandlerEnvironment.ConfigFolder)
 
