@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"time"
 
+	logging "github.com/Azure/azure-extension-platform/pkg/logging"
+	settings "github.com/Azure/azure-extension-platform/pkg/settings"
 	"github.com/Azure/custom-script-extension-linux/pkg/seqnum"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
@@ -21,7 +23,7 @@ const (
 )
 
 type cmdFunc func(ctx *log.Context, hEnv HandlerEnvironment, seqNum int) (msg string, err error)
-type preFunc func(ctx *log.Context, seqNum int) error
+type preFunc func(ctx *log.Context, hEnv HandlerEnvironment, seqNum int) error
 
 type cmd struct {
 	f                  cmdFunc // associated function
@@ -123,13 +125,15 @@ func uninstall(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, erro
 	return "", nil
 }
 
-func enablePre(ctx *log.Context, seqNum int) error {
+func enablePre(ctx *log.Context, hEnv HandlerEnvironment, seqNum int) error {
 	// exit if this sequence number (a snapshot of the configuration) is already
 	// processed. if not, save this sequence number before proceeding.
 	if shouldExit, err := checkAndSaveSeqNum(ctx, seqNum, mostRecentSequence); err != nil {
 		return errors.Wrap(err, "failed to process sequence number")
 	} else if shouldExit {
 		ctx.Log("event", "exit", "message", "the script configuration has already been processed, will not run again")
+		el := logging.New(nil)
+		settings.CleanUpSettings(el, hEnv.HandlerEnvironment.ConfigFolder)
 		os.Exit(0)
 	}
 	return nil
@@ -176,6 +180,10 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) 
 	} else {
 		ctx.Log("event", "enable failed")
 	}
+
+	ctx.Log("event", "clearing setting files")
+	el := logging.New(nil)
+	settings.CleanUpSettings(el, h.HandlerEnvironment.ConfigFolder)
 
 	msg := fmt.Sprintf("\n[stdout]\n%s\n[stderr]\n%s", string(stdoutTail), string(stderrTail))
 	return msg, runErr
