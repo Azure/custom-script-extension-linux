@@ -9,7 +9,6 @@ import (
 
 	"github.com/ahmetalpbalkan/go-httpbin"
 	"github.com/go-kit/kit/log"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -161,5 +160,8 @@ func Test_migrateToMostRecentSequence(t *testing.T) {
 
 	migratedSuccessfully := migrateToMostRecentSequence(ctx, seqNum)
 
-	assert.NoError(t, migratedSuccessfully)
+	require.NoError(t, migratedSuccessfully)
+
+	//cleanup
+	_ = os.Remove("mrseq")
 }
