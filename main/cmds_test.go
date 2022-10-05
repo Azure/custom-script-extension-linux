@@ -9,6 +9,7 @@ import (
 
 	"github.com/ahmetalpbalkan/go-httpbin"
 	"github.com/go-kit/kit/log"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -150,4 +151,15 @@ func Test_decodeScriptGzip(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, info, "32;3;gzip=1")
 	require.Equal(t, s, "ls\n")
+}
+
+func Test_migrateToMostRecentSequence(t *testing.T) {
+	ctx := log.NewContext(log.NewSyncLogger(log.NewLogfmtLogger(
+		os.Stdout))).With("time", log.DefaultTimestamp).With("version", VersionString())
+
+	seqNum := 1
+
+	migratedSuccessfully := migrateToMostRecentSequence(ctx, seqNum)
+
+	assert.NoError(t, migratedSuccessfully)
 }
