@@ -72,7 +72,8 @@ func install(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error)
 	// If it is (2) attempt to migrate to mrseq.  Find the latest settings
 	// file, and set the sequence to it.
 	if _, err := os.Stat(mostRecentSequence); os.IsNotExist(err) {
-		if migrateToMostRecentSequence(ctx, seqNum) != nil {
+		err := migrateToMostRecentSequence(ctx, seqNum)
+		if err != nil {
 			return "install failed", err
 		}
 	}
@@ -198,7 +199,7 @@ func checkAndSaveSeqNum(ctx log.Logger, seq int, mrseqPath string) (shouldExit b
 		// sequence number.
 		return true, nil
 	}
-	ctx.Log("event", "mrseq not found", "message", "attempting to save config seqnum...")
+	ctx.Log("event", "mrseq not found", "message", "attempting to save config seqnum")
 	if err := seqnum.Set(mrseqPath, seq); err != nil {
 		return false, errors.Wrap(err, "failed to save sequence number")
 	}
