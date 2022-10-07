@@ -86,7 +86,7 @@ func migrateToMostRecentSequence(ctx *log.Context, seqNum int) {
 	ctx.Log("event", "recreate mrseq", "message", fmt.Sprintf("cannot find mrseq at %v", mostRecentSequence))
 	fout, err := os.Create(mostRecentSequence)
 	if err != nil {
-		ctx.Log("event", "recreate mrseq", "error", err)
+		ctx.Log("event", "error creating sequence file", "error", err)
 		return
 	}
 	defer fout.Close()
@@ -94,7 +94,7 @@ func migrateToMostRecentSequence(ctx *log.Context, seqNum int) {
 	if seqNum != 0 {
 		_, err := fout.WriteString(fmt.Sprintf("%v", seqNum))
 		if err != nil {
-			ctx.Log("event", "recreate mrseq", "error", err)
+			ctx.Log("event", "error writing to sequence file", "error", err)
 		}
 		ctx.Log("event", "recreate mrseq", "message", fmt.Sprintf("recreating mrseq %v from configSeqNum", seqNum))
 	}
