@@ -72,10 +72,7 @@ func install(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error)
 	// If it is (2) attempt to migrate to mrseq.  Find the latest settings
 	// file, and set the sequence to it.
 	if _, err := os.Stat(mostRecentSequence); os.IsNotExist(err) {
-		err := migrateToMostRecentSequence(ctx, seqNum)
-		if err != nil {
-			return "install failed", err
-		}
+		migrateToMostRecentSequence(ctx, seqNum)
 	}
 
 	ctx.Log("event", "created data dir", "path", dataDir)
@@ -83,29 +80,26 @@ func install(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error)
 	return "", nil
 }
 
-func migrateToMostRecentSequence(ctx *log.Context, seqNum int) error {
+func migrateToMostRecentSequence(ctx *log.Context, seqNum int) {
 	// The configSequenceNumber (seqNum) env variable is used for mrseq if mrseq not found
 	// based on logic in main.go the seqNum should always be populated
 	ctx.Log("event", "recreate mrseq", "message", fmt.Sprintf("cannot find mrseq at %v", mostRecentSequence))
 	fout, err := os.Create(mostRecentSequence)
-	defer fout.Close()
 	if err != nil {
 		ctx.Log("event", "recreate mrseq", "error", err)
-		return err
+		return
 	}
+	defer fout.Close()
 
 	if seqNum != 0 {
 		_, err := fout.WriteString(fmt.Sprintf("%v", seqNum))
-		if err == nil {
-			ctx.Log("event", "recreate mrseq", "message", fmt.Sprintf("recreating mrseq %v from configSeqNum", seqNum))
-			return nil
+		if err != nil {
+			ctx.Log("event", "recreate mrseq", "error", err)
 		}
-		ctx.Log("event", "recreate mrseq", "error", err)
-		return err
+		ctx.Log("event", "recreate mrseq", "message", fmt.Sprintf("recreating mrseq %v from configSeqNum", seqNum))
 	}
 
-	ctx.Log("event", "recreate mrseq", "message", "seq number is 0...")
-	return nil
+	ctx.Log("event", "recreate mrseq", "message", "seq number is 0")
 }
 
 func uninstall(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) {
