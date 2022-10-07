@@ -83,7 +83,7 @@ func install(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error)
 func migrateToMostRecentSequence(ctx *log.Context, seqNum int) {
 	// The configSequenceNumber (seqNum) env variable is used for mrseq if mrseq not found
 	// based on logic in main.go the seqNum should always be populated
-	ctx.Log("event", "recreate mrseq", "message", fmt.Sprintf("cannot find mrseq at %v", mostRecentSequence))
+	ctx.Log("event", "recreate mrseq", "message", fmt.Sprintf("cannot find %v", mostRecentSequence))
 	fout, err := os.Create(mostRecentSequence)
 	if err != nil {
 		ctx.Log("event", "error creating sequence file", "error", err)
@@ -95,8 +95,10 @@ func migrateToMostRecentSequence(ctx *log.Context, seqNum int) {
 		_, err := fout.WriteString(fmt.Sprintf("%v", seqNum))
 		if err != nil {
 			ctx.Log("event", "error writing to sequence file", "error", err)
+			return
 		}
-		ctx.Log("event", "recreate mrseq", "message", fmt.Sprintf("recreating mrseq %v from configSeqNum", seqNum))
+		ctx.Log("event", "recreate mrseq", "message", fmt.Sprintf("recreating mrseq with configSeqNum %v", seqNum))
+		return
 	}
 
 	ctx.Log("event", "recreate mrseq", "message", "seq number is 0")

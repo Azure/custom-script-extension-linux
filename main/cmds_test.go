@@ -158,9 +158,11 @@ func Test_migrateToMostRecentSequence(t *testing.T) {
 
 	seqNum := 1
 
-	migratedSuccessfully := migrateToMostRecentSequence(ctx, seqNum)
+	migrateToMostRecentSequence(ctx, seqNum)
 
-	require.NoError(t, migratedSuccessfully)
+	content, err := ioutil.ReadFile("mrseq")
+	require.Nil(t, err)
+	require.Equal(t, "1", string(content))
 
 	//cleanup
 	_ = os.Remove("mrseq")
