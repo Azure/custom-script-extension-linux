@@ -151,3 +151,19 @@ func Test_decodeScriptGzip(t *testing.T) {
 	require.Equal(t, info, "32;3;gzip=1")
 	require.Equal(t, s, "ls\n")
 }
+
+func Test_migrateToMostRecentSequence(t *testing.T) {
+	ctx := log.NewContext(log.NewSyncLogger(log.NewLogfmtLogger(
+		os.Stdout))).With("time", log.DefaultTimestamp).With("version", VersionString())
+
+	seqNum := 1
+
+	migrateToMostRecentSequence(ctx, seqNum)
+
+	content, err := ioutil.ReadFile("mrseq")
+	require.Nil(t, err)
+	require.Equal(t, "1", string(content))
+
+	//cleanup
+	_ = os.Remove("mrseq")
+}
