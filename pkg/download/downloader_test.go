@@ -3,12 +3,13 @@ package download_test
 import (
 	"errors"
 	"fmt"
-	"github.com/Azure/azure-extension-foundation/msi"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Azure/azure-extension-foundation/msi"
 
 	"github.com/Azure/custom-script-extension-linux/pkg/download"
 	"github.com/ahmetalpbalkan/go-httpbin"
@@ -48,7 +49,19 @@ func TestDownload_badStatusCodeFails(t *testing.T) {
 	} {
 		_, _, err := download.Download(download.NewURLDownload(fmt.Sprintf("%s/status/%d", srv.URL, code)))
 		require.NotNil(t, err, "not failed for code:%d", code)
-		require.Contains(t, err.Error(), "unexpected status code", "wrong message for code %d", code)
+		switch code {
+		case http.StatusNotFound:
+			require.Contains(t, err.Error(), "because it does not exist")
+		case http.StatusForbidden:
+			require.Contains(t, err.Error(), "Please verify the machine has network connectivity")
+		case http.StatusInternalServerError:
+			require.Contains(t, err.Error(), "due to an issue with storage")
+		case http.StatusBadRequest:
+			require.Contains(t, err.Error(), "because parts of the request were incorrectly formatted, missing, and/or invalid")
+		case http.StatusUnauthorized:
+			require.Contains(t, err.Error(), "because access was denied")
+		}
+		//require.Contains(t, err.Error(), "unexpected status code", "wrong message for code %d", code)
 	}
 }
 

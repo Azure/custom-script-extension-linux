@@ -19,7 +19,7 @@ func Test_blobDownload_validateInputs(t *testing.T) {
 		getURL() (string, error)
 	}
 
-	_, err := NewBlobDownload("", "", blobutil.AzureBlobRef{}).GetRequest()
+	req, err := NewBlobDownload("", "", blobutil.AzureBlobRef{}).GetRequest()
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "failed to initialize azure storage client")
 	require.Contains(t, err.Error(), "account name required")
@@ -33,9 +33,10 @@ func Test_blobDownload_validateInputs(t *testing.T) {
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "failed to initialize azure storage client")
 
-	_, err = NewBlobDownload("account", "Zm9vCg==", blobutil.AzureBlobRef{
+	req, err = NewBlobDownload("account", "Zm9vCg==", blobutil.AzureBlobRef{
 		StorageBase: storage.DefaultBaseURL,
 	}).GetRequest()
+	fmt.Println("request ID: " + req.Header.Get(xMsClientRequestIdHeaderName))
 	require.Nil(t, err)
 }
 
@@ -73,7 +74,8 @@ func Test_blobDownload_fails_badCreds(t *testing.T) {
 
 	status, _, err := Download(d)
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "unexpected status code: actual=403")
+	require.Contains(t, err.Error(), "Please verify the machine has network connectivity")
+	require.Contains(t, err.Error(), "403")
 	require.Equal(t, status, http.StatusForbidden)
 }
 

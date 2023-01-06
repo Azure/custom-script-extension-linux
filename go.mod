@@ -9,6 +9,7 @@ require (
 	github.com/ahmetalpbalkan/go-httpbin v0.0.0-20160706084156-8817b883dae1
 	github.com/go-kit/kit v0.12.0
 	github.com/go-stack/stack v1.5.2 // indirect
+	github.com/google/uuid v1.3.0
 	github.com/gorilla/context v0.0.0-20160525203319-aed02d124ae4 // indirect
 	github.com/gorilla/mux v0.0.0-20160605233521-9fa818a44c2b // indirect
 	github.com/pkg/errors v0.9.1

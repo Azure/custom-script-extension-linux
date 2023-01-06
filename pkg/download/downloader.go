@@ -2,11 +2,12 @@ package download
 
 import (
 	"fmt"
-	"github.com/Azure/custom-script-extension-linux/pkg/urlutil"
 	"io"
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/Azure/custom-script-extension-linux/pkg/urlutil"
 
 	"github.com/pkg/errors"
 )
@@ -58,15 +59,41 @@ func Download(d Downloader) (int, io.ReadCloser, error) {
 		return resp.StatusCode, resp.Body, nil
 	}
 
-	err = fmt.Errorf("unexpected status code: actual=%d expected=%d", resp.StatusCode, http.StatusOK)
+	errString := ""
+	requestId := resp.Header.Get(xMsServiceRequestIdHeaderName)
 	switch d.(type) {
 	case *blobWithMsiToken:
 		switch resp.StatusCode {
 		case http.StatusNotFound:
-			return resp.StatusCode, nil, errors.Wrapf(err, MsiDownload404ErrorString)
+			errString = MsiDownload404ErrorString
 		case http.StatusForbidden:
-			return resp.StatusCode, nil, errors.Wrapf(err, MsiDownload403ErrorString)
+			errString = MsiDownload403ErrorString
+		}
+		break
+	default:
+		switch resp.StatusCode {
+		case http.StatusUnauthorized:
+			errString = fmt.Sprintf("CustomScript failed to download the blob [REDACTED] because access was denied. Please fix the blob permissions and try again, the response code returned was: \"%s\"",
+				resp.Status,
+			)
+		case http.StatusNotFound:
+			errString = fmt.Sprintf("CustomScript failed to download the blob [REDACTED] because it does not exist. Please create the blob and try again, the response code returned was \"%s\"",
+				resp.Status)
+
+		case http.StatusBadRequest:
+			errString = fmt.Sprintf("CustomScript failed to download the blob [REDACTED] because parts of the request were incorrectly formatted, missing, and/or invalid. The response code returned was: \"%s\"",
+				resp.Status)
+
+		case http.StatusInternalServerError:
+			errString = fmt.Sprintf("CustomScript failed to download the blob [REDACTED] due to an issue with storage. The response code returned was: \"%s\"",
+				resp.Status)
+		default:
+			errString = fmt.Sprintf("CustomScript failed to download the blob [REDACTED] because the server returned a response of \"%s.\" Please verify the machine has network connectivity.",
+				resp.Status)
 		}
 	}
-	return resp.StatusCode, nil, err
+	if len(requestId) > 0 {
+		errString += fmt.Sprintf(" (Service request ID: %s", requestId)
+	}
+	return resp.StatusCode, nil, fmt.Errorf(errString)
 }
