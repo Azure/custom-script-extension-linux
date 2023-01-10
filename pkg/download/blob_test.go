@@ -11,7 +11,12 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/custom-script-extension-linux/pkg/blobutil"
+	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/require"
+)
+
+var (
+	testctx = log.NewContext(log.NewNopLogger())
 )
 
 func Test_blobDownload_validateInputs(t *testing.T) {
@@ -19,7 +24,7 @@ func Test_blobDownload_validateInputs(t *testing.T) {
 		getURL() (string, error)
 	}
 
-	req, err := NewBlobDownload("", "", blobutil.AzureBlobRef{}).GetRequest()
+	_, err := NewBlobDownload("", "", blobutil.AzureBlobRef{}).GetRequest()
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "failed to initialize azure storage client")
 	require.Contains(t, err.Error(), "account name required")
@@ -33,10 +38,9 @@ func Test_blobDownload_validateInputs(t *testing.T) {
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "failed to initialize azure storage client")
 
-	req, err = NewBlobDownload("account", "Zm9vCg==", blobutil.AzureBlobRef{
+	_, err = NewBlobDownload("account", "Zm9vCg==", blobutil.AzureBlobRef{
 		StorageBase: storage.DefaultBaseURL,
 	}).GetRequest()
-	fmt.Println("request ID: " + req.Header.Get(xMsClientRequestIdHeaderName))
 	require.Nil(t, err)
 }
 
@@ -72,7 +76,7 @@ func Test_blobDownload_fails_badCreds(t *testing.T) {
 		Container:   "foocontainer",
 	})
 
-	status, _, err := Download(d)
+	status, _, err := Download(testctx, d)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "Please verify the machine has network connectivity")
 	require.Contains(t, err.Error(), "403")
@@ -86,7 +90,7 @@ func Test_blobDownload_fails_urlNotFound(t *testing.T) {
 		Container:   "foocontainer",
 	})
 
-	_, _, err := Download(d)
+	_, _, err := Download(testctx, d)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "http request failed:")
 }
@@ -125,7 +129,7 @@ func Test_blobDownload_actualBlob(t *testing.T) {
 		Blob:        name,
 		StorageBase: base,
 	})
-	_, body, err := Download(d)
+	_, body, err := Download(testctx, d)
 	require.Nil(t, err)
 	defer body.Close()
 	b, err := ioutil.ReadAll(body)

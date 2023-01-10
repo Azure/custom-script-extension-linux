@@ -2,10 +2,11 @@ package download
 
 import (
 	"encoding/json"
-	"github.com/Azure/azure-extension-foundation/msi"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"testing"
+
+	"github.com/Azure/azure-extension-foundation/msi"
+	"github.com/stretchr/testify/require"
 )
 
 // README
@@ -44,7 +45,7 @@ func Test_realDownloadBlobWithMsiToken(t *testing.T) {
 		err := json.Unmarshal([]byte(msiJson), &msi)
 		return msi, err
 	}}
-	_, stream, err := Download(&downloader)
+	_, stream, err := Download(testctx, &downloader)
 	require.NoError(t, err, "File download failed")
 	defer stream.Close()
 
