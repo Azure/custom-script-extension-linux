@@ -1,13 +1,13 @@
 package download_test
 
 import (
-	"github.com/Azure/azure-extension-foundation/msi"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/Azure/azure-extension-foundation/msi"
 	"github.com/Azure/custom-script-extension-linux/pkg/download"
 	"github.com/ahmetalpbalkan/go-httpbin"
 	"github.com/go-kit/kit/log"
@@ -128,7 +128,8 @@ type mockDownloader struct {
 
 func (self *mockDownloader) GetRequest() (*http.Request, error) {
 	self.timesCalled++
-	return http.NewRequest("GET", self.url, nil)
+	req, err := http.NewRequest("GET", self.url, nil)
+	return req, err
 }
 
 // sleepRecorder keeps track of the durations of Sleep calls

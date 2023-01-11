@@ -54,6 +54,23 @@ func Test_realDownloadBlobWithMsiToken(t *testing.T) {
 	require.Contains(t, string(bytes), stringToLookFor)
 }
 
+func Test_realDownloadBlobWithMsiToken404(t *testing.T) {
+	if msiJson == "" || blobUri == "" || stringToLookFor == "" {
+		t.Skip()
+	}
+	var badBlobUri = blobUri[0 : len(blobUri)-1]
+	downloader := blobWithMsiToken{badBlobUri, func() (msi.Msi, error) {
+		msi := msi.Msi{}
+		err := json.Unmarshal([]byte(msiJson), &msi)
+		return msi, err
+	}}
+	_, stream, err := Download(testctx, &downloader)
+	require.NotNil(t, err, "File download succeeded but was not supposed to")
+	require.Contains(t, err.Error(), MsiDownload404ErrorString)
+	require.Contains(t, err.Error(), "Service request ID:") // should have a service request ID since downloading from Azure Storage
+	defer stream.Close()
+}
+
 func Test_isAzureStorageBlobUri(t *testing.T) {
 	require.True(t, IsAzureStorageBlobUri("https://a.blob.core.windows.net/container/blobname"))
 	require.True(t, IsAzureStorageBlobUri("http://mystorageaccountcn.blob.core.chinacloudapi.cn"))

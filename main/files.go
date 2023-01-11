@@ -38,7 +38,6 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handl
 	fp := filepath.Join(downloadDir, fn)
 	const mode = 0500 // we assume users download scripts to execute
 	if _, err := download.SaveTo(ctx, dl, fp, mode); err != nil {
-		//TODO: Track response id and code
 		return err
 	}
 
