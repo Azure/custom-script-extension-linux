@@ -40,7 +40,8 @@ func TestDownload_wrapsHTTPError(t *testing.T) {
 	require.Contains(t, err.Error(), "http request failed:")
 }
 
-func TestDownload_badStatusCodeFails(t *testing.T) {
+// This test is only to make sure that formatting of error messages for specific codes is correct
+func TestDownload_wrapsCommonErrorCodes(t *testing.T) {
 	srv := httptest.NewServer(httpbin.GetMux())
 	defer srv.Close()
 
@@ -52,9 +53,10 @@ func TestDownload_badStatusCodeFails(t *testing.T) {
 		http.StatusBadRequest,
 		http.StatusUnauthorized,
 	} {
-		_, _, err := download.Download(testctx, download.NewURLDownload(fmt.Sprintf("%s/status/%d", srv.URL, code)))
+		respCode, _, err := download.Download(testctx, download.NewURLDownload(fmt.Sprintf("%s/status/%d", srv.URL, code)))
 		require.NotNil(t, err, "not failed for code:%d", code)
-		switch code {
+		require.Equal(t, code, respCode)
+		switch respCode {
 		case http.StatusNotFound:
 			require.Contains(t, err.Error(), "because it does not exist")
 		case http.StatusForbidden:
@@ -66,7 +68,6 @@ func TestDownload_badStatusCodeFails(t *testing.T) {
 		case http.StatusUnauthorized:
 			require.Contains(t, err.Error(), "because access was denied")
 		}
-		//require.Contains(t, err.Error(), "unexpected status code", "wrong message for code %d", code)
 	}
 }
 

@@ -3,6 +3,7 @@ package download
 import (
 	"encoding/json"
 	"io/ioutil"
+	"net/http"
 	"testing"
 
 	"github.com/Azure/azure-extension-foundation/msi"
@@ -64,11 +65,11 @@ func Test_realDownloadBlobWithMsiToken404(t *testing.T) {
 		err := json.Unmarshal([]byte(msiJson), &msi)
 		return msi, err
 	}}
-	_, stream, err := Download(testctx, &downloader)
+	code, _, err := Download(testctx, &downloader)
 	require.NotNil(t, err, "File download succeeded but was not supposed to")
+	require.Equal(t, http.StatusNotFound, code)
 	require.Contains(t, err.Error(), MsiDownload404ErrorString)
 	require.Contains(t, err.Error(), "Service request ID:") // should have a service request ID since downloading from Azure Storage
-	defer stream.Close()
 }
 
 func Test_isAzureStorageBlobUri(t *testing.T) {
