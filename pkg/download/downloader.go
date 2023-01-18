@@ -75,29 +75,29 @@ func Download(ctx *log.Context, d Downloader) (int, io.ReadCloser, error) {
 		}
 		break
 	default:
-		uri := req.URL.Host //"string"
+		hostname := req.URL.Host //"string"
 		switch resp.StatusCode {
 		case http.StatusUnauthorized:
 			errString = fmt.Sprintf("CustomScript failed to download the file from %s because access was denied. Please fix the blob permissions and try again, the response code and message returned were: %q",
-				uri,
+				hostname,
 				resp.Status)
 		case http.StatusNotFound:
 			errString = fmt.Sprintf("CustomScript failed to download the file from %s because it does not exist. Please create the blob and try again, the response code and message returned were: %q",
-				uri,
+				hostname,
 				resp.Status)
 
 		case http.StatusBadRequest:
 			errString = fmt.Sprintf("CustomScript failed to download the file from %s because parts of the request were incorrectly formatted, missing, and/or invalid. The response code and message returned were: %q",
-				uri,
+				hostname,
 				resp.Status)
 
 		case http.StatusInternalServerError:
 			errString = fmt.Sprintf("CustomScript failed to download the file from %s due to an issue with storage. The response code and message returned were: %q",
-				uri,
+				hostname,
 				resp.Status)
 		default:
 			errString = fmt.Sprintf("CustomScript failed to download the file from %s because the server returned a response code and message of %q Please verify the machine has network connectivity.",
-				uri,
+				hostname,
 				resp.Status)
 		}
 	}
