@@ -1,13 +1,13 @@
 package download_test
 
 import (
-	"github.com/Azure/azure-extension-foundation/msi"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/Azure/azure-extension-foundation/msi"
 	"github.com/Azure/custom-script-extension-linux/pkg/download"
 	"github.com/ahmetalpbalkan/go-httpbin"
 	"github.com/go-kit/kit/log"
@@ -63,7 +63,8 @@ func TestWithRetries_failingBadStatusCode_validateSleeps(t *testing.T) {
 
 	sr := new(sleepRecorder)
 	_, err := download.WithRetries(nopLog(), []download.Downloader{d}, sr.Sleep)
-	require.EqualError(t, err, "unexpected status code: actual=429 expected=200")
+	require.Contains(t, err.Error(), "429 Too Many Requests")
+	require.Contains(t, err.Error(), "Please verify the machine has network connectivity")
 
 	require.Equal(t, sleepSchedule, []time.Duration(*sr))
 }
@@ -127,7 +128,8 @@ type mockDownloader struct {
 
 func (self *mockDownloader) GetRequest() (*http.Request, error) {
 	self.timesCalled++
-	return http.NewRequest("GET", self.url, nil)
+	req, err := http.NewRequest("GET", self.url, nil)
+	return req, err
 }
 
 // sleepRecorder keeps track of the durations of Sleep calls

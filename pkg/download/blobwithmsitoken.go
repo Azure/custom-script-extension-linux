@@ -8,6 +8,7 @@ import (
 
 	"github.com/Azure/azure-extension-foundation/httputil"
 	"github.com/Azure/azure-extension-foundation/msi"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
@@ -43,6 +44,7 @@ func (self *blobWithMsiToken) GetRequest() (*http.Request, error) {
 		return nil, err
 	}
 
+	request.Header.Set(xMsClientRequestIdHeaderName, uuid.New().String())
 	if IsAzureStorageBlobUri(self.url) {
 		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", msi.AccessToken))
 		request.Header.Set(xMsVersionHeaderName, xMsVersionValue)

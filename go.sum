@@ -15,6 +15,8 @@ github.com/go-logfmt/logfmt v0.5.1 h1:otpy5pqBCBZ1ng9RQ0dPu4PN7ba75Y/aA+UpowDyNV
 github.com/go-logfmt/logfmt v0.5.1/go.mod h1:WYhtIu8zTZfxdn5+rREduYbwxfcBr/Vr6KEVveWlfTs=
 github.com/go-stack/stack v1.5.2 h1:5sTB/0oZM2O31k/N1IRwxxVXzLIt5NF2Aqx/2gWI9OY=
 github.com/go-stack/stack v1.5.2/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
+github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
+github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/gorilla/context v0.0.0-20160525203319-aed02d124ae4 h1:3nOfQt8sRPYbXORD5tJ8YyQ3HlL2Jt3LJ2U17CbNh6I=
 github.com/gorilla/context v0.0.0-20160525203319-aed02d124ae4/go.mod h1:kBGZzfjB9CEq2AlWe17Uuf7NDRt0dE0s8S51q0aT7Yg=
 github.com/gorilla/mux v0.0.0-20160605233521-9fa818a44c2b h1:OFvZV3a+25cGJH9dETHw0nk0wV6hLZI7IJijOkXEFS0=

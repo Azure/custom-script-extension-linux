@@ -2,11 +2,13 @@ package download
 
 import (
 	"fmt"
-	"github.com/Azure/custom-script-extension-linux/pkg/urlutil"
 	"io"
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/Azure/custom-script-extension-linux/pkg/urlutil"
+	"github.com/go-kit/kit/log"
 
 	"github.com/pkg/errors"
 )
@@ -42,12 +44,15 @@ var (
 // Download retrieves a response body and checks the response status code to see
 // if it is 200 OK and then returns the response body. It issues a new request
 // every time called. It is caller's responsibility to close the response body.
-func Download(d Downloader) (int, io.ReadCloser, error) {
+func Download(ctx *log.Context, d Downloader) (int, io.ReadCloser, error) {
 	req, err := d.GetRequest()
 	if err != nil {
 		return -1, nil, errors.Wrapf(err, "failed to create http request")
 	}
-
+	requestID := req.Header.Get(xMsClientRequestIdHeaderName)
+	if len(requestID) > 0 {
+		ctx.Log("info", fmt.Sprintf("starting download with client request ID %s", requestID))
+	}
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		err = urlutil.RemoveUrlFromErr(err)
@@ -58,15 +63,46 @@ func Download(d Downloader) (int, io.ReadCloser, error) {
 		return resp.StatusCode, resp.Body, nil
 	}
 
-	err = fmt.Errorf("unexpected status code: actual=%d expected=%d", resp.StatusCode, http.StatusOK)
+	errString := ""
+	requestId := resp.Header.Get(xMsServiceRequestIdHeaderName)
 	switch d.(type) {
 	case *blobWithMsiToken:
 		switch resp.StatusCode {
 		case http.StatusNotFound:
-			return resp.StatusCode, nil, errors.Wrapf(err, MsiDownload404ErrorString)
+			errString = MsiDownload404ErrorString
 		case http.StatusForbidden:
-			return resp.StatusCode, nil, errors.Wrapf(err, MsiDownload403ErrorString)
+			errString = MsiDownload403ErrorString
+		}
+		break
+	default:
+		hostname := req.URL.Host //"string"
+		switch resp.StatusCode {
+		case http.StatusUnauthorized:
+			errString = fmt.Sprintf("CustomScript failed to download the file from %s because access was denied. Please fix the blob permissions and try again, the response code and message returned were: %q",
+				hostname,
+				resp.Status)
+		case http.StatusNotFound:
+			errString = fmt.Sprintf("CustomScript failed to download the file from %s because it does not exist. Please create the blob and try again, the response code and message returned were: %q",
+				hostname,
+				resp.Status)
+
+		case http.StatusBadRequest:
+			errString = fmt.Sprintf("CustomScript failed to download the file from %s because parts of the request were incorrectly formatted, missing, and/or invalid. The response code and message returned were: %q",
+				hostname,
+				resp.Status)
+
+		case http.StatusInternalServerError:
+			errString = fmt.Sprintf("CustomScript failed to download the file from %s due to an issue with storage. The response code and message returned were: %q",
+				hostname,
+				resp.Status)
+		default:
+			errString = fmt.Sprintf("CustomScript failed to download the file from %s because the server returned a response code and message of %q Please verify the machine has network connectivity.",
+				hostname,
+				resp.Status)
 		}
 	}
-	return resp.StatusCode, nil, err
+	if len(requestId) > 0 {
+		errString += fmt.Sprintf(" (Service request ID: %s)", requestId)
+	}
+	return resp.StatusCode, nil, fmt.Errorf(errString)
 }

@@ -11,7 +11,12 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/custom-script-extension-linux/pkg/blobutil"
+	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/require"
+)
+
+var (
+	testctx = log.NewContext(log.NewNopLogger())
 )
 
 func Test_blobDownload_validateInputs(t *testing.T) {
@@ -71,9 +76,10 @@ func Test_blobDownload_fails_badCreds(t *testing.T) {
 		Container:   "foocontainer",
 	})
 
-	status, _, err := Download(d)
+	status, _, err := Download(testctx, d)
 	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "unexpected status code: actual=403")
+	require.Contains(t, err.Error(), "Please verify the machine has network connectivity")
+	require.Contains(t, err.Error(), "403")
 	require.Equal(t, status, http.StatusForbidden)
 }
 
@@ -84,7 +90,7 @@ func Test_blobDownload_fails_urlNotFound(t *testing.T) {
 		Container:   "foocontainer",
 	})
 
-	_, _, err := Download(d)
+	_, _, err := Download(testctx, d)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "http request failed:")
 }
@@ -123,10 +129,61 @@ func Test_blobDownload_actualBlob(t *testing.T) {
 		Blob:        name,
 		StorageBase: base,
 	})
-	_, body, err := Download(d)
+	_, body, err := Download(testctx, d)
 	require.Nil(t, err)
 	defer body.Close()
 	b, err := ioutil.ReadAll(body)
 	require.Nil(t, err)
 	require.EqualValues(t, chunk, b, "retrieved body is different body=%d chunk=%d", len(b), len(chunk))
+}
+
+func Test_blobDownload_fails_actualBlob404(t *testing.T) {
+	acct := os.Getenv("AZURE_STORAGE_ACCOUNT")
+	key := os.Getenv("AZURE_STORAGE_ACCESS_KEY")
+	if acct == "" || key == "" {
+		t.Skipf("Skipping: AZURE_STORAGE_ACCOUNT or AZURE_STORAGE_ACCESS_KEY not specified to run this test")
+	}
+	base := storage.DefaultBaseURL
+
+	blobName := "<BLOB THAT DOESN'T EXIST>"
+	containerName := "<CONTAINER NAME>"
+
+	// Get the blob via downloader
+	d := NewBlobDownload(acct, key, blobutil.AzureBlobRef{
+		Container:   containerName,
+		Blob:        blobName,
+		StorageBase: base,
+	})
+	code, _, err := Download(testctx, d)
+	require.NotNil(t, err)
+	require.Equal(t, code, http.StatusNotFound)
+	require.Contains(t, err.Error(), "because it does not exist")
+	require.Contains(t, err.Error(), "Not Found")
+	require.Contains(t, err.Error(), "Service request ID")
+}
+
+func Test_blobDownload_fails_actualBlob409(t *testing.T) {
+	// before running this test, go to your storage account on portal > Configuration and disable Blob public access
+	acct := os.Getenv("AZURE_STORAGE_ACCOUNT")
+	key := os.Getenv("AZURE_STORAGE_ACCESS_KEY")
+	if acct == "" || key == "" {
+		t.Skipf("Skipping: AZURE_STORAGE_ACCOUNT or AZURE_STORAGE_ACCESS_KEY not specified to run this test")
+	}
+	base := storage.DefaultBaseURL
+
+	blobName := "<BLOB NAME>"
+	containerName := "<CONTAINER NAME>"
+
+	// Get the blob via downloader
+	d := NewBlobDownload(acct, key, blobutil.AzureBlobRef{
+		Container:   containerName,
+		Blob:        blobName,
+		StorageBase: base,
+	})
+	code, _, err := Download(testctx, d)
+	require.NotNil(t, err)
+	require.Equal(t, code, http.StatusConflict)
+	require.Contains(t, err.Error(), "Please verify the machine has network connectivity")
+	require.Contains(t, err.Error(), "Public access is not permitted on this storage account")
+	require.Contains(t, err.Error(), "Service request ID")
 }
