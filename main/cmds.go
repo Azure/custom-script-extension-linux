@@ -13,6 +13,7 @@ import (
 
 	logging "github.com/Azure/azure-extension-platform/pkg/logging"
 	settings "github.com/Azure/azure-extension-platform/pkg/settings"
+	utils "github.com/Azure/azure-extension-platform/pkg/utils"
 	"github.com/Azure/custom-script-extension-linux/pkg/seqnum"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
@@ -125,6 +126,12 @@ func enablePre(ctx *log.Context, hEnv HandlerEnvironment, seqNum int) error {
 	} else if shouldExit {
 		ctx.Log("event", "exit", "message", "the script configuration has already been processed, will not run again")
 		el := logging.New(nil)
+		utils.TryClearExtensionScriptsDirectoriesAndSettingsFilesExceptMostRecent(downloadDir,
+			hEnv.HandlerEnvironment.ConfigFolder,
+			"",
+			uint64(seqNum),
+			"\\d+.settings",
+			"%d.settings")
 		settings.CleanUpSettings(el, hEnv.HandlerEnvironment.ConfigFolder)
 		os.Exit(0)
 	}
