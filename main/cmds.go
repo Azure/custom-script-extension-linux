@@ -184,20 +184,21 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) 
 		ctx.Log("event", "enable failed")
 	}
 
-	ctx.Log("event", "clearing setting files!")
-	ctx.Log("event", "exit", "message", "the script configuration has already been processed, will not run again")
+	ctx.Log("event", "clearing script files!")
 	seqNumString := strconv.Itoa(seqNum)
 	err = utils.TryDeleteDirectoriesExcept(downloadDir, seqNumString)
 	if err != nil {
-		ctx.Log("event", "Could not clear scripts.")
+		ctx.Log("event", "could not clear scripts", "error", err)
 	}
+
+	ctx.Log("event", "clearing protected settings!")
 	mostRecentRuntimeSetting := fmt.Sprintf("\\d+.settings", "%d.settings")
 	err = utils.TryClearRegexMatchingFilesExcept(h.HandlerEnvironment.ConfigFolder,
 		mostRecentRuntimeSetting,
 		seqNumString,
 		false)
 	if err != nil {
-		ctx.Log("event", "Could not clear protecting settings.")
+		ctx.Log("event", "could not clear settings", "error", err)
 	}
 
 	msg := fmt.Sprintf("\n[stdout]\n%s\n[stderr]\n%s", string(stdoutTail), string(stderrTail))
