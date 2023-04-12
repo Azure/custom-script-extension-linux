@@ -156,7 +156,8 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) 
 		return "", errors.Wrap(err, "failed to get configuration")
 	}
 
-	dir := filepath.Join(dataDir, downloadDir, fmt.Sprintf("%d", seqNum))
+	downloadsParent := filepath.Join(dataDir, downloadDir)
+	dir := filepath.Join(downloadsParent, fmt.Sprintf("%d", seqNum))
 	if err := downloadFiles(ctx, dir, cfg); err != nil {
 		return "", errors.Wrap(err, "processing file downloads failed")
 	}
@@ -184,15 +185,15 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) 
 		ctx.Log("event", "enable failed")
 	}
 
-	ctx.Log("event", "clearing script files!")
+	ctx.Log("event", "clearing script files from here", downloadsParent)
 	seqNumString := strconv.Itoa(seqNum)
-	err = utils.TryDeleteDirectoriesExcept(downloadDir, seqNumString)
+	err = utils.TryDeleteDirectoriesExcept(downloadsParent, seqNumString)
 	if err != nil {
 		ctx.Log("event", "could not clear scripts", "error", err)
 	}
 
 	ctx.Log("event", "clearing protected settings!")
-	mostRecentRuntimeSetting := fmt.Sprintf("\\d+.settings", "%d.settings")
+	mostRecentRuntimeSetting := fmt.Sprintf("d+.settings", "%d.settings")
 	err = utils.TryClearRegexMatchingFilesExcept(h.HandlerEnvironment.ConfigFolder,
 		mostRecentRuntimeSetting,
 		seqNumString,
