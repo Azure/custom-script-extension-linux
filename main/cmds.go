@@ -184,7 +184,7 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) 
 		ctx.Log("event", "enable failed")
 	}
 
-	ctx.Log("event", "clearing setting files")
+	ctx.Log("event", "clearing setting files new")
 	// el := logging.New(nil)
 	// ctx.Log("event", "exit", "message", "the script configuration has already been processed, will not run again")
 	// seqNumString := strconv.Itoa(seqNum)
