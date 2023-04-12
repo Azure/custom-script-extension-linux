@@ -184,30 +184,21 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) 
 		ctx.Log("event", "enable failed")
 	}
 
-	ctx.Log("event", "clearing setting files new")
-	// el := logging.New(nil)
-	// ctx.Log("event", "exit", "message", "the script configuration has already been processed, will not run again")
-	// seqNumString := strconv.Itoa(seqNum)
-	// err := utils.TryDeleteDirectoriesExcept(downloadDir, seqNumString)
-	// if err != nil {
-	// 	ctx.Log("event", "Could not clear scripts.")
-	// }
-	// mostRecentRuntimeSetting := fmt.Sprintf("\\d+.settings", "%d.settings")
-	// err = utils.TryClearRegexMatchingFilesExcept(hEnv.HandlerEnvironment.ConfigFolder,
-	// 	mostRecentRuntimeSetting,
-	// 	seqNumString,
-	// 	false)
-	// if err != nil {
-	// 	ctx.Log("event", "Could not clear protecting settings.")
-	// }
-
-	utils.TryClearExtensionScriptsDirectoriesAndSettingsFilesExceptMostRecent(downloadDir,
-		h.HandlerEnvironment.ConfigFolder,
-		"customscriptextension",
-		uint64(seqNum),
-		"\\d+.settings",
-		"%d.settings")
-	//settings.CleanUpSettings(el, h.HandlerEnvironment.ConfigFolder)
+	ctx.Log("event", "clearing setting files!")
+	ctx.Log("event", "exit", "message", "the script configuration has already been processed, will not run again")
+	seqNumString := strconv.Itoa(seqNum)
+	err := utils.TryDeleteDirectoriesExcept(downloadDir, seqNumString)
+	if err != nil {
+		ctx.Log("event", "Could not clear scripts.")
+	}
+	mostRecentRuntimeSetting := fmt.Sprintf("\\d+.settings", "%d.settings")
+	err = utils.TryClearRegexMatchingFilesExcept(hEnv.HandlerEnvironment.ConfigFolder,
+		mostRecentRuntimeSetting,
+		seqNumString,
+		false)
+	if err != nil {
+		ctx.Log("event", "Could not clear protecting settings.")
+	}
 
 	msg := fmt.Sprintf("\n[stdout]\n%s\n[stderr]\n%s", string(stdoutTail), string(stderrTail))
 	return msg, runErr
