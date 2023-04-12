@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	logging "github.com/Azure/azure-extension-platform/pkg/logging"
@@ -125,21 +126,15 @@ func enablePre(ctx *log.Context, hEnv HandlerEnvironment, seqNum int) error {
 		return errors.Wrap(err, "failed to process sequence number")
 	} else if shouldExit {
 		ctx.Log("event", "exit", "message", "the script configuration has already been processed, will not run again")
-		//el := logging.New(nil)
-		// utils.TryClearExtensionScriptsDirectoriesAndSettingsFilesExceptMostRecent(downloadDir,
-		// 	hEnv.HandlerEnvironment.ConfigFolder,
-		// 	"",
-		// 	uint64(seqNum),
-		// 	"\\d+.settings",
-		// 	"%d.settings")
-		err := utils.TryDeleteDirectoriesExcept(downloadDir, uint64(seqNum))
+		seqNumString := strconv.Itoa(seqNum)
+		err := utils.TryDeleteDirectoriesExcept(downloadDir, seqNumString)
 		if err != nil {
 			ctx.Log("Could not clear scripts.")
 		}
 		mostRecentRuntimeSetting := fmt.Sprintf("\\d+.settings", "%d.settings")
 		err = utils.TryClearRegexMatchingFilesExcept(hEnv.HandlerEnvironment.ConfigFolder,
 			mostRecentRuntimeSetting,
-			uint64(seqNum),
+			seqNumString,
 			false)
 		if err != nil {
 			ctx.Log("Could not clear protecting settings.")
