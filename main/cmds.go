@@ -12,8 +12,6 @@ import (
 	"strconv"
 	"time"
 
-	logging "github.com/Azure/azure-extension-platform/pkg/logging"
-	settings "github.com/Azure/azure-extension-platform/pkg/settings"
 	utils "github.com/Azure/azure-extension-platform/pkg/utils"
 	"github.com/Azure/custom-script-extension-linux/pkg/seqnum"
 	"github.com/go-kit/kit/log"
@@ -129,7 +127,7 @@ func enablePre(ctx *log.Context, hEnv HandlerEnvironment, seqNum int) error {
 		seqNumString := strconv.Itoa(seqNum)
 		err := utils.TryDeleteDirectoriesExcept(downloadDir, seqNumString)
 		if err != nil {
-			ctx.Log("Could not clear scripts.")
+			ctx.Log("event", "Could not clear scripts.")
 		}
 		mostRecentRuntimeSetting := fmt.Sprintf("\\d+.settings", "%d.settings")
 		err = utils.TryClearRegexMatchingFilesExcept(hEnv.HandlerEnvironment.ConfigFolder,
@@ -137,9 +135,8 @@ func enablePre(ctx *log.Context, hEnv HandlerEnvironment, seqNum int) error {
 			seqNumString,
 			false)
 		if err != nil {
-			ctx.Log("Could not clear protecting settings.")
+			ctx.Log("event", "Could not clear protecting settings.")
 		}
-		//settings.CleanUpSettings(el, hEnv.HandlerEnvironment.ConfigFolder)
 		os.Exit(0)
 	}
 	return nil
@@ -188,8 +185,29 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) 
 	}
 
 	ctx.Log("event", "clearing setting files")
-	el := logging.New(nil)
-	settings.CleanUpSettings(el, h.HandlerEnvironment.ConfigFolder)
+	// el := logging.New(nil)
+	// ctx.Log("event", "exit", "message", "the script configuration has already been processed, will not run again")
+	// seqNumString := strconv.Itoa(seqNum)
+	// err := utils.TryDeleteDirectoriesExcept(downloadDir, seqNumString)
+	// if err != nil {
+	// 	ctx.Log("event", "Could not clear scripts.")
+	// }
+	// mostRecentRuntimeSetting := fmt.Sprintf("\\d+.settings", "%d.settings")
+	// err = utils.TryClearRegexMatchingFilesExcept(hEnv.HandlerEnvironment.ConfigFolder,
+	// 	mostRecentRuntimeSetting,
+	// 	seqNumString,
+	// 	false)
+	// if err != nil {
+	// 	ctx.Log("event", "Could not clear protecting settings.")
+	// }
+
+	utils.TryClearExtensionScriptsDirectoriesAndSettingsFilesExceptMostRecent(downloadDir,
+		h.HandlerEnvironment.ConfigFolder,
+		"customscriptextension",
+		uint64(seqNum),
+		"\\d+.settings",
+		"%d.settings")
+	//settings.CleanUpSettings(el, h.HandlerEnvironment.ConfigFolder)
 
 	msg := fmt.Sprintf("\n[stdout]\n%s\n[stderr]\n%s", string(stdoutTail), string(stderrTail))
 	return msg, runErr
