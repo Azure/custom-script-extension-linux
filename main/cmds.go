@@ -193,10 +193,10 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) 
 	}
 
 	ctx.Log("event", "clearing protected settings!")
-	mostRecentRuntimeSetting := fmt.Sprintf("d+.settings", "%d.settings")
+	mostRecentRuntimeSetting := fmt.Sprintf("d+.settings", uint(seqNum))
 	err = utils.TryClearRegexMatchingFilesExcept(h.HandlerEnvironment.ConfigFolder,
+		"\\d+.settings"",
 		mostRecentRuntimeSetting,
-		seqNumString,
 		false)
 	if err != nil {
 		ctx.Log("event", "could not clear settings", "error", err)
