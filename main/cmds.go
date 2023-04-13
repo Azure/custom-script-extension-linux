@@ -124,18 +124,21 @@ func enablePre(ctx *log.Context, hEnv HandlerEnvironment, seqNum int) error {
 		return errors.Wrap(err, "failed to process sequence number")
 	} else if shouldExit {
 		ctx.Log("event", "exit", "message", "the script configuration has already been processed, will not run again")
+		// clearing settings and scripts
+		ctx.Log("event", "clearing settings and script files")
+		downloadsParent := filepath.Join(dataDir, downloadDir)
 		seqNumString := strconv.Itoa(seqNum)
-		err := utils.TryDeleteDirectoriesExcept(downloadDir, seqNumString)
+		err = utils.TryDeleteDirectoriesExcept(downloadsParent, seqNumString)
 		if err != nil {
-			ctx.Log("event", "Could not clear scripts.")
+			ctx.Log("event", "could not clear scripts")
 		}
-		mostRecentRuntimeSetting := fmt.Sprintf("\\d+.settings", "%d.settings")
+		mostRecentRuntimeSetting := fmt.Sprintf("%d.settings", uint(seqNum))
 		err = utils.TryClearRegexMatchingFilesExcept(hEnv.HandlerEnvironment.ConfigFolder,
+			"\\d+.settings",
 			mostRecentRuntimeSetting,
-			seqNumString,
 			false)
 		if err != nil {
-			ctx.Log("event", "Could not clear protecting settings.")
+			ctx.Log("event", "could not clear settings")
 		}
 		os.Exit(0)
 	}
@@ -185,21 +188,20 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) 
 		ctx.Log("event", "enable failed")
 	}
 
-	ctx.Log("event", "clearing script files from here", downloadsParent)
+	// clearing settings and scripts
+	ctx.Log("event", "clearing settings and script files")
 	seqNumString := strconv.Itoa(seqNum)
 	err = utils.TryDeleteDirectoriesExcept(downloadsParent, seqNumString)
 	if err != nil {
-		ctx.Log("event", "could not clear scripts", "error", err)
+		ctx.Log("event", "could not clear scripts")
 	}
-
-	ctx.Log("event", "clearing protected settings!")
-	mostRecentRuntimeSetting := fmt.Sprintf("d+.settings", uint(seqNum))
+	mostRecentRuntimeSetting := fmt.Sprintf("%d.settings", uint(seqNum))
 	err = utils.TryClearRegexMatchingFilesExcept(h.HandlerEnvironment.ConfigFolder,
 		"\\d+.settings",
 		mostRecentRuntimeSetting,
 		false)
 	if err != nil {
-		ctx.Log("event", "could not clear settings", "error", err)
+		ctx.Log("event", "could not clear settings")
 	}
 
 	msg := fmt.Sprintf("\n[stdout]\n%s\n[stderr]\n%s", string(stdoutTail), string(stderrTail))
