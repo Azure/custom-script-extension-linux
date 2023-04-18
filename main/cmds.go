@@ -124,7 +124,7 @@ func enablePre(ctx *log.Context, hEnv HandlerEnvironment, seqNum int) error {
 		return errors.Wrap(err, "failed to process sequence number")
 	} else if shouldExit {
 		ctx.Log("event", "exit", "message", "the script configuration has already been processed, will not run again")
-		clearSettingsAndScriptExceptMostRecent(seqNum, ctx)
+		clearSettingsAndScriptExceptMostRecent(seqNum, ctx, hEnv)
 		os.Exit(0)
 	}
 	return nil
@@ -174,7 +174,7 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) 
 
 	msg := fmt.Sprintf("\n[stdout]\n%s\n[stderr]\n%s", string(stdoutTail), string(stderrTail))
 
-	clearSettingsAndScriptExceptMostRecent(seqNum, ctx)
+	clearSettingsAndScriptExceptMostRecent(seqNum, ctx, h)
 
 	return msg, runErr
 }
@@ -338,7 +338,7 @@ func decodeScript(script string) (string, string, error) {
 	return buf.String(), fmt.Sprintf("%d;%d;gzip=1", len(script), n), nil
 }
 
-func clearSettingsAndScriptExceptMostRecent(seqNum int, ctx *log.Context) {
+func clearSettingsAndScriptExceptMostRecent(seqNum int, ctx *log.Context, hEnv HandlerEnvironment) {
 	downloadsParent := filepath.Join(dataDir, downloadDir)
 	seqNumString := strconv.Itoa(seqNum)
 
