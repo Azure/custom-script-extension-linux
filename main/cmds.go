@@ -9,10 +9,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
-	logging "github.com/Azure/azure-extension-platform/pkg/logging"
-	settings "github.com/Azure/azure-extension-platform/pkg/settings"
+	utils "github.com/Azure/azure-extension-platform/pkg/utils"
 	"github.com/Azure/custom-script-extension-linux/pkg/seqnum"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
@@ -124,8 +124,7 @@ func enablePre(ctx *log.Context, hEnv HandlerEnvironment, seqNum int) error {
 		return errors.Wrap(err, "failed to process sequence number")
 	} else if shouldExit {
 		ctx.Log("event", "exit", "message", "the script configuration has already been processed, will not run again")
-		el := logging.New(nil)
-		settings.CleanUpSettings(el, hEnv.HandlerEnvironment.ConfigFolder)
+		clearSettingsAndScriptExceptMostRecent(seqNum, ctx, hEnv)
 		os.Exit(0)
 	}
 	return nil
@@ -173,11 +172,10 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) 
 		ctx.Log("event", "enable failed")
 	}
 
-	ctx.Log("event", "clearing setting files")
-	el := logging.New(nil)
-	settings.CleanUpSettings(el, h.HandlerEnvironment.ConfigFolder)
-
 	msg := fmt.Sprintf("\n[stdout]\n%s\n[stderr]\n%s", string(stdoutTail), string(stderrTail))
+
+	clearSettingsAndScriptExceptMostRecent(seqNum, ctx, h)
+
 	return msg, runErr
 }
 
@@ -338,4 +336,23 @@ func decodeScript(script string) (string, string, error) {
 
 	w.Flush()
 	return buf.String(), fmt.Sprintf("%d;%d;gzip=1", len(script), n), nil
+}
+
+func clearSettingsAndScriptExceptMostRecent(seqNum int, ctx *log.Context, hEnv HandlerEnvironment) {
+	downloadsParent := filepath.Join(dataDir, downloadDir)
+	seqNumString := strconv.Itoa(seqNum)
+
+	ctx.Log("event", "clearing settings and script files except most recent seq num")
+	err := utils.TryDeleteDirectoriesExcept(downloadsParent, seqNumString)
+	if err != nil {
+		ctx.Log("event", "could not clear scripts")
+	}
+	mostRecentRuntimeSetting := fmt.Sprintf("%d.settings", uint(seqNum))
+	err = utils.TryClearRegexMatchingFilesExcept(hEnv.HandlerEnvironment.ConfigFolder,
+		"\\d+.settings",
+		mostRecentRuntimeSetting,
+		false)
+	if err != nil {
+		ctx.Log("event", "could not clear settings")
+	}
 }
