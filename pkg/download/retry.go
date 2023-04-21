@@ -54,6 +54,8 @@ func WithRetries(ctx *log.Context, f *File, downloaders []Downloader, sf SleepFu
 					// because either connection was closed prematurely or file write operation failed
 					// mark status as -1 so that we retry
 					status = -1 
+					// clear out the contents of the file so as to not leave a partial file
+					f.Truncate(0)
 				}
 			}
 
