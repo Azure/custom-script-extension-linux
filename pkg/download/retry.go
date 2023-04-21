@@ -5,6 +5,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/go-kit/kit/log"
@@ -24,6 +25,7 @@ const (
 	expRetryN = 7 // how many times we retry the Download
 	expRetryK = time.Second * 3
 	expRetryM = 2
+	writeBufSize = 1024 * 8
 )
 
 // WithRetries retrieves a response body using the specified downloader. Any
@@ -31,14 +33,28 @@ const (
 // closed on failures). If the retries do not succeed, the last error is returned.
 //
 // It sleeps in exponentially increasing durations between retries.
-func WithRetries(ctx *log.Context, downloaders []Downloader, sf SleepFunc) (io.ReadCloser, error) {
+func WithRetries(ctx *log.Context, f *File, downloaders []Downloader, sf SleepFunc) (int64, error) {
 	var lastErr error
 	for _, d := range downloaders {
 		for n := 0; n < expRetryN; n++ {
 			ctx := ctx.With("retry", n)
 			status, out, err := Download(ctx, d)
 			if err == nil {
-				return out, nil
+				// server returned status code 200 OK
+				// we have a response body, copy it to the file
+				nBytes, err := io.CopyBuffer(f, out, make([]byte, writeBufSize))
+				if err == nil {
+					// we are done, close the response body
+					// and return the number of bytes written
+					out.Close()
+					return nBytes, nil
+				}
+				else {	
+					// we failed to download the response body and write it to file
+					// because either connection was closed prematurely or file write operation failed
+					// mark status as -1 so that we retry
+					status = -1 
+				}
 			}
 
 			lastErr = err
@@ -62,7 +78,7 @@ func WithRetries(ctx *log.Context, downloaders []Downloader, sf SleepFunc) (io.R
 			}
 		}
 	}
-	return nil, lastErr
+	return 0, lastErr
 }
 
 func isTransientHttpStatusCode(statusCode int) bool {
