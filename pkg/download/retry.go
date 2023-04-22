@@ -38,6 +38,9 @@ func WithRetries(ctx *log.Context, f *File, downloaders []Downloader, sf SleepFu
 	for _, d := range downloaders {
 		for n := 0; n < expRetryN; n++ {
 			ctx := ctx.With("retry", n)
+
+			nBytes := 0
+			start := time.Now()
 			status, out, err := Download(ctx, d)
 			if err == nil {
 				// server returned status code 200 OK
@@ -47,21 +50,24 @@ func WithRetries(ctx *log.Context, f *File, downloaders []Downloader, sf SleepFu
 					// we are done, close the response body
 					// and return the number of bytes written
 					out.Close()
+					end = time.Since(start)
+					ctx.Log("info", fmt.Sprintf("file download sucessful: downloaded %d bytes in %d milliseconds", nBytes, end.Milliseconds())
 					return nBytes, nil
 				}
 				else {	
 					// we failed to download the response body and write it to file
 					// because either connection was closed prematurely or file write operation failed
 					// mark status as -1 so that we retry
-					status = -1 
+					status = -1
 					// clear out the contents of the file so as to not leave a partial file
 					f.Truncate(0)
 				}
 			}
 
-			lastErr = err
-			ctx.Log("error", err)
+			end = time.Since(start)
+			ctx.Log("error", fmt.Sprintf("file download failed with error '%s' : downloaded %d bytes in %d milliseconds", err, nBytes, end.Milliseconds())
 
+			lastErr = err
 			if out != nil { // we are not going to read this response body
 				out.Close()
 			}
