@@ -47,7 +47,7 @@ func WithRetries(ctx *log.Context, f *File, downloaders []Downloader, sf SleepFu
 				// we have a response body, copy it to the file
 				nBytes, err := io.CopyBuffer(f, out, make([]byte, writeBufSize))
 				if err == nil {
-					// we are done, close the response body
+					// we are done, close the response body, log time taken to download the file
 					// and return the number of bytes written
 					out.Close()
 					end = time.Since(start)
@@ -64,6 +64,9 @@ func WithRetries(ctx *log.Context, f *File, downloaders []Downloader, sf SleepFu
 				}
 			}
 
+			// we are here because either server returned a non-200 status code
+			// or we failed to download the response body and write it to file
+			// log the error, time elapsed, bytes downloaded, and close the response body
 			end = time.Since(start)
 			ctx.Log("error", fmt.Sprintf("file download failed with error '%s' : downloaded %d bytes in %d milliseconds", err, nBytes, end.Milliseconds())
 
