@@ -39,36 +39,43 @@ func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf Slee
 		for n := 0; n < expRetryN; n++ {
 			ctx := ctx.With("retry", n)
 
-			nBytes := 0
+			// reset the last error before each retry
+			lastErr = nil
 			start := time.Now()
 			status, out, err := Download(ctx, d)
 			if err == nil {
 				// server returned status code 200 OK
 				// we have a response body, copy it to the file
-				nBytes, err := io.CopyBuffer(f, out, make([]byte, writeBufSize))
-				if err == nil {
+				nBytes, innerErr := io.CopyBuffer(f, out, make([]byte, writeBufSize))
+				if innerErr == nil {
 					// we are done, close the response body, log time taken to download the file
 					// and return the number of bytes written
 					out.Close()
 					end := time.Since(start)
-					ctx.Log("info", fmt.Sprintf("file download sucessful: downloaded %d bytes in %d milliseconds", nBytes, end.Milliseconds()))
+					ctx.Log("info", fmt.Sprintf("file download sucessful: downloaded and saved %d bytes in %d milliseconds", nBytes, end.Milliseconds()))
 					return nBytes, nil
+				} else {
+					// we failed to download the response body and write it to file
+					// because either connection was closed prematurely or file write operation failed
+					// mark status as -1 so that we retry
+					status = -1
+					// clear out the contents of the file so as to not leave a partial file
+					f.Truncate(0)
+					// cache the inner error
+					lastErr = innerErr
 				}
-				// we failed to download the response body and write it to file
-				// because either connection was closed prematurely or file write operation failed
-				// mark status as -1 so that we retry
-				status = -1
-				// clear out the contents of the file so as to not leave a partial file
-				f.Truncate(0)
+			} else {
+				// cache the outer error
+				lastErr = err
 			}
 
 			// we are here because either server returned a non-200 status code
 			// or we failed to download the response body and write it to file
 			// log the error, time elapsed, bytes downloaded, and close the response body
 			end := time.Since(start)
-			ctx.Log("error", fmt.Sprintf("file download failed with error '%s' : downloaded %d bytes in %d milliseconds", err, nBytes, end.Milliseconds()))
 
-			lastErr = err
+			ctx.Log("error", fmt.Sprintf("file download failed with error '%s' : downloaded and saved %d bytes in %d milliseconds", lastErr, 0, end.Milliseconds()))
+
 			if out != nil { // we are not going to read this response body
 				out.Close()
 			}
