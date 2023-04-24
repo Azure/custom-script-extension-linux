@@ -33,62 +33,84 @@ func TestActualSleep_actuallySleeps(t *testing.T) {
 }
 
 func TestWithRetries_noRetries(t *testing.T) {
+	dir, file = CreateTestFile()
+	defer file.Close()
+	defer os.Remove(dir)
+
 	srv := httptest.NewServer(httpbin.GetMux())
 	defer srv.Close()
 
 	d := download.NewURLDownload(srv.URL + "/status/200")
-
 	sr := new(sleepRecorder)
-	resp, err := download.WithRetries(nopLog(), []download.Downloader{d}, sr.Sleep)
+
+	resp, err := download.WithRetries(nopLog(), file, []download.Downloader{d}, sr.Sleep)
 	require.Nil(t, err, "should not fail")
 	require.NotNil(t, resp, "response body exists")
 	require.Equal(t, []time.Duration(nil), []time.Duration(*sr), "sleep should not be called")
 }
 
 func TestWithRetries_failing_validateNumberOfCalls(t *testing.T) {
+	dir, file = CreateTestFile()
+	defer file.Close()
+	defer os.Remove(dir)
+
 	srv := httptest.NewServer(httpbin.GetMux())
 	defer srv.Close()
 
 	bd := new(badDownloader)
-	_, err := download.WithRetries(nopLog(), []download.Downloader{bd}, new(sleepRecorder).Sleep)
+
+	_, err := download.WithRetries(nopLog(), file, []download.Downloader{bd}, new(sleepRecorder).Sleep)
 	require.Contains(t, err.Error(), "expected error", "error is preserved")
 	require.EqualValues(t, 7, bd.calls, "calls exactly expRetryN times")
 }
 
 func TestWithRetries_failingBadStatusCode_validateSleeps(t *testing.T) {
+	dir, file = CreateTestFile()
+	defer file.Close()
+	defer os.Remove(dir)
+
 	srv := httptest.NewServer(httpbin.GetMux())
 	defer srv.Close()
 
 	d := download.NewURLDownload(srv.URL + "/status/429")
-
 	sr := new(sleepRecorder)
-	_, err := download.WithRetries(nopLog(), []download.Downloader{d}, sr.Sleep)
+
+	_, err := download.WithRetries(nopLog(), file, []download.Downloader{d}, sr.Sleep)
 	require.Contains(t, err.Error(), "429 Too Many Requests")
 	require.Contains(t, err.Error(), "Please verify the machine has network connectivity")
-
 	require.Equal(t, sleepSchedule, []time.Duration(*sr))
 }
 
 func TestWithRetries_healingServer(t *testing.T) {
+	dir, file = CreateTestFile()
+	defer file.Close()
+	defer os.Remove(dir)
+
 	srv := httptest.NewServer(new(healingServer))
 	defer srv.Close()
 
 	d := download.NewURLDownload(srv.URL)
 	sr := new(sleepRecorder)
-	resp, err := download.WithRetries(nopLog(), []download.Downloader{d}, sr.Sleep)
+
+	resp, err := download.WithRetries(nopLog(), file, []download.Downloader{d}, sr.Sleep)
 	require.Nil(t, err, "should eventually succeed")
 	require.NotNil(t, resp, "response body exists")
-
 	require.Equal(t, sleepSchedule[:3], []time.Duration(*sr))
 }
 
 func TestRetriesWith_SwitchDownloaderOn404(t *testing.T) {
+	dir, file = CreateTestFile()
+	defer file.Close()
+	defer os.Remove(dir)
+
 	svr := httptest.NewServer(httpbin.GetMux())
 	hSvr := httptest.NewServer(new(healingServer))
 	defer svr.Close()
+
 	d404 := mockDownloader{0, svr.URL + "/status/404"}
 	d200 := mockDownloader{0, hSvr.URL}
-	resp, err := download.WithRetries(nopLog(), []download.Downloader{&d404, &d200}, func(d time.Duration) { return })
+
+	resp, err := download.WithRetries(nopLog(), file, []download.Downloader{&d404, &d200}, func(d time.Duration) { return })
 	require.Nil(t, err, "should eventually succeed")
 	require.NotNil(t, resp, "response body exists")
 	require.Equal(t, d404.timesCalled, 1)
@@ -96,15 +118,21 @@ func TestRetriesWith_SwitchDownloaderOn404(t *testing.T) {
 }
 
 func TestRetriesWith_SwitchDownloaderThenFailWithCorretErrorMessage(t *testing.T) {
+	dir, file = CreateTestFile()
+	defer file.Close()
+	defer os.Remove(dir)
+
 	svr := httptest.NewServer(httpbin.GetMux())
 	defer svr.Close()
+
 	var mockMsiProvider download.MsiProvider = func() (msi.Msi, error) {
 		return msi.Msi{AccessToken: "fakeAccessToken"}, nil
 	}
 
 	d404 := mockDownloader{0, svr.URL + "/status/404"}
 	msiDownloader403 := download.NewBlobWithMsiDownload(svr.URL+"/status/403", mockMsiProvider)
-	resp, err := download.WithRetries(nopLog(), []download.Downloader{&d404, msiDownloader403}, func(d time.Duration) { return })
+
+	resp, err := download.WithRetries(nopLog(), file, []download.Downloader{&d404, msiDownloader403}, func(d time.Duration) { return })
 	require.NotNil(t, err, "download with retries should fail")
 	require.Nil(t, resp, "response body should be nil for failed download with retries")
 	require.Equal(t, d404.timesCalled, 1)
@@ -112,11 +140,24 @@ func TestRetriesWith_SwitchDownloaderThenFailWithCorretErrorMessage(t *testing.T
 
 	d404 = mockDownloader{0, svr.URL + "/status/404"}
 	msiDownloader404 := download.NewBlobWithMsiDownload(svr.URL+"/status/404", mockMsiProvider)
-	resp, err = download.WithRetries(nopLog(), []download.Downloader{&d404, msiDownloader404}, func(d time.Duration) { return })
+
+	resp, err = download.WithRetries(nopLog(), file, []download.Downloader{&d404, msiDownloader404}, func(d time.Duration) { return })
 	require.NotNil(t, err, "download with retries should fail")
 	require.Nil(t, resp, "response body should be nil for failed download with retries")
 	require.Equal(t, d404.timesCalled, 1)
 	require.True(t, strings.Contains(err.Error(), download.MsiDownload404ErrorString), "error string doesn't contain the correct message")
+}
+
+func CreateTestFile() (string, *File){
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+
+	path := filepath.Join(dir, "test-file")
+
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, mode)
+	require.Nil(t, err)
+
+	return dir, file
 }
 
 // Test Utilities:
