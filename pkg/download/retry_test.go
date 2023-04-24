@@ -1,8 +1,12 @@
 package download_test
 
 import (
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -33,7 +37,7 @@ func TestActualSleep_actuallySleeps(t *testing.T) {
 }
 
 func TestWithRetries_noRetries(t *testing.T) {
-	dir, file = CreateTestFile()
+	dir, file := CreateTestFile()
 	defer file.Close()
 	defer os.RemoveAll(dir)
 
@@ -50,7 +54,7 @@ func TestWithRetries_noRetries(t *testing.T) {
 }
 
 func TestWithRetries_failing_validateNumberOfCalls(t *testing.T) {
-	dir, file = CreateTestFile()
+	dir, file := CreateTestFile()
 	defer file.Close()
 	defer os.RemoveAll(dir)
 
@@ -67,7 +71,7 @@ func TestWithRetries_failing_validateNumberOfCalls(t *testing.T) {
 }
 
 func TestWithRetries_failingBadStatusCode_validateSleeps(t *testing.T) {
-	dir, file = CreateTestFile()
+	dir, file := CreateTestFile()
 	defer file.Close()
 	defer os.Remove(dir)
 
@@ -85,7 +89,7 @@ func TestWithRetries_failingBadStatusCode_validateSleeps(t *testing.T) {
 }
 
 func TestWithRetries_healingServer(t *testing.T) {
-	dir, file = CreateTestFile()
+	dir, file := CreateTestFile()
 	defer file.Close()
 	defer os.RemoveAll(dir)
 
@@ -102,7 +106,7 @@ func TestWithRetries_healingServer(t *testing.T) {
 }
 
 func TestRetriesWith_SwitchDownloaderOn404(t *testing.T) {
-	dir, file = CreateTestFile()
+	dir, file := CreateTestFile()
 	defer file.Close()
 	defer os.RemoveAll(dir)
 
@@ -122,7 +126,7 @@ func TestRetriesWith_SwitchDownloaderOn404(t *testing.T) {
 }
 
 func TestRetriesWith_SwitchDownloaderThenFailWithCorretErrorMessage(t *testing.T) {
-	dir, file = CreateTestFile()
+	dir, file := CreateTestFile()
 	defer file.Close()
 	defer os.RemoveAll(dir)
 
@@ -139,7 +143,7 @@ func TestRetriesWith_SwitchDownloaderThenFailWithCorretErrorMessage(t *testing.T
 	resp, err := download.WithRetries(nopLog(), file, []download.Downloader{&d404, msiDownloader403}, func(d time.Duration) { return })
 	require.NotNil(t, err, "download with retries should fail")
 	require.Nil(t, resp, "response body should be nil for failed download with retries")
-    require.EqualValues(t, 0, n, "downloaded number of bytes should be zero")
+	require.EqualValues(t, 0, n, "downloaded number of bytes should be zero")
 	require.Equal(t, d404.timesCalled, 1)
 	require.True(t, strings.Contains(err.Error(), download.MsiDownload403ErrorString), "error string doesn't contain the correct message")
 
@@ -155,7 +159,7 @@ func TestRetriesWith_SwitchDownloaderThenFailWithCorretErrorMessage(t *testing.T
 }
 
 func TestRetriesWith_LargeFileThatTimesOutWhileDownloading(t *testing.T) {
-	dir, file = CreateTestFile()
+	dir, file := CreateTestFile()
 	defer file.Close()
 	defer os.RemoveAll(dir)
 
@@ -164,19 +168,19 @@ func TestRetriesWith_LargeFileThatTimesOutWhileDownloading(t *testing.T) {
 	defer srv.Close()
 
 	size := 1024 * 1024 * 256 // 256 MB
-	largeFileDownloader = mockDownloader{0, svr.URL + "/bytes/" + fmt.Sprintf("%d", size)}
+	largeFileDownloader := mockDownloader{0, svr.URL + "/bytes/" + fmt.Sprintf("%d", size)}
 	sr := new(sleepRecorder)
 
-	n, err := download.WitRetries(nopLog(), file, largeFileDownloader, sr.Sleep)
+	n, err := download.WithRetries(nopLog(), file, largeFileDownloader, sr.Sleep)
 	require.NotNil(t, err, "download with retries should fail because of server timeout")
-    require.EqualValues(t, 0, n, "downloaded number of bytes should be zero")
+	require.EqualValues(t, 0, n, "downloaded number of bytes should be zero")
 
 	fi, err := file.Stat()
 	require.Nil(t, err)
 	require.EqualValues(t, 0, fi.Size())
 }
 
-func CreateTestFile() (string, *File){
+func CreateTestFile() (string, *File) {
 	dir, err := ioutil.TempDir("", "")
 	require.Nil(t, err)
 

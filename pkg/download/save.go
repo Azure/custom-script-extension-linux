@@ -1,7 +1,6 @@
 package download
 
 import (
-	"io"
 	"os"
 
 	"github.com/go-kit/kit/log"

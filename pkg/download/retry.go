@@ -22,9 +22,9 @@ var (
 const (
 	// time to sleep between retries is an exponential backoff formula:
 	//   t(n) = k * m^n
-	expRetryN = 7 // how many times we retry the Download
-	expRetryK = time.Second * 3
-	expRetryM = 2
+	expRetryN    = 7 // how many times we retry the Download
+	expRetryK    = time.Second * 3
+	expRetryM    = 2
 	writeBufSize = 1024 * 8
 )
 
@@ -33,7 +33,7 @@ const (
 // closed on failures). If the retries do not succeed, the last error is returned.
 //
 // It sleeps in exponentially increasing durations between retries.
-func WithRetries(ctx *log.Context, f *File, downloaders []Downloader, sf SleepFunc) (int64, error) {
+func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf SleepFunc) (int64, error) {
 	var lastErr error
 	for _, d := range downloaders {
 		for n := 0; n < expRetryN; n++ {
@@ -50,25 +50,23 @@ func WithRetries(ctx *log.Context, f *File, downloaders []Downloader, sf SleepFu
 					// we are done, close the response body, log time taken to download the file
 					// and return the number of bytes written
 					out.Close()
-					end = time.Since(start)
-					ctx.Log("info", fmt.Sprintf("file download sucessful: downloaded %d bytes in %d milliseconds", nBytes, end.Milliseconds())
+					end := time.Since(start)
+					ctx.Log("info", fmt.Sprintf("file download sucessful: downloaded %d bytes in %d milliseconds", nBytes, end.Milliseconds()))
 					return nBytes, nil
 				}
-				else {	
-					// we failed to download the response body and write it to file
-					// because either connection was closed prematurely or file write operation failed
-					// mark status as -1 so that we retry
-					status = -1
-					// clear out the contents of the file so as to not leave a partial file
-					f.Truncate(0)
-				}
+				// we failed to download the response body and write it to file
+				// because either connection was closed prematurely or file write operation failed
+				// mark status as -1 so that we retry
+				status = -1
+				// clear out the contents of the file so as to not leave a partial file
+				f.Truncate(0)
 			}
 
 			// we are here because either server returned a non-200 status code
 			// or we failed to download the response body and write it to file
 			// log the error, time elapsed, bytes downloaded, and close the response body
-			end = time.Since(start)
-			ctx.Log("error", fmt.Sprintf("file download failed with error '%s' : downloaded %d bytes in %d milliseconds", err, nBytes, end.Milliseconds())
+			end := time.Since(start)
+			ctx.Log("error", fmt.Sprintf("file download failed with error '%s' : downloaded %d bytes in %d milliseconds", err, nBytes, end.Milliseconds()))
 
 			lastErr = err
 			if out != nil { // we are not going to read this response body
