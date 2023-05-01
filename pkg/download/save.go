@@ -1,15 +1,10 @@
 package download
 
 import (
-	"io"
 	"os"
 
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
-)
-
-const (
-	writeBufSize = 1024 * 8
 )
 
 // SaveTo uses given downloader to fetch the resource with retries and saves the
@@ -23,12 +18,10 @@ func SaveTo(ctx *log.Context, d []Downloader, dst string, mode os.FileMode) (int
 	}
 	defer f.Close()
 
-	body, err := WithRetries(ctx, d, ActualSleep)
+	n, err := WithRetries(ctx, f, d, ActualSleep)
 	if err != nil {
-		return 0, errors.Wrap(err, "failed to download file")
+		return n, errors.Wrapf(err, "failed to download response and write to file: %s", dst)
 	}
-	defer body.Close()
 
-	n, err := io.CopyBuffer(f, body, make([]byte, writeBufSize))
-	return n, errors.Wrapf(err, "failed to write to file: %s", dst)
+	return n, nil
 }
