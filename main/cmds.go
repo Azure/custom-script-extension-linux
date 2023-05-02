@@ -100,8 +100,6 @@ func migrateToMostRecentSequence(ctx *log.Context, seqNum int) {
 		ctx.Log("event", "recreate mrseq", "message", fmt.Sprintf("recreating mrseq with configSeqNum %v", seqNum))
 		return
 	}
-
-	ctx.Log("event", "recreate mrseq", "message", "seq number is 0")
 }
 
 func uninstall(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) {
