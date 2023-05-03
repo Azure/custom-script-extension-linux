@@ -72,7 +72,7 @@ func install(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error)
 	// If it is (2) attempt to migrate to mrseq.  Find the latest settings
 	// file, and set the sequence to it.
 	if _, err := os.Stat(mostRecentSequence); os.IsNotExist(err) {
-		migrateToMostRecentSequence(ctx, seqNum)
+		migrateToMostRecentSequence(ctx, h, seqNum)
 	}
 
 	ctx.Log("event", "created data dir", "path", dataDir)
@@ -80,28 +80,36 @@ func install(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error)
 	return "", nil
 }
 
-func migrateToMostRecentSequence(ctx *log.Context, seqNum int) {
-	// The configSequenceNumber (seqNum) env variable is used for mrseq if mrseq not found
-	// based on logic in main.go the seqNum should always be populated
-	ctx.Log("event", "recreate mrseq", "message", fmt.Sprintf("cannot find %v", mostRecentSequence))
+func migrateToMostRecentSequence(ctx *log.Context, h HandlerEnvironment, seqNum int) {
+	// The status folder is used instead of the settings because the settings file is written
+	// by the agent before install is called.  As a result, the extension cannot determine if this
+	// is a new install or an upgrade.
+	//
+	// If this is an upgrade there will be a status file. The agent will re-write the last status
+	// file to indicate that the upgrade happened successfully. The extension uses the last status
+	// sequence number to determine the last settings file that was executed.
+	//
+	// The agent helpfully copies mrseq every time an extension is upgraded thereby preserving the
+	// most recent executed sequence. If extensions use mrseq they benefit from this mechanism, and
+	// do not have invent another method.  The CustomScript extension should have been using this
+	// from the beginning, but it was not.
+	//
+	computedSeqNum, err := FindSeqNumStatus(h.HandlerEnvironment.StatusFolder)
+	if err != nil {
+		// If there was an error, the sequence number is zero.
+		ctx.Log("event", "migrate to mrseq", "error", err)
+		return
+	}
+
 	fout, err := os.Create(mostRecentSequence)
 	if err != nil {
-		ctx.Log("event", "error creating sequence file", "error", err)
+		ctx.Log("event", "migrate to mrseq", "error", err)
 		return
 	}
 	defer fout.Close()
 
-	if seqNum != 0 {
-		_, err := fout.WriteString(fmt.Sprintf("%v", seqNum))
-		if err != nil {
-			ctx.Log("event", "error writing to sequence file", "error", err)
-			return
-		}
-		ctx.Log("event", "recreate mrseq", "message", fmt.Sprintf("recreating mrseq with configSeqNum %v", seqNum))
-		return
-	}
-
-	ctx.Log("event", "recreate mrseq", "message", "seq number is 0")
+	ctx.Log("event", "migrate to mrseq", "message", fmt.Sprintf("migrated mrseq to %v", computedSeqNum))
+	fout.WriteString(fmt.Sprintf("%v", computedSeqNum))
 }
 
 func uninstall(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) {
@@ -193,7 +201,6 @@ func checkAndSaveSeqNum(ctx log.Logger, seq int, mrseqPath string) (shouldExit b
 		// sequence number.
 		return true, nil
 	}
-	ctx.Log("event", "mrseq not found", "message", "attempting to save config seqnum")
 	if err := seqnum.Set(mrseqPath, seq); err != nil {
 		return false, errors.Wrap(err, "failed to save sequence number")
 	}
