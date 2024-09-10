@@ -124,7 +124,7 @@ func unmarshalProtectedSettings(configFolder string, hs handlerSettingsCommon, v
 	// we use os/exec instead of azure-docker-extension/pkg/executil here as
 	// other extension handlers depend on this package for parsing handler
 	// settings.
-	cmd := exec.Command("openssl", "smime", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
+	cmd := exec.Command("openssl", "cms", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
 	var bOut, bErr bytes.Buffer
 	cmd.Stdin = bytes.NewReader(decoded)
 	cmd.Stdout = &bOut
