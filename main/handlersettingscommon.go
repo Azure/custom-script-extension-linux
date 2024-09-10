@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -142,7 +143,7 @@ func unmarshalProtectedSettings(configFolder string, hs handlerSettingsCommon, v
 	}
 
 	if err := cmd.Run(); err != nil {
-		return errors.Wrap(errMsg, "decrypting protected settings with smime command failed: error=%v stderr=%s", err, string(bErr.Bytes()))
+		return errors.Wrapf(errMsg, "decrypting protected settings with smime command failed: error=%v stderr=%s", err, string(bErr.Bytes()))
 	}
 
 	// decrypted: json object for protected settings
