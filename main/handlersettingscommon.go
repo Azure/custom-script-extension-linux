@@ -126,12 +126,23 @@ func unmarshalProtectedSettings(configFolder string, hs handlerSettingsCommon, v
 	// settings.
 	cmd := exec.Command("openssl", "cms", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
 	var bOut, bErr bytes.Buffer
+	var errMsg error
 	cmd.Stdin = bytes.NewReader(decoded)
 	cmd.Stdout = &bOut
 	cmd.Stderr = &bErr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("decrypting protected settings failed: error=%v stderr=%s", err, string(bErr.Bytes()))
+		errMsg = fmt.Errorf("decrypting protected settings with cms command failed: error=%v stderr=%s \n now decrypting with smime command", err, string(bErr.Bytes()))
+		cmd = exec.Command("openssl", "smime", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
+		cmd.Stdin = bytes.NewReader(decoded)
+		bOut.Reset()
+		bErr.Reset()
+		cmd.Stdout = &bOut
+		cmd.Stderr = &bErr
+	}
+
+	if err := cmd.Run(); err != nil {
+		return errors.Wrap(errMsg, "decrypting protected settings with smime command failed: error=%v stderr=%s", err, string(bErr.Bytes()))
 	}
 
 	// decrypted: json object for protected settings
