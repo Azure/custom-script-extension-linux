@@ -115,7 +115,7 @@ func (self *clientOrObjectId) isEmpty() bool {
 // runs JSON-schema and logical validation on it and returns it back.
 func parseAndValidateSettings(ctx *log.Context, configFolder string, seqNum int) (h handlerSettings, _ error) {
 	ctx.Log("event", "reading configuration")
-	pubJSON, protJSON, err := readSettings(configFolder, seqNum)
+	pubJSON, protJSON, err := readSettings(ctx, configFolder, seqNum)
 	if err != nil {
 		return h, err
 	}
@@ -144,9 +144,9 @@ func parseAndValidateSettings(ctx *log.Context, configFolder string, seqNum int)
 // readSettings uses specified configFolder (comes from HandlerEnvironment) to
 // decrypt and parse the public/protected settings of the extension handler into
 // JSON objects.
-func readSettings(configFolder string, seqNum int) (pubSettingsJSON, protSettingsJSON map[string]interface{}, err error) {
+func readSettings(ctx *log.Context, configFolder string, seqNum int) (pubSettingsJSON, protSettingsJSON map[string]interface{}, err error) {
 	cf := filepath.Join(configFolder, fmt.Sprintf("%d%s", seqNum, ".settings"))
-	pubSettingsJSON, protSettingsJSON, err = ReadSettings(cf)
+	pubSettingsJSON, protSettingsJSON, err = ReadSettings(ctx, cf)
 	err = errors.Wrapf(err, "error reading extension configuration")
 	return
 }
