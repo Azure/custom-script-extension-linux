@@ -125,6 +125,8 @@ func unmarshalProtectedSettings(configFolder string, hs handlerSettingsCommon, v
 	// we use os/exec instead of azure-docker-extension/pkg/executil here as
 	// other extension handlers depend on this package for parsing handler
 	// settings.
+
+	//using cms command to support for FIPS 140-3
 	cmd := exec.Command("openssl", "cms", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
 	var bOut, bErr bytes.Buffer
 	var errMsg error
@@ -132,6 +134,7 @@ func unmarshalProtectedSettings(configFolder string, hs handlerSettingsCommon, v
 	cmd.Stdout = &bOut
 	cmd.Stderr = &bErr
 
+	//back up smime command in case cms fails
 	if err := cmd.Run(); err != nil {
 		errMsg = fmt.Errorf("decrypting protected settings with cms command failed: error=%v stderr=%s \n now decrypting with smime command", err, string(bErr.Bytes()))
 		cmd = exec.Command("openssl", "smime", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
