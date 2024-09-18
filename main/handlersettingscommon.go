@@ -133,19 +133,19 @@ func unmarshalProtectedSettings(configFolder string, hs handlerSettingsCommon, v
 	cmd.Stdin = bytes.NewReader(decoded)
 	cmd.Stdout = &bOut
 	cmd.Stderr = &bErr
+	cmd.Run()
 
 	//back up smime command in case cms fails
+
+	errMsg = fmt.Errorf("decrypting protected settings with cms command failed: error=%v stderr=%s \n now decrypting with smime command", err, string(bErr.Bytes()))
+	cmd = exec.Command("openssl", "smime", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
+	cmd.Stdin = bytes.NewReader(decoded)
+	bOut.Reset()
+	bErr.Reset()
+	cmd.Stdout = &bOut
+	cmd.Stderr = &bErr
 	if err := cmd.Run(); err != nil {
-		errMsg = fmt.Errorf("decrypting protected settings with cms command failed: error=%v stderr=%s \n now decrypting with smime command", err, string(bErr.Bytes()))
-		cmd = exec.Command("openssl", "smime", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
-		cmd.Stdin = bytes.NewReader(decoded)
-		bOut.Reset()
-		bErr.Reset()
-		cmd.Stdout = &bOut
-		cmd.Stderr = &bErr
-		if err := cmd.Run(); err != nil {
-			return errors.Wrapf(errMsg, "decrypting protected settings with smime command failed: error=%v stderr=%s", err, string(bErr.Bytes()))
-		}
+		return errors.Wrapf(errMsg, "decrypting protected settings with smime command failed: error=%v stderr=%s", err, string(bErr.Bytes()))
 	}
 
 	// decrypted: json object for protected settings
