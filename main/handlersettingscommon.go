@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 )
 
@@ -42,7 +41,7 @@ func settingsPath(configFolder string) (string, error) {
 // ReadSettings locates the .settings file and returns public settings
 // JSON, and protected settings JSON (by decrypting it with the keys in
 // configFolder).
-func ReadSettings(ctx *log.Context, configFilePath string) (public, protected map[string]interface{}, _ error) {
+func ReadSettings(configFilePath string) (public, protected map[string]interface{}, _ error) {
 	hs, err := parseHandlerSettingsFile(configFilePath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error parsing settings file: %v", err)
@@ -50,7 +49,7 @@ func ReadSettings(ctx *log.Context, configFilePath string) (public, protected ma
 
 	public = hs.PublicSettings
 	configFolder := filepath.Dir(configFilePath)
-	if err := unmarshalProtectedSettings(ctx, configFolder, hs, &protected); err != nil {
+	if err := unmarshalProtectedSettings(configFolder, hs, &protected); err != nil {
 		return nil, nil, fmt.Errorf("failed to parse protected settings: %v", err)
 	}
 	return public, protected, nil
@@ -106,7 +105,7 @@ func parseHandlerSettingsFile(path string) (h handlerSettingsCommon, _ error) {
 // unmarshalProtectedSettings decodes the protected settings from handler
 // runtime settings JSON file, decrypts it using the certificates and unmarshals
 // into the given struct v.
-func unmarshalProtectedSettings(ctx *log.Context, configFolder string, hs handlerSettingsCommon, v interface{}) error {
+func unmarshalProtectedSettings(configFolder string, hs handlerSettingsCommon, v interface{}) error {
 	if hs.ProtectedSettingsBase64 == "" {
 		return nil
 	}
@@ -126,7 +125,6 @@ func unmarshalProtectedSettings(ctx *log.Context, configFolder string, hs handle
 	// we use os/exec instead of azure-docker-extension/pkg/executil here as
 	// other extension handlers depend on this package for parsing handler
 	// settings.
-	ctx.Log("about to do cms command")
 	cmd := exec.Command("openssl", "cms", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
 	var bOut, bErr bytes.Buffer
 	var errMsg error
@@ -135,7 +133,6 @@ func unmarshalProtectedSettings(ctx *log.Context, configFolder string, hs handle
 	cmd.Stderr = &bErr
 
 	if err := cmd.Run(); err != nil {
-		ctx.Log("about to do smime command")
 		errMsg = fmt.Errorf("decrypting protected settings with cms command failed: error=%v stderr=%s \n now decrypting with smime command", err, string(bErr.Bytes()))
 		cmd = exec.Command("openssl", "smime", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
 		cmd.Stdin = bytes.NewReader(decoded)
@@ -143,10 +140,9 @@ func unmarshalProtectedSettings(ctx *log.Context, configFolder string, hs handle
 		bErr.Reset()
 		cmd.Stdout = &bOut
 		cmd.Stderr = &bErr
-	}
-
-	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(errMsg, "decrypting protected settings with smime command failed: error=%v stderr=%s", err, string(bErr.Bytes()))
+		if err := cmd.Run(); err != nil {
+			return errors.Wrapf(errMsg, "decrypting protected settings with smime command failed: error=%v stderr=%s", err, string(bErr.Bytes()))
+		}
 	}
 
 	// decrypted: json object for protected settings
