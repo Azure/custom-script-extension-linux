@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -124,14 +125,27 @@ func unmarshalProtectedSettings(configFolder string, hs handlerSettingsCommon, v
 	// we use os/exec instead of azure-docker-extension/pkg/executil here as
 	// other extension handlers depend on this package for parsing handler
 	// settings.
-	cmd := exec.Command("openssl", "smime", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
+
+	//using cms command to support for FIPS 140-3
+	cmd := exec.Command("openssl", "cms", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
 	var bOut, bErr bytes.Buffer
+	var errMsg error
 	cmd.Stdin = bytes.NewReader(decoded)
 	cmd.Stdout = &bOut
 	cmd.Stderr = &bErr
 
+	//back up smime command in case cms fails
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("decrypting protected settings failed: error=%v stderr=%s", err, string(bErr.Bytes()))
+		errMsg = fmt.Errorf("decrypting protected settings with cms command failed: error=%v stderr=%s \n now decrypting with smime command", err, bErr.String())
+		cmd = exec.Command("openssl", "smime", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
+		cmd.Stdin = bytes.NewReader(decoded)
+		bOut.Reset()
+		bErr.Reset()
+		cmd.Stdout = &bOut
+		cmd.Stderr = &bErr
+		if err := cmd.Run(); err != nil {
+			return errors.Wrapf(errMsg, "decrypting protected settings with smime command failed: error=%v stderr=%s", err, bErr.String())
+		}
 	}
 
 	// decrypted: json object for protected settings
