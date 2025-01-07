@@ -9,6 +9,9 @@ import (
 	"syscall"
 
 	"github.com/pkg/errors"
+	vmextension "github.com/Azure/azure-extension-platform/vmextension"
+	github.com/Azure/custom-script-extension-linux/pkg/errorutil
+
 )
 
 // Exec runs the given cmd in /bin/sh, saves its stdout/stderr streams to
@@ -16,7 +19,7 @@ import (
 //
 // On error, an exit code may be returned if it is an exit code error.
 // Given stdout and stderr will be closed upon returning.
-func Exec(cmd, workdir string, stdout, stderr io.WriteCloser) (int, error) {
+func Exec(cmd, workdir string, stdout, stderr io.WriteCloser) (int, vmextension.ErrorWithClarification) {
 	defer stdout.Close()
 	defer stderr.Close()
 
@@ -30,6 +33,9 @@ func Exec(cmd, workdir string, stdout, stderr io.WriteCloser) (int, error) {
 	if ok {
 		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
 			code := status.ExitStatus()
+			if code != 0 {
+				return code, vmextension.NewErrorWithClarification(errorutil.commandExecution_failureExitCode, fmt.Errorf("command terminated with exit status=%d", code))
+			}
 			return code, fmt.Errorf("command terminated with exit status=%d", code)
 		}
 	}

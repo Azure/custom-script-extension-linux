@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
+	status "github.com/Azure/azure-extension-platform/pkg/status"
+	vmextension "github.com/Azure/azure-extension-platform/vmextension"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 )
@@ -96,6 +98,28 @@ func reportStatus(ctx *log.Context, hEnv HandlerEnvironment, seqNum int, t Type,
 	}
 	s := NewStatus(t, c.name, statusMsg(c, t, msg))
 	if err := s.Save(hEnv.HandlerEnvironment.StatusFolder, seqNum); err != nil {
+		ctx.Log("event", "failed to save handler status", "error", err)
+		return errors.Wrap(err, "failed to save handler status")
+	}
+	return nil
+}
+
+// reportStatus saves operation status to the status file for the extension
+// handler with the optional given message, if the given cmd requires reporting
+// status.
+//
+// If an error occurs reporting the status, it will be logged and returned.
+func reportErrorStatus(ctx *log.Context, hEnv HandlerEnvironment, seqNum int, t Type, c cmd, err vmextension.ErrorWithClarification) error {
+	if !c.shouldReportStatus {
+		ctx.Log("status", "not reported for operation (by design)")
+		return nil
+	}
+	ewc := status.ErrorClarification{
+		Code:    err.ErrorCode,
+		Message: err.Error(),
+	}
+	s := status.NewError(c.name, ewc)
+	if err := s.Save(hEnv.HandlerEnvironment.StatusFolder, uint(seqNum)); err != nil {
 		ctx.Log("event", "failed to save handler status", "error", err)
 		return errors.Wrap(err, "failed to save handler status")
 	}

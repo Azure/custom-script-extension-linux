@@ -22,14 +22,16 @@ const (
 	commandExecution_failureExitCode         int = 2
 	commandExecution_interruptedByVmShutdown int = 3
 
-	customerInput_commandToExecuteSpecifiedInTwoPlaces                   int = 20
-	customerInput_ignoreRelativePathForFileDownloadsSpecifiedInTwoPlaces int = 21
-	customerInput_fileUrisSpecifiedInTwoPlaces                           int = 22
-	customerInput_commandToExecuteNotSpecified                           int = 23
-	customerInput_fileUriContainsNull                                    int = 24
-	customerInput_invalidFileUris                                        int = 25
-	customerInput_storageCredsAndMIBothSpecified                         int = 26
-	customerInput_clientIdObjectIdBothSpecified                          int = 27
+	customerInput_commandToExecuteSpecifiedInTwoPlaces   int = 20
+	customerInput_fileUrisSpecifiedInTwoPlaces           int = 22
+	customerInput_commandToExecuteAndScriptNotSpecified  int = 23
+	customerInput_fileUriContainsNull                    int = 24
+	customerInput_invalidFileUris                        int = 25
+	customerInput_storageCredsAndMIBothSpecified         int = 26
+	customerInput_clientIdObjectIdBothSpecified          int = 27
+	customerInput_scriptSpecifiedInTwoPlaces             int = 28
+	customerInput_commandToExecuteAndScriptBothSpecified int = 29
+	customerInput_incompleteStorageCreds                 int = 30
 
 	fileDownload_unableToCreateDownloadDirectory int = 50
 	fileDownload_sasExpired                      int = 51
