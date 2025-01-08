@@ -8,10 +8,9 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/pkg/errors"
 	vmextension "github.com/Azure/azure-extension-platform/vmextension"
-	github.com/Azure/custom-script-extension-linux/pkg/errorutil
-
+	errorutil "github.com/Azure/custom-script-extension-linux/pkg/errorutil"
+	"github.com/pkg/errors"
 )
 
 // Exec runs the given cmd in /bin/sh, saves its stdout/stderr streams to
@@ -33,13 +32,14 @@ func Exec(cmd, workdir string, stdout, stderr io.WriteCloser) (int, vmextension.
 	if ok {
 		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
 			code := status.ExitStatus()
-			if code != 0 {
-				return code, vmextension.NewErrorWithClarification(errorutil.commandExecution_failureExitCode, fmt.Errorf("command terminated with exit status=%d", code))
-			}
-			return code, fmt.Errorf("command terminated with exit status=%d", code)
+			return code, vmextension.NewErrorWithClarification(errorutil.CommandExecution_failedUnknownError, fmt.Errorf("command terminated with exit status=%d", code))
 		}
 	}
-	return 0, errors.Wrapf(err, "failed to execute command")
+	if err == nil {
+		return 0, vmextension.NewErrorWithClarification(errorutil.NoError, nil)
+	}
+	return 0, vmextension.NewErrorWithClarification(errorutil.NoError, errors.Wrapf(err, "failed to execute command"))
+
 }
 
 // ExecCmdInDir executes the given command in given directory and saves output
@@ -48,20 +48,20 @@ func Exec(cmd, workdir string, stdout, stderr io.WriteCloser) (int, vmextension.
 //
 // Ideally, we execute commands only once per sequence number in custom-script-extension,
 // and save their output under /var/lib/waagent/<dir>/download/<seqnum>/*.
-func ExecCmdInDir(cmd, workdir string) error {
+func ExecCmdInDir(cmd, workdir string) vmextension.ErrorWithClarification {
 	outFn, errFn := logPaths(workdir)
 
 	outF, err := os.OpenFile(outFn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if err != nil {
-		return errors.Wrapf(err, "failed to open stdout file")
+		return vmextension.NewErrorWithClarification(errorutil.NoError, errors.Wrapf(err, "failed to open stdout file"))
 	}
 	errF, err := os.OpenFile(errFn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if err != nil {
-		return errors.Wrapf(err, "failed to open stderr file")
+		return vmextension.NewErrorWithClarification(errorutil.NoError, errors.Wrapf(err, "failed to open stderr file"))
 	}
 
-	_, err = Exec(cmd, workdir, outF, errF)
-	return err
+	_, ewc := Exec(cmd, workdir, outF, errF)
+	return ewc
 }
 
 // logPaths returns stdout and stderr file paths for the specified output

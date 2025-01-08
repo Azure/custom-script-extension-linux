@@ -8,11 +8,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/Azure/azure-extension-platform/vmextension"
 	"github.com/go-kit/kit/log"	
 	
-	github.com/Azure/custom-script-extension-linux/pkg/errorutil
-
+    errorutil "github.com/Azure/custom-script-extension-linux/pkg/errorutil"
 )
 
 // SleepFunc pauses the execution for at least duration d.
@@ -37,17 +35,19 @@ const (
 // closed on failures). If the retries do not succeed, the last error is returned.
 //
 // It sleeps in exponentially increasing durations between retries.
-func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf SleepFunc) (int64, vmextension.ErrorWithClarification) {
-	var lastErr vmextension.ErrorWithClarification
+func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf SleepFunc) (int64, int,  error) {
+	var lastErr error
+    var lastErrCode int
 	for _, d := range downloaders {
 		for n := 0; n < expRetryN; n++ {
 			ctx := ctx.With("retry", n)
 
 			// reset the last error before each retry
-			lastErr = vmextension.NewErrorWithClarification(errorutil.noError, nil)
+			lastErr = nil
+			lastErrCode = errorutil.NoError
 			start := time.Now()
-			status, out, err := Download(ctx, d)
-			if err.Err == nil {
+			status, out, errCode, err := Download(ctx, d)
+			if err == nil {
 				// server returned status code 200 OK
 				// we have a response body, copy it to the file
 				nBytes, innerErr := io.CopyBuffer(f, out, make([]byte, writeBufSize))
@@ -57,7 +57,7 @@ func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf Slee
 					out.Close()
 					end := time.Since(start)
 					ctx.Log("info", fmt.Sprintf("file download sucessful: downloaded and saved %d bytes in %d milliseconds", nBytes, end.Milliseconds()))
-					return nBytes, vmextension.NewErrorWithClarification(errorutil.noError, nil)
+					return nBytes, lastErrCode, lastErr
 				} else {
 					// we failed to download the response body and write it to file
 					// because either connection was closed prematurely or file write operation failed
@@ -66,11 +66,13 @@ func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf Slee
 					// clear out the contents of the file so as to not leave a partial file
 					f.Truncate(0)
 					// cache the inner error
-					lastErr = vmextension.NewErrorWithClarification(errorutil.fileDownload_genericError, innerErr)
+					lastErrCode = errorutil.FileDownload_genericError
+					lastErr = innerErr
 				}
 			} else {
 				// cache the outer error
 				lastErr = err
+				lastErrCode = errCode
 			}
 
 			// we are here because either server returned a non-200 status code
@@ -98,7 +100,7 @@ func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf Slee
 			}
 		}
 	}
-	return 0, lastErr
+	return 0, lastErrCode, lastErr
 }
 
 func isTransientHttpStatusCode(statusCode int) bool {

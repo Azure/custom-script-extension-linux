@@ -17,7 +17,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 
-	github.com/Azure/custom-script-extension-linux/pkg/errorutil
+	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
 
 )
 
@@ -27,11 +27,11 @@ import (
 func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handlerSettings) vmextension.ErrorWithClarification {
 	fn, err := urlToFileName(url)
 	if err != nil {
-		return vmextension.NewErrorWithClarification(errorutil.customerInput_invalidFileUris, err)
+		return vmextension.NewErrorWithClarification(errorutil.CustomerInput_invalidFileUris, err)
 	}
 
 	if !urlutil.IsValidUrl(url) {
-		return vmextension.NewErrorWithClarification(errorutil.customerInput_invalidFileUris,
+		return vmextension.NewErrorWithClarification(errorutil.CustomerInput_invalidFileUris,
 			fmt.Errorf("[REDACTED] is not a valid url"))
 	}
 
@@ -49,7 +49,7 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handl
 	if cfg.SkipDos2Unix == false {
 		err = postProcessFile(fp)
 	}
-	return vmextension.NewErrorWithClarification(errorutil.systemError, errors.Wrapf(err, "failed to post-process '%s'", fn))
+	return vmextension.NewErrorWithClarification(errorutil.SystemError, errors.Wrapf(err, "failed to post-process '%s'", fn))
 }
 
 // getDownloader returns a downloader for the given URL based on whether the
@@ -72,27 +72,27 @@ func getDownloaders(fileURL string, storageAccountName, storageAccountKey string
 			case managedIdentity.ClientId == "" && managedIdentity.ObjectId != "":
 				msiProvider = download.GetMsiProviderForStorageAccountsWithObjectId(fileURL, managedIdentity.ObjectId)
 			default:
-				return nil, vmextension.NewErrorWithClarification(errorutil.customerInput_clientIdObjectIdBothSpecified, fmt.Errorf("unexpected combination of ClientId and ObjectId found"))
+				return nil, vmextension.NewErrorWithClarification(errorutil.CustomerInput_clientIdObjectIdBothSpecified, fmt.Errorf("unexpected combination of ClientId and ObjectId found"))
 			}
 			return []download.Downloader{
 				// try downloading without MSI token first, but attempt with MSI if the download fails
 				download.NewURLDownload(fileURL),
 				download.NewBlobWithMsiDownload(fileURL, msiProvider),
-			}, vmextension.NewErrorWithClarification(errorutil.noError, nil)
+			}, vmextension.NewErrorWithClarification(errorutil.NoError, nil)
 		} else {
 			// do not use MSI downloader if the uri is not azure storage blob, or managedIdentity isn't specified
-			return []download.Downloader{download.NewURLDownload(fileURL)}, vmextension.NewErrorWithClarification(errorutil.noError, nil)
+			return []download.Downloader{download.NewURLDownload(fileURL)}, vmextension.NewErrorWithClarification(errorutil.NoError, nil)
 		}
 	} else {
 		// if storage name account and key are specified, use that for all files
 		// this preserves old behavior
 		blob, err := blobutil.ParseBlobURL(fileURL)
 		if err != nil {
-			return nil, vmextension.NewErrorWithClarification(errorutil.customerInput_invalidFileUris, err)
+			return nil, vmextension.NewErrorWithClarification(errorutil.CustomerInput_invalidFileUris, err)
 		}
 		return []download.Downloader{download.NewBlobDownload(
 				storageAccountName, storageAccountKey, blob)},
-			vmextension.NewErrorWithClarification(errorutil.noError, nil)
+			vmextension.NewErrorWithClarification(errorutil.NoError, nil)
 	}
 }
 

@@ -6,46 +6,47 @@ import (
 
 const (
 	// System errors
-	fileDownload_badRequest   int = -41
-	fileDownload_unknownError int = -40
+	FileDownload_badRequest   int = -41
+	FileDownload_unknownError int = -40
 
-	imds_internalMsiError int = -30
+	Imds_internalMsiError int = -30
 
-	internal_badConfig               int = -21
-	internal_couldNotFindCertificate int = -20
+	Internal_badConfig               int = -21
+	Internal_couldNotFindCertificate int = -20
 
-	storage_internalServerError int = -1
-	systemError                 int = 0 // CRP interprets anything > 0 as user errors
+	Storage_internalServerError int = -1
+	SystemError                 int = 0 // CRP interprets anything > 0 as user errors
 
 	// User errors
-	commandExecution_failedUnknownError      int = 1
-	commandExecution_failureExitCode         int = 2
-	commandExecution_interruptedByVmShutdown int = 3
+	CommandExecution_failedUnknownError      int = 1
+	CommandExecution_failureExitCode         int = 2
+	CommandExecution_interruptedByVmShutdown int = 3
 
-	customerInput_commandToExecuteSpecifiedInTwoPlaces   int = 20
-	customerInput_fileUrisSpecifiedInTwoPlaces           int = 22
-	customerInput_commandToExecuteAndScriptNotSpecified  int = 23
-	customerInput_fileUriContainsNull                    int = 24
-	customerInput_invalidFileUris                        int = 25
-	customerInput_storageCredsAndMIBothSpecified         int = 26
-	customerInput_clientIdObjectIdBothSpecified          int = 27
-	customerInput_scriptSpecifiedInTwoPlaces             int = 28
-	customerInput_commandToExecuteAndScriptBothSpecified int = 29
-	customerInput_incompleteStorageCreds                 int = 30
+	CustomerInput_commandToExecuteSpecifiedInTwoPlaces   int = 20
+	CustomerInput_fileUrisSpecifiedInTwoPlaces           int = 22
+	CustomerInput_commandToExecuteAndScriptNotSpecified  int = 23
+	CustomerInput_fileUriContainsNull                    int = 24
+	CustomerInput_invalidFileUris                        int = 25
+	CustomerInput_storageCredsAndMIBothSpecified         int = 26
+	CustomerInput_clientIdObjectIdBothSpecified          int = 27
+	CustomerInput_scriptSpecifiedInTwoPlaces             int = 28
+	CustomerInput_commandToExecuteAndScriptBothSpecified int = 29
+	CustomerInput_incompleteStorageCreds                 int = 30
 
-	fileDownload_unableToCreateDownloadDirectory int = 50
-	fileDownload_sasExpired                      int = 51
-	fileDownload_accessDenied                    int = 52
-	fileDownload_doesNotExist                    int = 53
-	fileDownload_networkingError                 int = 54
-	fileDownload_genericError                    int = 55
-	fileDownload_exceededTimeout                 int = 56
+	FileDownload_unableToCreateDownloadDirectory int = 50
+	FileDownload_sasExpired                      int = 51
+	FileDownload_accessDenied                    int = 52
+	FileDownload_doesNotExist                    int = 53
+	FileDownload_networkingError                 int = 54
+	FileDownload_genericError                    int = 55
+	FileDownload_exceededTimeout                 int = 56
 
-	msi_notFound                    int = 70
-	msi_doesNotHaveRightPermissions int = 71
-	msi_GenericRetrievalError       int = 72
+	Msi_notFound                    int = 70
+	Msi_doesNotHaveRightPermissions int = 71
+	Msi_GenericRetrievalError       int = 72
 
 	// No Error - used as a placeholder value
 	// when representing an "empty" ErrorWithClarification
-	noError int = math.MaxInt
+	// or when the error can be treated without the clarification
+	NoError int = math.MaxInt
 )

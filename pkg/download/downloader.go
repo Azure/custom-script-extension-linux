@@ -6,10 +6,9 @@ import (
 	"net"
 	"net/http"
 	"time"
-	"url"
+	"net/url"
 
-	"github.com/Azure/azure-extension-platform/vmextension"
-	github.com/Azure/custom-script-extension-linux/pkg/errorutil
+	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
 	"github.com/Azure/custom-script-extension-linux/pkg/urlutil"
 	"github.com/go-kit/kit/log"
 
@@ -47,11 +46,10 @@ var (
 // Download retrieves a response body and checks the response status code to see
 // if it is 200 OK and then returns the response body. It issues a new request
 // every time called. It is caller's responsibility to close the response body.
-func Download(ctx *log.Context, d Downloader) (int, io.ReadCloser, vmextension.ErrorWithClarification) {
+func Download(ctx *log.Context, d Downloader) (int, io.ReadCloser, int, error) {
 	req, err := d.GetRequest()
 	if err != nil {
-		return -1, nil, vmextension.NewErrorWithClarification(errorutil.fileDownload_genericError, 
-			errors.Wrapf(err, "failed to create http request"))
+		return -1, nil, errorutil.FileDownload_genericError, errors.Wrapf(err, "failed to create http request")
 	}
 	requestID := req.Header.Get(xMsClientRequestIdHeaderName)
 	if len(requestID) > 0 {
@@ -59,19 +57,17 @@ func Download(ctx *log.Context, d Downloader) (int, io.ReadCloser, vmextension.E
 	}
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		if ((url.Error)err.Timeout()) {
+		if ((err.(*url.Error)).Timeout()) {
 			err = urlutil.RemoveUrlFromErr(err)
-			return -1, nil, vmextension.NewErrorWithClarification(errorutil.fileDownload_exceededTimeout, 
-				errors.Wrapf(err, "http request timed out"))
+			return -1, nil, errorutil.FileDownload_exceededTimeout, errors.Wrapf(err, "http request timed out")
 		}
 		err = urlutil.RemoveUrlFromErr(err)
-		return -1, nil, vmextension.NewErrorWithClarification(errorutil.fileDownload_unknownError, 
-			errors.Wrapf(err, "http request failed"))
+		return -1, nil, errorutil.FileDownload_unknownError, errors.Wrapf(err, "http request failed")
 	}
 
 	if resp.StatusCode == http.StatusOK {
 		// We're setting the errorCode to MaxInt because we're only checking whether the internal error is nil
-		return resp.StatusCode, resp.Body, vmextension.NewErrorWithClarification(errorutil.noError, nil)
+		return resp.StatusCode, resp.Body, errorutil.NoError, nil
 	}
 
 	errString := ""
@@ -82,12 +78,12 @@ func Download(ctx *log.Context, d Downloader) (int, io.ReadCloser, vmextension.E
 		switch resp.StatusCode {
 		case http.StatusNotFound:
 			errString = MsiDownload404ErrorString
-			errClarificationCode = errorutil.msi_notFound
+			errClarificationCode = errorutil.Msi_notFound
 		case http.StatusForbidden:
 			errString = MsiDownload403ErrorString
-			errClarificationCode = errorutil.msi_doesNotHaveRightPermissions
+			errClarificationCode = errorutil.Msi_doesNotHaveRightPermissions
 		default:
-			errClarificationCode = errorutil.msi_GenericRetrievalError
+			errClarificationCode = errorutil.Msi_GenericRetrievalError
 		}
 		break
 	default:
@@ -97,33 +93,33 @@ func Download(ctx *log.Context, d Downloader) (int, io.ReadCloser, vmextension.E
 			errString = fmt.Sprintf("CustomScript failed to download the file from %s because access was denied. Please fix the blob permissions and try again, the response code and message returned were: %q",
 				hostname,
 				resp.Status)
-			errClarificationCode = errorutil.fileDownload_accessDenied
+			errClarificationCode = errorutil.FileDownload_accessDenied
 		case http.StatusNotFound:
 			errString = fmt.Sprintf("CustomScript failed to download the file from %s because it does not exist. Please create the blob and try again, the response code and message returned were: %q",
 				hostname,
 				resp.Status)
-			errClarificationCode = errorutil.fileDownload_doesNotExist
+			errClarificationCode = errorutil.FileDownload_doesNotExist
 
 		case http.StatusBadRequest:
 			errString = fmt.Sprintf("CustomScript failed to download the file from %s because parts of the request were incorrectly formatted, missing, and/or invalid. The response code and message returned were: %q",
 				hostname,
 				resp.Status)
-			errClarificationCode = errorutil.fileDownload_badRequest
+			errClarificationCode = errorutil.FileDownload_badRequest
 
 		case http.StatusInternalServerError:
 			errString = fmt.Sprintf("CustomScript failed to download the file from %s due to an issue with storage. The response code and message returned were: %q",
 				hostname,
 				resp.Status)
-			errClarificationCode = errorutil.storage_internalServerError
+			errClarificationCode = errorutil.Storage_internalServerError
 		default:
 			errString = fmt.Sprintf("CustomScript failed to download the file from %s because the server returned a response code and message of %q Please verify the machine has network connectivity.",
 				hostname,
 				resp.Status)
-			errClarificationCode = errorutil.fileDownload_networkingError
+			errClarificationCode = errorutil.FileDownload_networkingError
 		}
 	}
 	if len(requestId) > 0 {
 		errString += fmt.Sprintf(" (Service request ID: %s)", requestId)
 	}
-	return resp.StatusCode, nil, vmextension.NewErrorWithClarification(errClarificationCode, fmt.Errorf(errString))
+	return resp.StatusCode, nil, errClarificationCode, fmt.Errorf(errString)
 }

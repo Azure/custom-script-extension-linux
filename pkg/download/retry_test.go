@@ -2,7 +2,7 @@ package download_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	// "io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -168,8 +168,8 @@ func TestRetriesWith_LargeFileThatTimesOutWhileDownloading(t *testing.T) {
 	largeFileDownloader := mockDownloader{0, srv.URL + "/bytes/" + fmt.Sprintf("%d", size)}
 	sr := new(sleepRecorder)
 
-	n, err := download.WithRetries(nopLog(), file, []download.Downloader{&largeFileDownloader}, sr.Sleep)
-	require.NotNil(t, err, "download with retries should fail because of server timeout")
+	n, ewc := download.WithRetries(nopLog(), file, []download.Downloader{&largeFileDownloader}, sr.Sleep)
+	require.NotNil(t, ewc.Err, "download with retries should fail because of server timeout")
 	require.EqualValues(t, 0, n, "downloaded number of bytes should be zero")
 
 	fi, err := file.Stat()
@@ -178,8 +178,8 @@ func TestRetriesWith_LargeFileThatTimesOutWhileDownloading(t *testing.T) {
 }
 
 func CreateTestFile(t *testing.T) (string, *os.File) {
-	dir, err := ioutil.TempDir("", "")
-	require.Nil(t, err)
+	dir := os.TempDir()
+	// require.Nil(t, err)
 
 	path := filepath.Join(dir, "test-file")
 
