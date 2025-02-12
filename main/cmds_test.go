@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
 	"github.com/ahmetalpbalkan/go-httpbin"
 	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/require"
@@ -84,7 +85,7 @@ func Test_runCmd_success(t *testing.T) {
 
 	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
 		publicSettings: publicSettings{CommandToExecute: "date"},
-	}), "command should run successfully")
+	}).Err, "command should run successfully")
 
 	// check stdout stderr files
 	_, err = os.Stat(filepath.Join(dir, "stdout"))
@@ -98,11 +99,12 @@ func Test_runCmd_fail(t *testing.T) {
 	require.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	err = runCmd(log.NewNopLogger(), dir, handlerSettings{
+	ewc := runCmd(log.NewNopLogger(), dir, handlerSettings{
 		publicSettings: publicSettings{CommandToExecute: "non-existing-cmd"},
 	})
-	require.NotNil(t, err, "command terminated with exit status")
-	require.Contains(t, err.Error(), "failed to execute command")
+	require.Equal(t, errorutil.CommandExecution_failureExitCode, ewc.ErrorCode)
+	require.NotNil(t, ewc.Err, "command terminated with exit status")
+	require.Contains(t, ewc.Err.Error(), "failed to execute command")
 }
 
 func Test_downloadFiles(t *testing.T) {
@@ -113,7 +115,7 @@ func Test_downloadFiles(t *testing.T) {
 	srv := httptest.NewServer(httpbin.GetMux())
 	defer srv.Close()
 
-	err = downloadFiles(log.NewContext(log.NewNopLogger()),
+	ewc := downloadFiles(log.NewContext(log.NewNopLogger()),
 		dir,
 		handlerSettings{
 			publicSettings: publicSettings{
@@ -123,7 +125,7 @@ func Test_downloadFiles(t *testing.T) {
 					srv.URL + "/bytes/1000",
 				}},
 		})
-	require.Nil(t, err)
+	require.Nil(t, ewc.Err)
 
 	// check the files
 	f := []string{"10", "100", "1000"}

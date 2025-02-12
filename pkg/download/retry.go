@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"	
+	"github.com/Azure/azure-extension-platform/vmextension"
+
 	
     errorutil "github.com/Azure/custom-script-extension-linux/pkg/errorutil"
 )
@@ -35,7 +37,7 @@ const (
 // closed on failures). If the retries do not succeed, the last error is returned.
 //
 // It sleeps in exponentially increasing durations between retries.
-func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf SleepFunc) (int64, int,  error) {
+func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf SleepFunc) (int64, vmextension.ErrorWithClarification) {
 	var lastErr error
     var lastErrCode int
 	for _, d := range downloaders {
@@ -46,8 +48,8 @@ func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf Slee
 			lastErr = nil
 			lastErrCode = errorutil.NoError
 			start := time.Now()
-			status, out, errCode, err := Download(ctx, d)
-			if err == nil {
+			status, out, ewc := Download(ctx, d)
+			if ewc.Err == nil {
 				// server returned status code 200 OK
 				// we have a response body, copy it to the file
 				nBytes, innerErr := io.CopyBuffer(f, out, make([]byte, writeBufSize))
@@ -57,7 +59,7 @@ func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf Slee
 					out.Close()
 					end := time.Since(start)
 					ctx.Log("info", fmt.Sprintf("file download sucessful: downloaded and saved %d bytes in %d milliseconds", nBytes, end.Milliseconds()))
-					return nBytes, lastErrCode, lastErr
+					return nBytes, vmextension.NewErrorWithClarification(lastErrCode, lastErr)
 				} else {
 					// we failed to download the response body and write it to file
 					// because either connection was closed prematurely or file write operation failed
@@ -71,8 +73,8 @@ func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf Slee
 				}
 			} else {
 				// cache the outer error
-				lastErr = err
-				lastErrCode = errCode
+				lastErr = ewc.Err
+				lastErrCode = ewc.ErrorCode
 			}
 
 			// we are here because either server returned a non-200 status code
@@ -100,7 +102,7 @@ func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf Slee
 			}
 		}
 	}
-	return 0, lastErrCode, lastErr
+	return 0, vmextension.NewErrorWithClarification(lastErrCode, lastErr)
 }
 
 func isTransientHttpStatusCode(statusCode int) bool {

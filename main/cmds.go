@@ -253,7 +253,7 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (ewc vmextension.Er
 
 	if ewc.Err != nil {
 		ctx.Log("event", "failed to execute command", "error", err, "output", dir)
-		return vmextension.NewErrorWithClarification(errorutil.NoError, errors.Wrap(err, "failed to execute command"))
+		return vmextension.NewErrorWithClarification(ewc.ErrorCode, errors.Wrap(ewc.Err, "failed to execute command"))
 	}
 	ctx.Log("event", "executed command", "output", dir)
 	return vmextension.NewErrorWithClarification(errorutil.NoError, nil)

@@ -32,13 +32,13 @@ func Exec(cmd, workdir string, stdout, stderr io.WriteCloser) (int, vmextension.
 	if ok {
 		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
 			code := status.ExitStatus()
-			return code, vmextension.NewErrorWithClarification(errorutil.CommandExecution_failedUnknownError, fmt.Errorf("command terminated with exit status=%d", code))
+			return code, vmextension.NewErrorWithClarification(errorutil.CommandExecution_failureExitCode, fmt.Errorf("command terminated with exit status=%d", code))
 		}
 	}
 	if err == nil {
 		return 0, vmextension.NewErrorWithClarification(errorutil.NoError, nil)
 	}
-	return 0, vmextension.NewErrorWithClarification(errorutil.NoError, errors.Wrapf(err, "failed to execute command"))
+	return 0, vmextension.NewErrorWithClarification(errorutil.CommandExecution_failedUnknownError, errors.Wrapf(err, "failed to execute command"))
 
 }
 
