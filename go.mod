@@ -1,10 +1,12 @@
 module github.com/Azure/custom-script-extension-linux
 
-go 1.21
+go 1.23
+
+toolchain go1.23.5
 
 require (
 	github.com/Azure/azure-extension-foundation v0.0.0-20230404211847-9858bdd5c187
-	github.com/Azure/azure-extension-platform v0.0.0-20230218002700-ca684482c954
+	github.com/Azure/azure-extension-platform v0.0.0-20250107200156-aa20f765d49f
 	github.com/Azure/azure-sdk-for-go v3.1.0-beta.0.20160802173609-87de771fcdf5+incompatible
 	github.com/ahmetalpbalkan/go-httpbin v0.0.0-20160706084156-8817b883dae1
 	github.com/go-kit/kit v0.12.0
@@ -24,6 +26,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
+	golang.org/x/sys v0.5.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

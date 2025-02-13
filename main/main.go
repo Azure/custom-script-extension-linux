@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/go-kit/kit/log"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -78,10 +79,11 @@ func main() {
 	}
 	// execute the subcommand
 	reportStatus(ctx, hEnv, seqNum, StatusTransitioning, cmd, "")
-	msg, err := cmd.f(ctx, hEnv, seqNum)
-	if err != nil {
-		ctx.Log("event", "failed to handle", "error", err)
-		reportStatus(ctx, hEnv, seqNum, StatusError, cmd, err.Error()+msg)
+	msg, ewc := cmd.f(ctx, hEnv, seqNum)
+	if ewc.Err != nil {
+		ctx.Log("event", "failed to handle", "error", ewc.Error())
+		ewc.Err = errors.Wrap(ewc.Err, ewc.Error()+msg)
+		reportErrorStatus(ctx, hEnv, seqNum, StatusError, cmd, ewc)
 		os.Exit(cmd.failExitCode)
 	}
 	reportStatus(ctx, hEnv, seqNum, StatusSuccess, cmd, msg)

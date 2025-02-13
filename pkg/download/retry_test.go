@@ -2,7 +2,7 @@ package download_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	// "io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -48,7 +48,7 @@ func TestWithRetries_noRetries(t *testing.T) {
 	sr := new(sleepRecorder)
 
 	n, err := download.WithRetries(nopLog(), file, []download.Downloader{d}, sr.Sleep)
-	require.Nil(t, err, "should not fail")
+	require.Nil(t, err.Err, "should not fail")
 	require.EqualValues(t, 0, n, "downloaded number of bytes should be zero")
 	require.Equal(t, []time.Duration(nil), []time.Duration(*sr), "sleep should not be called")
 }
@@ -65,7 +65,7 @@ func TestWithRetries_failing_validateNumberOfCalls(t *testing.T) {
 	sr := new(sleepRecorder)
 
 	n, err := download.WithRetries(nopLog(), file, []download.Downloader{bd}, sr.Sleep)
-	require.Contains(t, err.Error(), "expected error", "error is preserved")
+	require.Contains(t, err.Err.Error(), "expected error", "error is preserved")
 	require.EqualValues(t, 0, n, "downloaded number of bytes should be zero")
 	require.EqualValues(t, 7, bd.calls, "calls exactly expRetryN times")
 }
@@ -82,8 +82,8 @@ func TestWithRetries_failingBadStatusCode_validateSleeps(t *testing.T) {
 	sr := new(sleepRecorder)
 
 	n, err := download.WithRetries(nopLog(), file, []download.Downloader{d}, sr.Sleep)
-	require.Contains(t, err.Error(), "429 Too Many Requests")
-	require.Contains(t, err.Error(), "Please verify the machine has network connectivity")
+	require.Contains(t, err.Err.Error(), "429 Too Many Requests")
+	require.Contains(t, err.Err.Error(), "Please verify the machine has network connectivity")
 	require.EqualValues(t, 0, n, "downloaded number of bytes should be zero")
 	require.Equal(t, sleepSchedule, []time.Duration(*sr))
 }
@@ -100,7 +100,7 @@ func TestWithRetries_healingServer(t *testing.T) {
 	sr := new(sleepRecorder)
 
 	n, err := download.WithRetries(nopLog(), file, []download.Downloader{d}, sr.Sleep)
-	require.Nil(t, err, "should eventually succeed")
+	require.Nil(t, err.Err, "should eventually succeed")
 	require.EqualValues(t, 0, n, "downloaded number of bytes should be zero")
 	require.Equal(t, sleepSchedule[:3], []time.Duration(*sr))
 }
@@ -118,7 +118,7 @@ func TestRetriesWith_SwitchDownloaderOn404(t *testing.T) {
 	d200 := mockDownloader{0, hSvr.URL}
 
 	n, err := download.WithRetries(nopLog(), file, []download.Downloader{&d404, &d200}, func(d time.Duration) { return })
-	require.Nil(t, err, "should eventually succeed")
+	require.Nil(t, err.Err, "should eventually succeed")
 	require.EqualValues(t, 0, n, "downloaded number of bytes should be zero")
 	require.Equal(t, d404.timesCalled, 1)
 	require.Equal(t, d200.timesCalled, 4)
@@ -140,7 +140,7 @@ func TestRetriesWith_SwitchDownloaderThenFailWithCorretErrorMessage(t *testing.T
 	msiDownloader403 := download.NewBlobWithMsiDownload(svr.URL+"/status/403", mockMsiProvider)
 
 	n, err := download.WithRetries(nopLog(), file, []download.Downloader{&d404, msiDownloader403}, func(d time.Duration) { return })
-	require.NotNil(t, err, "download with retries should fail")
+	require.NotNil(t, err.Err, "download with retries should fail")
 	require.EqualValues(t, 0, n, "downloaded number of bytes should be zero")
 	require.Equal(t, d404.timesCalled, 1)
 	require.True(t, strings.Contains(err.Error(), download.MsiDownload403ErrorString), "error string doesn't contain the correct message")
@@ -149,7 +149,7 @@ func TestRetriesWith_SwitchDownloaderThenFailWithCorretErrorMessage(t *testing.T
 	msiDownloader404 := download.NewBlobWithMsiDownload(svr.URL+"/status/404", mockMsiProvider)
 
 	n, err = download.WithRetries(nopLog(), file, []download.Downloader{&d404, msiDownloader404}, func(d time.Duration) { return })
-	require.NotNil(t, err, "download with retries should fail")
+	require.NotNil(t, err.Err, "download with retries should fail")
 	require.EqualValues(t, 0, n, "downloaded number of bytes should be zero")
 	require.Equal(t, d404.timesCalled, 1)
 	require.True(t, strings.Contains(err.Error(), download.MsiDownload404ErrorString), "error string doesn't contain the correct message")
@@ -168,8 +168,8 @@ func TestRetriesWith_LargeFileThatTimesOutWhileDownloading(t *testing.T) {
 	largeFileDownloader := mockDownloader{0, srv.URL + "/bytes/" + fmt.Sprintf("%d", size)}
 	sr := new(sleepRecorder)
 
-	n, err := download.WithRetries(nopLog(), file, []download.Downloader{&largeFileDownloader}, sr.Sleep)
-	require.NotNil(t, err, "download with retries should fail because of server timeout")
+	n, ewc := download.WithRetries(nopLog(), file, []download.Downloader{&largeFileDownloader}, sr.Sleep)
+	require.NotNil(t, ewc.Err, "download with retries should fail because of server timeout")
 	require.EqualValues(t, 0, n, "downloaded number of bytes should be zero")
 
 	fi, err := file.Stat()
@@ -178,8 +178,8 @@ func TestRetriesWith_LargeFileThatTimesOutWhileDownloading(t *testing.T) {
 }
 
 func CreateTestFile(t *testing.T) (string, *os.File) {
-	dir, err := ioutil.TempDir("", "")
-	require.Nil(t, err)
+	dir := os.TempDir()
+	// require.Nil(t, err)
 
 	path := filepath.Join(dir, "test-file")
 
