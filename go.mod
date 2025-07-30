@@ -1,6 +1,6 @@
 module github.com/Azure/custom-script-extension-linux
 
-go 1.21
+go 1.24
 
 require (
 	github.com/Azure/azure-extension-foundation v0.0.0-20230404211847-9858bdd5c187
