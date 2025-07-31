@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Azure/azure-extension-platform/vmextension"
 	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
 	"github.com/stretchr/testify/require"
 )
@@ -15,7 +16,7 @@ import (
 func TestExec_success(t *testing.T) {
 	v := new(mockFile)
 	ec, err := Exec("date", "/", v, v)
-	require.Nil(t, err.Err, "err: %v -- out: %s", err.Err, v.b.Bytes())
+	require.Nil(t, err, "err: %v -- out: %s", err, v.b.Bytes())
 	require.EqualValues(t, 0, ec)
 }
 
@@ -25,7 +26,7 @@ func TestExec_success_redirectsStdStreams_closesFds(t *testing.T) {
 	require.False(t, e.closed, "stderr open")
 
 	_, err := Exec("/bin/echo 'I am stdout!'>&1; /bin/echo 'I am stderr!'>&2", "/", o, e)
-	require.Nil(t, err.Err, "err: %v -- stderr: %s", err.Err, e.b.Bytes())
+	require.Nil(t, err, "err: %v -- stderr: %s", err, e.b.Bytes())
 	require.Equal(t, "I am stdout!\n", string(o.b.Bytes()))
 	require.Equal(t, "I am stderr!\n", string(e.b.Bytes()))
 	require.True(t, o.closed, "stdout closed")
@@ -34,17 +35,25 @@ func TestExec_success_redirectsStdStreams_closesFds(t *testing.T) {
 
 func TestExec_failure_exitError(t *testing.T) {
 	ec, err := Exec("exit 12", "/", new(mockFile), new(mockFile))
-	require.Equal(t, err.ErrorCode, errorutil.CommandExecution_failureExitCode)
-	require.NotNil(t, err.Err)
-	require.EqualError(t, err.Err, "command terminated with exit status=12") // error is customized
+	if customErr, ok := err.(vmextension.ErrorWithClarification); ok {
+		require.Equal(t, customErr.ErrorCode, errorutil.CommandExecution_failureExitCode)
+		require.NotNil(t, customErr.Err)
+		require.EqualError(t, customErr.Err, "command terminated with exit status=12") // error is customized
+	} else {
+		t.Errorf("error does not have ErrorCode field: %v", err)
+	}
 	require.EqualValues(t, 12, ec)
 }
 
 func TestExec_failure_genericError(t *testing.T) {
 	_, err := Exec("date", "/non-existing-path", new(mockFile), new(mockFile))
-	require.Equal(t, err.ErrorCode, errorutil.CommandExecution_failedUnknownError)
-	require.NotNil(t, err.Err)
-	require.Contains(t, err.Err.Error(), "failed to execute command:") // error is wrapped
+	if customErr, ok := err.(vmextension.ErrorWithClarification); ok {
+		require.Equal(t, customErr.ErrorCode, errorutil.CommandExecution_failedUnknownError)
+	} else {
+		t.Errorf("error does not have ErrorCode field: %v", err)
+	}
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "failed to execute command:") // error is wrapped
 }
 
 func TestExec_failure_fdClosed(t *testing.T) {
@@ -52,9 +61,13 @@ func TestExec_failure_fdClosed(t *testing.T) {
 	require.Nil(t, out.Close())
 
 	_, err := Exec("date", "/", out, out)
-	require.Equal(t, err.ErrorCode, errorutil.CommandExecution_failedUnknownError)
-	require.NotNil(t, err.Err)
-	require.Contains(t, err.Err.Error(), "file closed") // error is wrapped
+	if customErr, ok := err.(vmextension.ErrorWithClarification); ok {
+		require.Equal(t, customErr.ErrorCode, errorutil.CommandExecution_failedUnknownError)
+	} else {
+		t.Errorf("error does not have ErrorCode field: %v", err)
+	}
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "file closed") // error is wrapped
 }
 
 func TestExec_failure_redirectsStdStreams_closesFds(t *testing.T) {
@@ -63,8 +76,12 @@ func TestExec_failure_redirectsStdStreams_closesFds(t *testing.T) {
 	require.False(t, e.closed, "stderr open")
 
 	_, err := Exec(`/bin/echo 'I am stdout!'>&1; /bin/echo 'I am stderr!'>&2; exit 12`, "/", o, e)
-	require.Equal(t, err.ErrorCode, errorutil.CommandExecution_failureExitCode)
-	require.NotNil(t, err.Err)
+	if customErr, ok := err.(vmextension.ErrorWithClarification); ok {
+		require.Equal(t, customErr.ErrorCode, errorutil.CommandExecution_failureExitCode)
+	} else {
+		t.Errorf("error does not have ErrorCode field: %v", err)
+	}
+	require.NotNil(t, err)
 	require.Equal(t, "I am stdout!\n", string(o.b.Bytes()))
 	require.Equal(t, "I am stderr!\n", string(e.b.Bytes()))
 	require.True(t, o.closed, "stdout closed")
@@ -77,7 +94,7 @@ func TestExecCmdInDir(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	ewc := ExecCmdInDir("/bin/echo 'Hello world'", dir)
-	require.Nil(t, ewc.Err)
+	require.Nil(t, ewc)
 	require.True(t, fileExists(t, filepath.Join(dir, "stdout")), "stdout file should be created")
 	require.True(t, fileExists(t, filepath.Join(dir, "stderr")), "stderr file should be created")
 
@@ -92,9 +109,13 @@ func TestExecCmdInDir(t *testing.T) {
 
 func TestExecCmdInDir_cantOpenError(t *testing.T) {
 	err := ExecCmdInDir("/bin/echo 'Hello world'", "/non-existing-dir")
-	require.Equal(t, err.ErrorCode, errorutil.NoError)
-	require.NotNil(t, err.Err)
-	require.Contains(t, err.Err.Error(), "failed to open stdout file")
+	require.NotNil(t, err)
+	if customErr, ok := err.(vmextension.ErrorWithClarification); ok {
+		require.Equal(t, customErr.ErrorCode, errorutil.NoError)
+	} else {
+		t.Errorf("error does not have ErrorCode field: %v", err)
+	}
+	require.Contains(t, err.Error(), "failed to open stdout file")
 }
 
 func TestExecCmdInDir_truncates(t *testing.T) {
@@ -102,8 +123,8 @@ func TestExecCmdInDir_truncates(t *testing.T) {
 	require.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	require.Nil(t, ExecCmdInDir("/bin/echo '1:out'; /bin/echo '1:err'>&2", dir).Err)
-	require.Nil(t, ExecCmdInDir("/bin/echo '2:out'; /bin/echo '2:err'>&2", dir).Err)
+	require.Nil(t, ExecCmdInDir("/bin/echo '1:out'; /bin/echo '1:err'>&2", dir))
+	require.Nil(t, ExecCmdInDir("/bin/echo '2:out'; /bin/echo '2:err'>&2", dir))
 
 	b, err := ioutil.ReadFile(filepath.Join(dir, "stdout"))
 	require.Nil(t, err)

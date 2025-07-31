@@ -85,7 +85,7 @@ func Test_runCmd_success(t *testing.T) {
 
 	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
 		publicSettings: publicSettings{CommandToExecute: "date"},
-	}).Err, "command should run successfully")
+	}), "command should run successfully")
 
 	// check stdout stderr files
 	_, err = os.Stat(filepath.Join(dir, "stdout"))
@@ -102,9 +102,11 @@ func Test_runCmd_fail(t *testing.T) {
 	ewc := runCmd(log.NewNopLogger(), dir, handlerSettings{
 		publicSettings: publicSettings{CommandToExecute: "non-existing-cmd"},
 	})
-	require.Equal(t, errorutil.CommandExecution_failureExitCode, ewc.ErrorCode)
-	require.NotNil(t, ewc.Err, "command terminated with exit status")
-	require.Contains(t, ewc.Err.Error(), "failed to execute command")
+	exitCoder, ok := ewc.(interface{ ExitCode() int })
+	require.True(t, ok, "error does not implement ExitCode()")
+	require.Equal(t, errorutil.CommandExecution_failureExitCode, exitCoder.ExitCode())
+	require.NotNil(t, ewc, "command terminated with exit status")
+	require.Contains(t, ewc.Error(), "failed to execute command")
 }
 
 func Test_downloadFiles(t *testing.T) {
@@ -125,7 +127,7 @@ func Test_downloadFiles(t *testing.T) {
 					srv.URL + "/bytes/1000",
 				}},
 		})
-	require.Nil(t, ewc.Err)
+	require.Nil(t, ewc)
 
 	// check the files
 	f := []string{"10", "100", "1000"}
