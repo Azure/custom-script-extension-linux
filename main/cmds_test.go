@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	vmextension "github.com/Azure/azure-extension-platform/vmextension"
 	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
 	"github.com/ahmetalpbalkan/go-httpbin"
 	"github.com/go-kit/kit/log"
@@ -102,11 +103,10 @@ func Test_runCmd_fail(t *testing.T) {
 	ewc := runCmd(log.NewNopLogger(), dir, handlerSettings{
 		publicSettings: publicSettings{CommandToExecute: "non-existing-cmd"},
 	})
-	exitCoder, ok := ewc.(interface{ ExitCode() int })
-	require.True(t, ok, "error does not implement ExitCode()")
-	require.Equal(t, errorutil.CommandExecution_failureExitCode, exitCoder.ExitCode())
-	require.NotNil(t, ewc, "command terminated with exit status")
-	require.Contains(t, ewc.Error(), "failed to execute command")
+	customErr := ewc.(vmextension.ErrorWithClarification)
+	require.Equal(t, errorutil.CommandExecution_failureExitCode, customErr.ErrorCode)
+	require.NotNil(t, customErr, "command terminated with exit status")
+	require.Contains(t, customErr.Error(), "failed to execute command")
 }
 
 func Test_downloadFiles(t *testing.T) {

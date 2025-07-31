@@ -257,7 +257,7 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (ewc error) {
 		return ewc
 	}
 	ctx.Log("event", "executed command", "output", dir)
-	return
+	return nil
 }
 
 func writeTempScript(script, dir string, skipDosToUnix bool) (string, string, error) {
