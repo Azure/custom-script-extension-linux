@@ -1,18 +1,18 @@
 module github.com/Azure/custom-script-extension-linux
 
-go 1.21
+go 1.24
 
 require (
 	github.com/Azure/azure-extension-foundation v0.0.0-20230404211847-9858bdd5c187
-	github.com/Azure/azure-extension-platform v0.0.0-20230218002700-ca684482c954
+	github.com/Azure/azure-extension-platform v0.0.0-20250107200156-aa20f765d49f
 	github.com/Azure/azure-sdk-for-go v3.1.0-beta.0.20160802173609-87de771fcdf5+incompatible
 	github.com/ahmetalpbalkan/go-httpbin v0.0.0-20160706084156-8817b883dae1
 	github.com/go-kit/kit v0.12.0
 	github.com/google/uuid v1.3.0
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.10.0
 	github.com/xeipuuv/gojsonschema v1.2.0
-	golang.org/x/text v0.9.0
+	golang.org/x/text v0.27.0
 )
 
 require (
