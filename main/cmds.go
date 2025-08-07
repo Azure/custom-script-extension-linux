@@ -245,16 +245,18 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (ewc error) {
 	}
 
 	begin := time.Now()
-	var isEwc bool
-	ewc, isEwc = ExecCmdInDir(cmd, dir).(vmextension.ErrorWithClarification)
+
+	executeError := ExecCmdInDir(cmd, dir)
 	elapsed := time.Now().Sub(begin)
-	isSuccess := ewc == nil
+	isSuccess := executeError == nil
 
 	telemetry("scenario", scenario, isSuccess, elapsed)
 
-	if ewc != nil && isEwc {
+	if executeError != nil {
 		ctx.Log("event", "failed to execute command", "error", err, "output", dir)
-		return ewc
+		customErr := executeError.(vmextension.ErrorWithClarification)
+		customErr.Err = errors.Wrap(customErr.Err, "failed to execute command")
+		return customErr
 	}
 	ctx.Log("event", "executed command", "output", dir)
 	return nil
