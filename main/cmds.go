@@ -114,10 +114,10 @@ func min(a, b int) int {
 
 func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, error) {
 	// parse the extension handler settings (not available prior to 'enable')
-	cfg, ewc := parseAndValidateSettings(ctx, h.HandlerEnvironment.ConfigFolder, seqNum)
-	if ewc != nil {
-		ewc = errors.Wrap(ewc, "failed to get configuration")
-		return "", ewc
+	cfg, parseErr := parseAndValidateSettings(ctx, h.HandlerEnvironment.ConfigFolder, seqNum)
+	if parseErr != nil {
+		parseErr = errors.Wrap(parseErr, "failed to get configuration")
+		return "", parseErr
 	}
 
 	dir := filepath.Join(dataDir, downloadDir, fmt.Sprintf("%d", seqNum))
@@ -254,9 +254,12 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (ewc error) {
 
 	if executeError != nil {
 		ctx.Log("event", "failed to execute command", "error", err, "output", dir)
-		customErr := executeError.(vmextension.ErrorWithClarification)
-		customErr.Err = errors.Wrap(customErr.Err, "failed to execute command")
-		return customErr
+		customErr, ok := executeError.(vmextension.ErrorWithClarification)
+		if ok {
+			customErr.Err = errors.Wrap(customErr.Err, "failed to execute command")
+			return customErr
+		}
+		return executeError
 	}
 	ctx.Log("event", "executed command", "output", dir)
 	return nil

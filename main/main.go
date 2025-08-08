@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-extension-platform/vmextension"
+	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 )
@@ -84,8 +85,12 @@ func main() {
 	if err != nil {
 		ctx.Log("event", "failed to handle", "error", err)
 		err = errors.Wrap(err, err.Error()+msg)
-		ewc := err.(vmextension.ErrorWithClarification)
-		reportErrorStatus(ctx, hEnv, seqNum, StatusError, cmd, ewc)
+		ewc, ok := err.(vmextension.ErrorWithClarification)
+		if ok {
+			reportErrorStatus(ctx, hEnv, seqNum, StatusError, cmd, ewc)
+		} else {
+			reportErrorStatus(ctx, hEnv, seqNum, StatusError, cmd, vmextension.NewErrorWithClarification(errorutil.NoError, err))
+		}
 		os.Exit(cmd.failExitCode)
 	}
 	reportStatus(ctx, hEnv, seqNum, StatusSuccess, cmd, msg)

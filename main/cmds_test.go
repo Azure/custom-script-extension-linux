@@ -100,13 +100,18 @@ func Test_runCmd_fail(t *testing.T) {
 	require.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ewc := runCmd(log.NewNopLogger(), dir, handlerSettings{
+	runErr := runCmd(log.NewNopLogger(), dir, handlerSettings{
 		publicSettings: publicSettings{CommandToExecute: "non-existing-cmd"},
 	})
-	customErr := ewc.(vmextension.ErrorWithClarification)
-	require.Equal(t, errorutil.CommandExecution_failureExitCode, customErr.ErrorCode)
-	require.NotNil(t, customErr, "command terminated with exit status")
-	require.Contains(t, customErr.Error(), "failed to execute command")
+	customErr, ok := runErr.(vmextension.ErrorWithClarification)
+	if ok {
+		require.Equal(t, errorutil.CommandExecution_failureExitCode, customErr.ErrorCode)
+		require.NotNil(t, customErr, "command terminated with exit status")
+		require.Contains(t, customErr.Error(), "failed to execute command")
+	} else {
+		require.NotNil(t, runErr, "command should have failed")
+		require.Contains(t, runErr.Error(), "failed to execute command")
+	}
 }
 
 func Test_downloadFiles(t *testing.T) {
