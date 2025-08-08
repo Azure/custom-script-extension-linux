@@ -18,7 +18,7 @@ import (
 //
 // On error, an exit code may be returned if it is an exit code error.
 // Given stdout and stderr will be closed upon returning.
-func Exec(cmd, workdir string, stdout, stderr io.WriteCloser) (int, vmextension.ErrorWithClarification) {
+func Exec(cmd, workdir string, stdout, stderr io.WriteCloser) (int, error) {
 	defer stdout.Close()
 	defer stderr.Close()
 
@@ -36,7 +36,7 @@ func Exec(cmd, workdir string, stdout, stderr io.WriteCloser) (int, vmextension.
 		}
 	}
 	if err == nil {
-		return 0, vmextension.NewErrorWithClarification(errorutil.NoError, nil)
+		return 0, nil
 	}
 	return 0, vmextension.NewErrorWithClarification(errorutil.CommandExecution_failedUnknownError, errors.Wrapf(err, "failed to execute command"))
 
@@ -48,7 +48,7 @@ func Exec(cmd, workdir string, stdout, stderr io.WriteCloser) (int, vmextension.
 //
 // Ideally, we execute commands only once per sequence number in custom-script-extension,
 // and save their output under /var/lib/waagent/<dir>/download/<seqnum>/*.
-func ExecCmdInDir(cmd, workdir string) vmextension.ErrorWithClarification {
+func ExecCmdInDir(cmd, workdir string) error {
 	outFn, errFn := logPaths(workdir)
 
 	outF, err := os.OpenFile(outFn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)

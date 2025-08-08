@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Azure/azure-extension-platform/vmextension"
+	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 )
@@ -79,11 +81,16 @@ func main() {
 	}
 	// execute the subcommand
 	reportStatus(ctx, hEnv, seqNum, StatusTransitioning, cmd, "")
-	msg, ewc := cmd.f(ctx, hEnv, seqNum)
-	if ewc.Err != nil {
-		ctx.Log("event", "failed to handle", "error", ewc.Error())
-		ewc.Err = errors.Wrap(ewc.Err, ewc.Error()+msg)
-		reportErrorStatus(ctx, hEnv, seqNum, StatusError, cmd, ewc)
+	msg, err := cmd.f(ctx, hEnv, seqNum)
+	if err != nil {
+		ctx.Log("event", "failed to handle", "error", err)
+		err = errors.Wrap(err, err.Error()+msg)
+		ewc, ok := err.(vmextension.ErrorWithClarification)
+		if ok {
+			reportErrorStatus(ctx, hEnv, seqNum, StatusError, cmd, ewc)
+		} else {
+			reportErrorStatus(ctx, hEnv, seqNum, StatusError, cmd, vmextension.NewErrorWithClarification(errorutil.NoError, err))
+		}
 		os.Exit(cmd.failExitCode)
 	}
 	reportStatus(ctx, hEnv, seqNum, StatusSuccess, cmd, msg)

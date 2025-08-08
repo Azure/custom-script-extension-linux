@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	vmextension "github.com/Azure/azure-extension-platform/vmextension"
 	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
 	"github.com/ahmetalpbalkan/go-httpbin"
 	"github.com/go-kit/kit/log"
@@ -85,7 +86,7 @@ func Test_runCmd_success(t *testing.T) {
 
 	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
 		publicSettings: publicSettings{CommandToExecute: "date"},
-	}).Err, "command should run successfully")
+	}), "command should run successfully")
 
 	// check stdout stderr files
 	_, err = os.Stat(filepath.Join(dir, "stdout"))
@@ -99,12 +100,18 @@ func Test_runCmd_fail(t *testing.T) {
 	require.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	ewc := runCmd(log.NewNopLogger(), dir, handlerSettings{
+	runErr := runCmd(log.NewNopLogger(), dir, handlerSettings{
 		publicSettings: publicSettings{CommandToExecute: "non-existing-cmd"},
 	})
-	require.Equal(t, errorutil.CommandExecution_failureExitCode, ewc.ErrorCode)
-	require.NotNil(t, ewc.Err, "command terminated with exit status")
-	require.Contains(t, ewc.Err.Error(), "failed to execute command")
+	customErr, ok := runErr.(vmextension.ErrorWithClarification)
+	if ok {
+		require.Equal(t, errorutil.CommandExecution_failureExitCode, customErr.ErrorCode)
+		require.NotNil(t, customErr, "command terminated with exit status")
+		require.Contains(t, customErr.Error(), "failed to execute command")
+	} else {
+		require.NotNil(t, runErr, "command should have failed")
+		require.Contains(t, runErr.Error(), "failed to execute command")
+	}
 }
 
 func Test_downloadFiles(t *testing.T) {
@@ -125,7 +132,7 @@ func Test_downloadFiles(t *testing.T) {
 					srv.URL + "/bytes/1000",
 				}},
 		})
-	require.Nil(t, ewc.Err)
+	require.Nil(t, ewc)
 
 	// check the files
 	f := []string{"10", "100", "1000"}
