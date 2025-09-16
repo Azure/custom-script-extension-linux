@@ -114,7 +114,7 @@ func printUsage(args []string) {
 	for k := range cmds {
 		fmt.Printf("%s", k)
 		if i != len(cmds)-1 {
-			fmt.Printf("|")
+			fmt.Printf("%s", "|")
 		}
 		i++
 	}
