@@ -14,7 +14,7 @@ func RemoveUrlFromErr(err error) error {
 			strSegments[i] = "[REDACTED]"
 		}
 	}
-	return fmt.Errorf(strings.Join(strSegments, " "))
+	return fmt.Errorf("%s", strings.Join(strSegments, " "))
 }
 
 func IsValidUrl(urlstring string) bool {
