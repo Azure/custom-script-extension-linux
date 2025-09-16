@@ -43,8 +43,13 @@ func (b blobDownload) getURL() (string, error) {
 	}
 
 	// get read-only
-	sasURL, err := cl.GetBlobService().GetBlobSASURI(b.blob.Container, b.blob.Blob,
-		time.Now().UTC().Add(blobSASDuration), "r")
+	blobClient := cl.GetBlobService()
+	sasOptions := storage.BlobSASOptions{
+		storage.BlobServiceSASPermissions{Read: true},
+		storage.OverrideHeaders{},
+		storage.SASOptions{Expiry: time.Now().UTC().Add(blobSASDuration)},
+	}
+	sasURL, err := blobClient.GetContainerReference(b.blob.Container).GetBlobReference(b.blob.Blob).GetSASURI(sasOptions)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to generate SAS key for blob")
 	}
