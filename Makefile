@@ -24,7 +24,9 @@ binary: clean
 	  -ldflags "-X main.Version=`grep -E -m 1 -o  '<Version>(.*)</Version>' misc/manifest.xml | awk -F">" '{print $$2}' | awk -F"<" '{print $$1}'`" \
 	  -o $(BINDIR)/$(BIN_ARM64) ./main 
 	cp ./misc/custom-script-shim ./$(BINDIR)
+
 clean:
 	rm -rf "$(BINDIR)" "$(BUNDLEDIR)"
+
 .PHONY: clean binary
 
