@@ -16,11 +16,11 @@ binary: clean
 	  exit 1; \
 	fi
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -v \ # CGO_ENABLED=0 forces static linking
-	  -tags "netgo,osusergo" \ # -tags netgo,osusergo make the intent explicit and ensure the pure-Go implementations are selected even if cgo is enabled elsewhere (for other packages).
+	  -tags "netgo osusergo" \ # -tags netgo,osusergo make the intent explicit and ensure the pure-Go implementations are selected even if cgo is enabled elsewhere (for other packages).
 	  -ldflags "-X main.Version=`grep -E -m 1 -o  '<Version>(.*)</Version>' misc/manifest.xml | awk -F">" '{print $$2}' | awk -F"<" '{print $$1}'`" \
 	  -o $(BINDIR)/$(BIN) ./main 
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -v \ # CGO_ENABLED=0 forces static linking
-	  -tags "netgo,osusergo" \ # -tags netgo,osusergo make the intent explicit and ensure the pure-Go implementations are selected even if cgo is enabled elsewhere (for other packages).
+	  -tags "netgo osusergo" \ # -tags netgo,osusergo make the intent explicit and ensure the pure-Go implementations are selected even if cgo is enabled elsewhere (for other packages).
 	  -ldflags "-X main.Version=`grep -E -m 1 -o  '<Version>(.*)</Version>' misc/manifest.xml | awk -F">" '{print $$2}' | awk -F"<" '{print $$1}'`" \
 	  -o $(BINDIR)/$(BIN_ARM64) ./main 
 	cp ./misc/custom-script-shim ./$(BINDIR)
