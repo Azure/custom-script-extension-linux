@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func Test_expectedErrorString(t *testing.T) {
@@ -17,6 +19,13 @@ func Test_expectedErrorString(t *testing.T) {
 	} else {
 		fmt.Println(outputErr.Error())
 	}
+}
+
+func Test_TrailingLeadingQuotes(t *testing.T) {
+	errorString := "Get \"https://rm-agent.prod.manageddevops.microsoft.com/1223456/AngryChipmunk-x64.tar.gz?expires=12345&keyId=mykey&signature=notasignature\": EOF' :"
+	inputErr := fmt.Errorf("%s", errorString)
+	outputErr := RemoveUrlFromErr(inputErr)
+	require.Equal(t, "Get [REDACTED] EOF' :", outputErr.Error())
 }
 
 func Test_nonHttpsSchema(t *testing.T) {

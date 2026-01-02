@@ -1,14 +1,27 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
+
 readonly SCRIPT_DIR=$(dirname "$0")
-readonly LOG_DIR="/var/log/azure/custom-script"
+readonly LOG_FOLDER_KEY=logFolder
 readonly LOG_FILE=handler.log
-readonly ARCHITECTURE=$( [[ "$(uname -p)" == "unknown" ]] && echo "$(uname -m)" || echo "$(uname -p)" ) #ternary operator
+readonly HANDLER_ENV_PATH="${SCRIPT_DIR}/../HandlerEnvironment.json"
+readonly HANDLER_ENV=$(cat $HANDLER_ENV_PATH) # If file is missing, this will come out blank
+
+readonly ARCHITECTURE=$( [[ "$(uname -p)" == "unknown" ]] && echo "$(uname -m)" || echo "$(uname -p)" ) # ternary operator
 HANDLER_BIN="custom-script-extension"
 if [ $ARCHITECTURE == "arm64" ] || [ $ARCHITECTURE == "aarch64" ]; then
-     HANDLER_BIN="custom-script-extension-arm64";
+    HANDLER_BIN="custom-script-extension-arm64"
 fi
+
+LOG_DIR="/var/log/azure/custom-script"
+if [[ "$HANDLER_ENV" == *"$LOG_FOLDER_KEY"* ]]; then
+       tmp=${HANDLER_ENV#*$LOG_FOLDER_KEY\": \"}
+       LOG_DIR=${tmp%%\"\,*}
+       unset tmp
+fi
+
+echo "Placing logs in directory $LOG_DIR"
 
 # status_file returns the .status file path we are supposed to write
 # by determining the highest sequence number from ./config/*.settings files.

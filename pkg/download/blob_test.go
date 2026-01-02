@@ -1,9 +1,10 @@
 package download
 
 import (
+	"crypto/rand"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
+	"math/big"
 	"net/http"
 	"os"
 	"testing"
@@ -27,7 +28,7 @@ func Test_blobDownload_validateInputs(t *testing.T) {
 	_, err := NewBlobDownload("", "", blobutil.AzureBlobRef{}).GetRequest()
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "failed to initialize azure storage client")
-	require.Contains(t, err.Error(), "account name required")
+	require.Contains(t, err.Error(), "account name is not valid")
 
 	_, err = NewBlobDownload("account", "", blobutil.AzureBlobRef{}).GetRequest()
 	require.NotNil(t, err)
@@ -70,7 +71,8 @@ func Test_blobDownload_getURL(t *testing.T) {
 }
 
 func Test_blobDownload_fails_badCreds(t *testing.T) {
-	d := NewBlobDownload("example", "Zm9vCg==", blobutil.AzureBlobRef{
+	storageAccountName := "deeptivaistorage"
+	d := NewBlobDownload(storageAccountName, "Zm9vCg==", blobutil.AzureBlobRef{
 		StorageBase: storage.DefaultBaseURL,
 		Blob:        "fooBlob.txt",
 		Container:   "foocontainer",
@@ -107,21 +109,24 @@ func Test_blobDownload_actualBlob(t *testing.T) {
 	cl, err := storage.NewClient(acct, key, base, storage.DefaultAPIVersion, true)
 	require.Nil(t, err)
 	bs := cl.GetBlobService()
-
+	randInt, _ := rand.Int(rand.Reader, big.NewInt(time.Now().UnixNano()))
 	var (
 		n         = 1024 * 64
 		name      = "blob.txt"
-		container = fmt.Sprintf("custom-script-test-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Int63())
+		container = fmt.Sprintf("custom-script-test-%d", randInt)
 		chunk     = make([]byte, n)
 	)
-	_, err = bs.DeleteContainerIfExists(container)
+	containerRef := bs.GetContainerReference(container)
+	_, err = containerRef.DeleteIfExists(&storage.DeleteContainerOptions{})
 	require.Nil(t, err)
-	_, err = bs.CreateContainerIfNotExists(container, storage.ContainerAccessTypePrivate)
+	_, err = containerRef.CreateIfNotExists(&storage.CreateContainerOptions{
+		Access: storage.ContainerAccessTypePrivate})
 	require.Nil(t, err)
-	defer bs.DeleteContainer(container)
-	require.Nil(t, bs.PutAppendBlob(container, name, nil))
+	defer containerRef.Delete(&storage.DeleteContainerOptions{})
+	blobRef := containerRef.GetBlobReference(name)
+	require.Nil(t, blobRef.PutAppendBlob(&storage.PutBlobOptions{}))
 	rand.Read(chunk)
-	require.Nil(t, bs.AppendBlock(container, name, chunk, nil))
+	require.Nil(t, blobRef.AppendBlock(chunk, &storage.AppendBlockOptions{}))
 
 	// Get the blob via downloader
 	d := NewBlobDownload(acct, key, blobutil.AzureBlobRef{

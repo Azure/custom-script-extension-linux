@@ -14,11 +14,13 @@ func RemoveUrlFromErr(err error) error {
 			strSegments[i] = "[REDACTED]"
 		}
 	}
-	return fmt.Errorf(strings.Join(strSegments, " "))
+	return fmt.Errorf("%s", strings.Join(strSegments, " "))
 }
 
 func IsValidUrl(urlstring string) bool {
-	u, parseError := url.Parse(urlstring)
+	// Remove leading and trailing quotes
+	noQuotes := strings.Trim(urlstring, `"'`)
+	u, parseError := url.Parse(noQuotes)
 	if parseError == nil && u.Scheme != "" && u.Host != "" {
 		return true
 	}
