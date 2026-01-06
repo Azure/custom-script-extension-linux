@@ -5,8 +5,8 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"time"
 	"net/url"
+	"time"
 
 	"github.com/Azure/azure-extension-platform/vmextension"
 	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
@@ -23,10 +23,10 @@ type Downloader interface {
 }
 
 const (
-	MsiDownload404ErrorString = "please ensure that the blob location in the fileUri setting exists, and the specified Managed Identity has read permissions to the storage blob"
-	MsiDownload403ErrorString = "please ensure that the specified Managed Identity has read permissions to the storage blob"
+	MsiDownload404ErrorString     = "please ensure that the blob location in the fileUri setting exists, and the specified Managed Identity has read permissions to the storage blob"
+	MsiDownload403ErrorString     = "please ensure that the specified Managed Identity has read permissions to the storage blob"
 	MsiDownloadGenericErrorString = "unable to download the MSI. This may be due to firewall rules or a networking error"
-	MsiDownload500ErrorString = "the IMDS service returned a00 upon requesting the MSI"
+	MsiDownload500ErrorString     = "the IMDS service returned a00 upon requesting the MSI"
 )
 
 var (
@@ -49,10 +49,11 @@ var (
 // Download retrieves a response body and checks the response status code to see
 // if it is 200 OK and then returns the response body. It issues a new request
 // every time called. It is caller's responsibility to close the response body.
-func Download(ctx *log.Context, d Downloader) (int, io.ReadCloser, vmextension.ErrorWithClarification) {
+func Download(ctx *log.Context, d Downloader) (int, io.ReadCloser, *vmextension.ErrorWithClarification) {
 	req, err := d.GetRequest()
 	if err != nil {
-		return -1, nil, vmextension.NewErrorWithClarification(errorutil.FileDownload_genericError, errors.Wrapf(err, "failed to create http request"))
+		ewc := vmextension.NewErrorWithClarification(errorutil.FileDownload_genericError, errors.Wrapf(err, "failed to create http request"))
+		return -1, nil, &ewc
 	}
 	requestID := req.Header.Get(xMsClientRequestIdHeaderName)
 	if len(requestID) > 0 {
@@ -60,17 +61,20 @@ func Download(ctx *log.Context, d Downloader) (int, io.ReadCloser, vmextension.E
 	}
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		if ((err.(*url.Error)).Timeout()) {
+		if (err.(*url.Error)).Timeout() {
 			err = urlutil.RemoveUrlFromErr(err)
-			return -1, nil, vmextension.NewErrorWithClarification(errorutil.FileDownload_exceededTimeout, errors.Wrapf(err, "http request timed out"))
+			ewc := vmextension.NewErrorWithClarification(errorutil.FileDownload_exceededTimeout, errors.Wrapf(err, "http request timed out"))
+			return -1, nil, &ewc
 		}
 		err = urlutil.RemoveUrlFromErr(err)
-		return -1, nil, vmextension.NewErrorWithClarification(errorutil.FileDownload_unknownError, errors.Wrapf(err, "http request failed"))
+		ewc := vmextension.NewErrorWithClarification(errorutil.FileDownload_unknownError, errors.Wrapf(err, "http request failed"))
+		return -1, nil, &ewc
 	}
 
 	if resp.StatusCode == http.StatusOK {
 		// We're setting the errorCode to MaxInt because we're only checking whether the internal error is nil
-		return resp.StatusCode, resp.Body, vmextension.NewErrorWithClarification(errorutil.NoError, nil)
+		ewc := vmextension.NewErrorWithClarification(errorutil.NoError, nil)
+		return resp.StatusCode, resp.Body, &ewc
 	}
 
 	errString := ""
@@ -128,5 +132,11 @@ func Download(ctx *log.Context, d Downloader) (int, io.ReadCloser, vmextension.E
 	if len(requestId) > 0 {
 		errString += fmt.Sprintf(" (Service request ID: %s)", requestId)
 	}
-	return resp.StatusCode, nil, vmextension.NewErrorWithClarification(errClarificationCode, fmt.Errorf(errString))
+
+	if errClarificationCode == 0 {
+		return resp.StatusCode, nil, nil
+	}
+
+	ewc := vmextension.NewErrorWithClarification(errClarificationCode, fmt.Errorf(errString))
+	return resp.StatusCode, nil, &ewc
 }

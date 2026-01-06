@@ -24,7 +24,7 @@ const (
 	maxScriptSize = 256 * 1024
 )
 
-type cmdFunc func(ctx *log.Context, hEnv HandlerEnvironment, seqNum int) (msg string, ewc vmextension.ErrorWithClarification)
+type cmdFunc func(ctx *log.Context, hEnv HandlerEnvironment, seqNum int) (msg string, ewc *vmextension.ErrorWithClarification)
 type preFunc func(ctx *log.Context, hEnv HandlerEnvironment, seqNum int) error
 
 type cmd struct {
@@ -57,14 +57,15 @@ var (
 	}
 )
 
-func noop(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, vmextension.ErrorWithClarification) {
+func noop(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmextension.ErrorWithClarification) {
 	ctx.Log("event", "noop")
-	return "", vmextension.NewErrorWithClarification(errorutil.NoError, nil)
+	return "", nil
 }
 
-func install(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, vmextension.ErrorWithClarification) {
+func install(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmextension.ErrorWithClarification) {
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		return "", vmextension.NewErrorWithClarification(errorutil.SystemError, errors.Wrap(err, "failed to create data dir"))
+		ewc := vmextension.NewErrorWithClarification(errorutil.SystemError, errors.Wrap(err, "failed to create data dir"))
+		return "", &ewc
 	}
 
 	// If the file mrseq does not exists it is for two possible reasons.
@@ -76,20 +77,21 @@ func install(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, vmexte
 
 	ctx.Log("event", "created data dir", "path", dataDir)
 	ctx.Log("event", "installed")
-	return "", vmextension.NewErrorWithClarification(errorutil.NoError, nil)
+	return "", nil
 }
 
-func uninstall(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, vmextension.ErrorWithClarification) {
+func uninstall(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmextension.ErrorWithClarification) {
 	{ // a new context scope with path
 		ctx = ctx.With("path", dataDir)
 		ctx.Log("event", "removing data dir", "path", dataDir)
 		if err := os.RemoveAll(dataDir); err != nil {
-			return "", vmextension.NewErrorWithClarification(errorutil.NoError, errors.Wrap(err, "failed to delete data directory"))
+			ewc := vmextension.NewErrorWithClarification(errorutil.NoError, errors.Wrap(err, "failed to delete data directory"))
+			return "", &ewc
 		}
 		ctx.Log("event", "removed data dir")
 	}
 	ctx.Log("event", "uninstalled")
-	return "", vmextension.NewErrorWithClarification(errorutil.NoError, nil)
+	return "", nil
 }
 
 func enablePre(ctx *log.Context, hEnv HandlerEnvironment, seqNum int) error {
@@ -112,10 +114,10 @@ func min(a, b int) int {
 	return b
 }
 
-func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, vmextension.ErrorWithClarification) {
+func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmextension.ErrorWithClarification) {
 	// parse the extension handler settings (not available prior to 'enable')
 	cfg, ewc := parseAndValidateSettings(ctx, h.HandlerEnvironment.ConfigFolder, seqNum)
-	if ewc.Err != nil {
+	if ewc != nil {
 		ewc.Err = errors.Wrap(ewc.Err, "failed to get configuration")
 		return "", ewc
 	}
@@ -179,12 +181,13 @@ func checkAndSaveSeqNum(ctx log.Logger, seq int, mrseqPath string) (shouldExit b
 
 // downloadFiles downloads the files specified in cfg into dir (creates if does
 // not exist) and takes storage credentials specified in cfg into account.
-func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) vmextension.ErrorWithClarification {
+func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) *vmextension.ErrorWithClarification {
 	// - prepare the output directory for files and the command output
 	// - create the directory if missing
 	ctx.Log("event", "creating output directory", "path", dir)
 	if err := os.MkdirAll(dir, 0700); err != nil {
-		return vmextension.NewErrorWithClarification(errorutil.FileDownload_unableToCreateDownloadDirectory, errors.Wrap(err, "failed to prepare output directory"))
+		ewc := vmextension.NewErrorWithClarification(errorutil.FileDownload_unableToCreateDownloadDirectory, errors.Wrap(err, "failed to prepare output directory"))
+		return &ewc
 	}
 	ctx.Log("event", "created output directory")
 
@@ -206,15 +209,16 @@ func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) vmextensio
 		ctx.Log("event", "download start")
 		if ewc := downloadAndProcessURL(ctx, f, dir, &cfg); ewc.Err != nil {
 			ctx.Log("event", "download failed", "error", ewc.Err)
-			return vmextension.NewErrorWithClarification(ewc.ErrorCode, errors.Wrapf(ewc.Err, "failed to download file[%d]", i))
+			ewc := vmextension.NewErrorWithClarification(ewc.ErrorCode, errors.Wrapf(ewc.Err, "failed to download file[%d]", i))
+			return &ewc
 		}
 		ctx.Log("event", "download complete", "output", dir)
 	}
-	return vmextension.NewErrorWithClarification(errorutil.NoError, nil)
+	return nil
 }
 
 // runCmd runs the command (extracted from cfg) in the given dir (assumed to exist).
-func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (ewc vmextension.ErrorWithClarification) {
+func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (ewc *vmextension.ErrorWithClarification) {
 	ctx.Log("event", "executing command", "output", dir)
 	var cmd string
 	var scenario string
@@ -233,13 +237,13 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (ewc vmextension.Er
 	} else if cfg.publicSettings.Script != "" {
 		ctx.Log("event", "executing public script", "output", dir)
 		if cmd, scenarioInfo, err = writeTempScript(cfg.publicSettings.Script, dir, cfg.publicSettings.SkipDos2Unix); err != nil {
-			return vmextension.NewErrorWithClarification(errorutil.NoError, err)
+			return nil
 		}
 		scenario = fmt.Sprintf("public-script;%s", scenarioInfo)
 	} else if cfg.protectedSettings.Script != "" {
 		ctx.Log("event", "executing protected script", "output", dir)
 		if cmd, scenarioInfo, err = writeTempScript(cfg.protectedSettings.Script, dir, cfg.publicSettings.SkipDos2Unix); err != nil {
-			return vmextension.NewErrorWithClarification(errorutil.NoError, err)
+			return nil
 		}
 		scenario = fmt.Sprintf("protected-script;%s", scenarioInfo)
 	}
@@ -253,10 +257,11 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (ewc vmextension.Er
 
 	if ewc.Err != nil {
 		ctx.Log("event", "failed to execute command", "error", err, "output", dir)
-		return vmextension.NewErrorWithClarification(ewc.ErrorCode, errors.Wrap(ewc.Err, "failed to execute command"))
+		ewc := vmextension.NewErrorWithClarification(ewc.ErrorCode, errors.Wrap(ewc.Err, "failed to execute command"))
+		return &ewc
 	}
 	ctx.Log("event", "executed command", "output", dir)
-	return vmextension.NewErrorWithClarification(errorutil.NoError, nil)
+	return nil
 }
 
 func writeTempScript(script, dir string, skipDosToUnix bool) (string, string, error) {

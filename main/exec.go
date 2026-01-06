@@ -18,7 +18,7 @@ import (
 //
 // On error, an exit code may be returned if it is an exit code error.
 // Given stdout and stderr will be closed upon returning.
-func Exec(cmd, workdir string, stdout, stderr io.WriteCloser) (int, vmextension.ErrorWithClarification) {
+func Exec(cmd, workdir string, stdout, stderr io.WriteCloser) (int, *vmextension.ErrorWithClarification) {
 	defer stdout.Close()
 	defer stderr.Close()
 
@@ -32,14 +32,16 @@ func Exec(cmd, workdir string, stdout, stderr io.WriteCloser) (int, vmextension.
 	if ok {
 		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
 			code := status.ExitStatus()
-			return code, vmextension.NewErrorWithClarification(errorutil.CommandExecution_failureExitCode, fmt.Errorf("command terminated with exit status=%d", code))
+			ewc := vmextension.NewErrorWithClarification(errorutil.CommandExecution_failureExitCode, fmt.Errorf("command terminated with exit status=%d", code))
+			return code, &ewc
 		}
 	}
 	if err == nil {
-		return 0, vmextension.NewErrorWithClarification(errorutil.NoError, nil)
+		return 0, nil
 	}
-	return 0, vmextension.NewErrorWithClarification(errorutil.CommandExecution_failedUnknownError, errors.Wrapf(err, "failed to execute command"))
 
+	ewc := vmextension.NewErrorWithClarification(errorutil.CommandExecution_failedUnknownError, errors.Wrapf(err, "failed to execute command"))
+	return 0, &ewc
 }
 
 // ExecCmdInDir executes the given command in given directory and saves output
@@ -48,16 +50,18 @@ func Exec(cmd, workdir string, stdout, stderr io.WriteCloser) (int, vmextension.
 //
 // Ideally, we execute commands only once per sequence number in custom-script-extension,
 // and save their output under /var/lib/waagent/<dir>/download/<seqnum>/*.
-func ExecCmdInDir(cmd, workdir string) vmextension.ErrorWithClarification {
+func ExecCmdInDir(cmd, workdir string) *vmextension.ErrorWithClarification {
 	outFn, errFn := logPaths(workdir)
 
 	outF, err := os.OpenFile(outFn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if err != nil {
-		return vmextension.NewErrorWithClarification(errorutil.NoError, errors.Wrapf(err, "failed to open stdout file"))
+		ewc := vmextension.NewErrorWithClarification(errorutil.NoError, errors.Wrapf(err, "failed to open stdout file"))
+		return &ewc
 	}
 	errF, err := os.OpenFile(errFn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if err != nil {
-		return vmextension.NewErrorWithClarification(errorutil.NoError, errors.Wrapf(err, "failed to open stderr file"))
+		ewc := vmextension.NewErrorWithClarification(errorutil.NoError, errors.Wrapf(err, "failed to open stderr file"))
+		return &ewc
 	}
 
 	_, ewc := Exec(cmd, workdir, outF, errF)

@@ -8,11 +8,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-kit/kit/log"	
 	"github.com/Azure/azure-extension-platform/vmextension"
+	"github.com/go-kit/kit/log"
 
-	
-    errorutil "github.com/Azure/custom-script-extension-linux/pkg/errorutil"
+	errorutil "github.com/Azure/custom-script-extension-linux/pkg/errorutil"
 )
 
 // SleepFunc pauses the execution for at least duration d.
@@ -37,9 +36,9 @@ const (
 // closed on failures). If the retries do not succeed, the last error is returned.
 //
 // It sleeps in exponentially increasing durations between retries.
-func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf SleepFunc) (int64, vmextension.ErrorWithClarification) {
+func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf SleepFunc) (int64, *vmextension.ErrorWithClarification) {
 	var lastErr error
-    var lastErrCode int
+	var lastErrCode int
 	for _, d := range downloaders {
 		for n := 0; n < expRetryN; n++ {
 			ctx := ctx.With("retry", n)
@@ -59,7 +58,8 @@ func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf Slee
 					out.Close()
 					end := time.Since(start)
 					ctx.Log("info", fmt.Sprintf("file download sucessful: downloaded and saved %d bytes in %d milliseconds", nBytes, end.Milliseconds()))
-					return nBytes, vmextension.NewErrorWithClarification(lastErrCode, lastErr)
+					ewc := vmextension.NewErrorWithClarification(lastErrCode, lastErr)
+					return nBytes, &ewc
 				} else {
 					// we failed to download the response body and write it to file
 					// because either connection was closed prematurely or file write operation failed
@@ -102,7 +102,13 @@ func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf Slee
 			}
 		}
 	}
-	return 0, vmextension.NewErrorWithClarification(lastErrCode, lastErr)
+
+	if lastErr == nil {
+		return 0, nil
+	}
+
+	ewc := vmextension.NewErrorWithClarification(lastErrCode, lastErr)
+	return 0, &ewc
 }
 
 func isTransientHttpStatusCode(statusCode int) bool {
