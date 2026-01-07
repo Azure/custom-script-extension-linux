@@ -36,13 +36,13 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handl
 	}
 
 	dl, ewc := getDownloaders(url, cfg.StorageAccountName, cfg.StorageAccountKey, cfg.ManagedIdentity)
-	if ewc.Err != nil {
+	if ewc != nil {
 		return ewc
 	}
 
 	fp := filepath.Join(downloadDir, fn)
 	const mode = 0500 // we assume users download scripts to execute
-	if _, ewc := download.SaveTo(ctx, dl, fp, mode); ewc.Err != nil {
+	if _, ewc := download.SaveTo(ctx, dl, fp, mode); ewc != nil {
 		return ewc
 	}
 

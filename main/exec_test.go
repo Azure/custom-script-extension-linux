@@ -25,7 +25,7 @@ func TestExec_success_redirectsStdStreams_closesFds(t *testing.T) {
 	require.False(t, e.closed, "stderr open")
 
 	_, err := Exec("/bin/echo 'I am stdout!'>&1; /bin/echo 'I am stderr!'>&2", "/", o, e)
-	require.Nil(t, err.Err, "err: %v -- stderr: %s", err.Err, e.b.Bytes())
+	require.Nil(t, err, "err: %v -- stderr: %s", err.Err, e.b.Bytes())
 	require.Equal(t, "I am stdout!\n", string(o.b.Bytes()))
 	require.Equal(t, "I am stderr!\n", string(e.b.Bytes()))
 	require.True(t, o.closed, "stdout closed")
@@ -77,7 +77,7 @@ func TestExecCmdInDir(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	ewc := ExecCmdInDir("/bin/echo 'Hello world'", dir)
-	require.Nil(t, ewc.Err)
+	require.Nil(t, ewc)
 	require.True(t, fileExists(t, filepath.Join(dir, "stdout")), "stdout file should be created")
 	require.True(t, fileExists(t, filepath.Join(dir, "stderr")), "stderr file should be created")
 
@@ -92,7 +92,7 @@ func TestExecCmdInDir(t *testing.T) {
 
 func TestExecCmdInDir_cantOpenError(t *testing.T) {
 	err := ExecCmdInDir("/bin/echo 'Hello world'", "/non-existing-dir")
-	require.Equal(t, err.ErrorCode, errorutil.NoError)
+	require.Equal(t, err.ErrorCode, errorutil.Os_FailedToOpenStdErr)
 	require.NotNil(t, err.Err)
 	require.Contains(t, err.Err.Error(), "failed to open stdout file")
 }
@@ -102,8 +102,8 @@ func TestExecCmdInDir_truncates(t *testing.T) {
 	require.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	require.Nil(t, ExecCmdInDir("/bin/echo '1:out'; /bin/echo '1:err'>&2", dir).Err)
-	require.Nil(t, ExecCmdInDir("/bin/echo '2:out'; /bin/echo '2:err'>&2", dir).Err)
+	require.Nil(t, ExecCmdInDir("/bin/echo '1:out'; /bin/echo '1:err'>&2", dir))
+	require.Nil(t, ExecCmdInDir("/bin/echo '2:out'; /bin/echo '2:err'>&2", dir))
 
 	b, err := ioutil.ReadFile(filepath.Join(dir, "stdout"))
 	require.Nil(t, err)

@@ -72,9 +72,7 @@ func Download(ctx *log.Context, d Downloader) (int, io.ReadCloser, *vmextension.
 	}
 
 	if resp.StatusCode == http.StatusOK {
-		// We're setting the errorCode to MaxInt because we're only checking whether the internal error is nil
-		ewc := vmextension.NewErrorWithClarification(errorutil.NoError, nil)
-		return resp.StatusCode, resp.Body, &ewc
+		return resp.StatusCode, resp.Body, nil
 	}
 
 	errString := ""
@@ -137,6 +135,6 @@ func Download(ctx *log.Context, d Downloader) (int, io.ReadCloser, *vmextension.
 		return resp.StatusCode, nil, nil
 	}
 
-	ewc := vmextension.NewErrorWithClarification(errClarificationCode, fmt.Errorf(errString))
+	ewc := vmextension.NewErrorWithClarification(errClarificationCode, errors.New(errString))
 	return resp.StatusCode, nil, &ewc
 }

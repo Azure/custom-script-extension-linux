@@ -58,7 +58,7 @@ func Test_reportErrorStatus_fileExists(t *testing.T) {
 	fakeEnv.HandlerEnvironment.StatusFolder = tmpDir
 	ewc := vmextension.NewErrorWithClarification(errorutil.CommandExecution_failureExitCode, fmt.Errorf("command failed with exit code = 1"))
 
-	require.Nil(t, reportErrorStatus(log.NewContext(log.NewNopLogger()), fakeEnv, 1, StatusError, cmdEnable, ewc))
+	require.Nil(t, reportErrorStatus(log.NewContext(log.NewNopLogger()), fakeEnv, 1, StatusError, cmdEnable, &ewc))
 
 	path := filepath.Join(tmpDir, "1.status")
 	b, err := ioutil.ReadFile(path)

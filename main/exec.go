@@ -55,12 +55,12 @@ func ExecCmdInDir(cmd, workdir string) *vmextension.ErrorWithClarification {
 
 	outF, err := os.OpenFile(outFn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if err != nil {
-		ewc := vmextension.NewErrorWithClarification(errorutil.NoError, errors.Wrapf(err, "failed to open stdout file"))
+		ewc := vmextension.NewErrorWithClarification(errorutil.Os_FailedToOpenStdOut, errors.Wrapf(err, "failed to open stdout file"))
 		return &ewc
 	}
 	errF, err := os.OpenFile(errFn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if err != nil {
-		ewc := vmextension.NewErrorWithClarification(errorutil.NoError, errors.Wrapf(err, "failed to open stderr file"))
+		ewc := vmextension.NewErrorWithClarification(errorutil.Os_FailedToOpenStdErr, errors.Wrapf(err, "failed to open stderr file"))
 		return &ewc
 	}
 

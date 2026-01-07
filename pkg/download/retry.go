@@ -45,10 +45,10 @@ func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf Slee
 
 			// reset the last error before each retry
 			lastErr = nil
-			lastErrCode = errorutil.NoError
+			lastErrCode = 0
 			start := time.Now()
 			status, out, ewc := Download(ctx, d)
-			if ewc.Err == nil {
+			if ewc == nil {
 				// server returned status code 200 OK
 				// we have a response body, copy it to the file
 				nBytes, innerErr := io.CopyBuffer(f, out, make([]byte, writeBufSize))
@@ -58,8 +58,7 @@ func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf Slee
 					out.Close()
 					end := time.Since(start)
 					ctx.Log("info", fmt.Sprintf("file download sucessful: downloaded and saved %d bytes in %d milliseconds", nBytes, end.Milliseconds()))
-					ewc := vmextension.NewErrorWithClarification(lastErrCode, lastErr)
-					return nBytes, &ewc
+					return nBytes, nil
 				} else {
 					// we failed to download the response body and write it to file
 					// because either connection was closed prematurely or file write operation failed

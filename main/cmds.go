@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"time"
 
-	utils "github.com/Azure/azure-extension-platform/pkg/utils"
+	"github.com/Azure/azure-extension-platform/pkg/utils"
 	vmextension "github.com/Azure/azure-extension-platform/vmextension"
 	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
 	"github.com/Azure/custom-script-extension-linux/pkg/seqnum"
@@ -85,7 +85,7 @@ func uninstall(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vme
 		ctx = ctx.With("path", dataDir)
 		ctx.Log("event", "removing data dir", "path", dataDir)
 		if err := os.RemoveAll(dataDir); err != nil {
-			ewc := vmextension.NewErrorWithClarification(errorutil.NoError, errors.Wrap(err, "failed to delete data directory"))
+			ewc := vmextension.NewErrorWithClarification(errorutil.Os_FailedToDeleteDataDir, errors.Wrap(err, "failed to delete data directory"))
 			return "", &ewc
 		}
 		ctx.Log("event", "removed data dir")
@@ -123,7 +123,7 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmexte
 	}
 
 	dir := filepath.Join(dataDir, downloadDir, fmt.Sprintf("%d", seqNum))
-	if ewc := downloadFiles(ctx, dir, cfg); ewc.Err != nil {
+	if ewc := downloadFiles(ctx, dir, cfg); ewc != nil {
 		ewc.Err = errors.Wrap(ewc.Err, "processing file downloads failed")
 		return "", ewc
 	}
@@ -142,7 +142,7 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmexte
 		ctx.Log("message", "error tailing stderr logs", "error", err)
 	}
 
-	isSuccess := runErr.Err == nil
+	isSuccess := runErr == nil
 	telemetry("Output", "-- stdout/stderr omitted from telemetry pipeline --", isSuccess, 0)
 
 	if isSuccess {
@@ -207,7 +207,7 @@ func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) *vmextensi
 	for i, f := range cfg.fileUrls() {
 		ctx := ctx.With("file", i)
 		ctx.Log("event", "download start")
-		if ewc := downloadAndProcessURL(ctx, f, dir, &cfg); ewc.Err != nil {
+		if ewc := downloadAndProcessURL(ctx, f, dir, &cfg); ewc != nil {
 			ctx.Log("event", "download failed", "error", ewc.Err)
 			ewc := vmextension.NewErrorWithClarification(ewc.ErrorCode, errors.Wrapf(ewc.Err, "failed to download file[%d]", i))
 			return &ewc
@@ -251,11 +251,11 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (ewc *vmextension.E
 	begin := time.Now()
 	ewc = ExecCmdInDir(cmd, dir)
 	elapsed := time.Now().Sub(begin)
-	isSuccess := ewc.Err == nil
+	isSuccess := ewc == nil
 
 	telemetry("scenario", scenario, isSuccess, elapsed)
 
-	if ewc.Err != nil {
+	if ewc != nil {
 		ctx.Log("event", "failed to execute command", "error", err, "output", dir)
 		ewc := vmextension.NewErrorWithClarification(ewc.ErrorCode, errors.Wrap(ewc.Err, "failed to execute command"))
 		return &ewc

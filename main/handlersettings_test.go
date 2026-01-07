@@ -3,8 +3,9 @@ package main
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
-import "github.com/stretchr/testify/require"
 
 func Test_handlerSettingsValidate(t *testing.T) {
 	// commandToExecute not specified
@@ -90,20 +91,22 @@ func Test_skipDos2UnixDefaultsToFalse(t *testing.T) {
 }
 
 func Test_managedIdentityVerification(t *testing.T) {
-	require.NoError(t, handlerSettings{publicSettings{}, protectedSettings{
+	err := handlerSettings{publicSettings{}, protectedSettings{
 		CommandToExecute: "echo hi",
 		FileURLs:         []string{"file1", "file2"},
 		ManagedIdentity: &clientOrObjectId{
 			ClientId: "31b403aa-c364-4240-a7ff-d85fb6cd7232",
 		},
-	}}.validate().Err, "validation failed for settings with MSI")
+	}}.validate()
+	require.Nil(t, err, "validation failed for settings with MSI")
 
-	require.NoError(t, handlerSettings{publicSettings{}, protectedSettings{
+	err = handlerSettings{publicSettings{}, protectedSettings{
 		CommandToExecute: "echo hi",
 		ManagedIdentity: &clientOrObjectId{
 			ObjectId: "31b403aa-c364-4240-a7ff-d85fb6cd7232",
 		},
-	}}.validate().Err, "validation failed for settings with MSI")
+	}}.validate()
+	require.Nil(t, err, "validation failed for settings with MSI")
 
 	require.Equal(t, errUsingBothKeyAndMsi,
 		handlerSettings{publicSettings{},
@@ -148,7 +151,7 @@ func Test_toJSONUmarshallForManagedIdentity(t *testing.T) {
 	require.NoError(t, err, "error while deserializing json")
 	require.Nil(t, protSettings.ManagedIdentity, "ProtectedSettings.ManagedIdentity was expected to be nil")
 	h := handlerSettings{publicSettings{}, *protSettings}
-	require.NoError(t, h.validate().Err, "settings should be valid")
+	require.Nil(t, h.validate(), "settings should be valid")
 
 	testString = `{"commandToExecute" : "echo hello", "fileUris":["https://a.com/file.txt"], "managedIdentity": { }}`
 	require.NoError(t, validateProtectedSettings(testString), "protected settings should be valid")
@@ -159,7 +162,7 @@ func Test_toJSONUmarshallForManagedIdentity(t *testing.T) {
 	require.Equal(t, protSettings.ManagedIdentity.ClientId, "")
 	require.Equal(t, protSettings.ManagedIdentity.ObjectId, "")
 	h = handlerSettings{publicSettings{}, *protSettings}
-	require.NoError(t, h.validate().Err, "settings should be valid")
+	require.Nil(t, h.validate(), "settings should be valid")
 
 	testString = `{"commandToExecute" : "echo hello", "fileUris":["https://a.com/file.txt", "https://b.com/file2.txt"], "managedIdentity": { "clientId": "31b403aa-c364-4240-a7ff-d85fb6cd7232"}}`
 	require.NoError(t, validateProtectedSettings(testString), "protected settings should be valid")
@@ -170,7 +173,7 @@ func Test_toJSONUmarshallForManagedIdentity(t *testing.T) {
 	require.Equal(t, protSettings.ManagedIdentity.ClientId, "31b403aa-c364-4240-a7ff-d85fb6cd7232")
 	require.Equal(t, protSettings.ManagedIdentity.ObjectId, "")
 	h = handlerSettings{publicSettings{}, *protSettings}
-	require.NoError(t, h.validate().Err, "settings should be valid")
+	require.Nil(t, h.validate(), "settings should be valid")
 
 	testString = `{"commandToExecute" : "echo hello", "fileUris":["https://a.com/file.txt"], "managedIdentity": { "objectId": "31b403aa-c364-4240-a7ff-d85fb6cd7232"}}`
 	require.NoError(t, validateProtectedSettings(testString), "protected settings should be valid")
@@ -181,7 +184,7 @@ func Test_toJSONUmarshallForManagedIdentity(t *testing.T) {
 	require.Equal(t, protSettings.ManagedIdentity.ObjectId, "31b403aa-c364-4240-a7ff-d85fb6cd7232")
 	require.Equal(t, protSettings.ManagedIdentity.ClientId, "")
 	h = handlerSettings{publicSettings{}, *protSettings}
-	require.NoError(t, h.validate().Err, "settings should be valid")
+	require.Nil(t, h.validate(), "settings should be valid")
 
 	testString = `{"commandToExecute" : "echo hello", "fileUris":["https://a.com/file.txt", "https://b.com/file2.txt"], "managedIdentity": { "clientId": "31b403aa-c364-4240-a7ff-d85fb6cd7232", "objectId": "41b403aa-c364-4240-a7ff-d85fb6cd7232"}}`
 	require.NoError(t, validateProtectedSettings(testString), "protected settings should be valid")
@@ -192,5 +195,5 @@ func Test_toJSONUmarshallForManagedIdentity(t *testing.T) {
 	require.Equal(t, protSettings.ManagedIdentity.ClientId, "31b403aa-c364-4240-a7ff-d85fb6cd7232")
 	require.Equal(t, protSettings.ManagedIdentity.ObjectId, "41b403aa-c364-4240-a7ff-d85fb6cd7232")
 	h = handlerSettings{publicSettings{}, *protSettings}
-	require.Error(t, h.validate().Err, "settings should be invalid")
+	require.Error(t, h.validate(), "settings should be invalid")
 }

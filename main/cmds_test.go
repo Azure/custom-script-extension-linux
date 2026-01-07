@@ -125,7 +125,7 @@ func Test_downloadFiles(t *testing.T) {
 					srv.URL + "/bytes/1000",
 				}},
 		})
-	require.Nil(t, ewc.Err)
+	require.Nil(t, ewc)
 
 	// check the files
 	f := []string{"10", "100", "1000"}

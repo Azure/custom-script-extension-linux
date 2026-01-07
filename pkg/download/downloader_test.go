@@ -30,7 +30,7 @@ func (b *badDownloader) GetRequest() (*http.Request, error) {
 }
 
 func TestDownload_wrapsGetRequestError(t *testing.T) {
-	_, _, ewc:= download.Download(testctx, new(badDownloader))
+	_, _, ewc := download.Download(testctx, new(badDownloader))
 	require.Equal(t, ewc.ErrorCode, errorutil.FileDownload_genericError)
 	require.NotNil(t, ewc.Err)
 	require.EqualError(t, ewc.Err, "failed to create http request: expected error")
@@ -56,7 +56,7 @@ func TestDownload_wrapsCommonErrorCodes(t *testing.T) {
 		http.StatusBadRequest,
 		http.StatusUnauthorized,
 	} {
-		respCode, _, ewc:= download.Download(testctx, download.NewURLDownload(fmt.Sprintf("%s/status/%d", srv.URL, code)))
+		respCode, _, ewc := download.Download(testctx, download.NewURLDownload(fmt.Sprintf("%s/status/%d", srv.URL, code)))
 		require.NotNil(t, ewc.Err, "not failed for code:%d", code)
 		require.Equal(t, code, respCode)
 		switch respCode {
@@ -84,8 +84,7 @@ func TestDownload_statusOKSucceeds(t *testing.T) {
 	defer srv.Close()
 
 	_, body, ewc := download.Download(testctx, download.NewURLDownload(srv.URL+"/status/200"))
-	require.Equal(t, ewc.ErrorCode, errorutil.NoError)
-	require.Nil(t, ewc.Err)
+	require.Nil(t, ewc)
 	defer body.Close()
 	require.NotNil(t, body)
 }
@@ -133,8 +132,7 @@ func TestDownload_retrievesBody(t *testing.T) {
 	defer srv.Close()
 
 	_, body, ewc := download.Download(testctx, download.NewURLDownload(srv.URL+"/bytes/65536"))
-	require.Equal(t, ewc.ErrorCode, errorutil.NoError)
-	require.Nil(t, ewc.Err)
+	require.Nil(t, ewc)
 	defer body.Close()
 	b, err := io.ReadAll(body)
 	require.Nil(t, err)
@@ -146,7 +144,6 @@ func TestDownload_bodyClosesWithoutError(t *testing.T) {
 	defer srv.Close()
 
 	_, body, ewc := download.Download(testctx, download.NewURLDownload(srv.URL+"/get"))
-	require.Equal(t, ewc.ErrorCode, errorutil.NoError)
-	require.Nil(t, ewc.Err)
+	require.Nil(t, ewc)
 	require.Nil(t, body.Close(), "body should close fine")
 }

@@ -14,6 +14,10 @@ const (
 	Internal_badConfig               int = -21
 	Internal_couldNotFindCertificate int = -20
 
+	Os_FailedToDeleteDataDir int = -50
+	Os_FailedToOpenStdOut    int = -51
+	Os_FailedToOpenStdErr    int = -52
+
 	Storage_internalServerError int = -1
 	SystemError                 int = 0 // CRP interprets anything > 0 as user errors
 
