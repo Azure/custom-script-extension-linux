@@ -32,16 +32,14 @@ func Exec(cmd, workdir string, stdout, stderr io.WriteCloser) (int, *vmextension
 	if ok {
 		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
 			code := status.ExitStatus()
-			ewc := vmextension.NewErrorWithClarification(errorutil.CommandExecution_failureExitCode, fmt.Errorf("command terminated with exit status=%d", code))
-			return code, &ewc
+			return code, vmextension.NewErrorWithClarificationPtr(errorutil.CommandExecution_failureExitCode, fmt.Errorf("command terminated with exit status=%d", code))
 		}
 	}
 	if err == nil {
 		return 0, nil
 	}
 
-	ewc := vmextension.NewErrorWithClarification(errorutil.CommandExecution_failedUnknownError, errors.Wrapf(err, "failed to execute command"))
-	return 0, &ewc
+	return 0, vmextension.NewErrorWithClarificationPtr(errorutil.CommandExecution_failedUnknownError, errors.Wrapf(err, "failed to execute command"))
 }
 
 // ExecCmdInDir executes the given command in given directory and saves output
@@ -55,13 +53,11 @@ func ExecCmdInDir(cmd, workdir string) *vmextension.ErrorWithClarification {
 
 	outF, err := os.OpenFile(outFn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if err != nil {
-		ewc := vmextension.NewErrorWithClarification(errorutil.Os_FailedToOpenStdOut, errors.Wrapf(err, "failed to open stdout file"))
-		return &ewc
+		return vmextension.NewErrorWithClarificationPtr(errorutil.Os_FailedToOpenStdOut, errors.Wrapf(err, "failed to open stdout file"))
 	}
 	errF, err := os.OpenFile(errFn, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if err != nil {
-		ewc := vmextension.NewErrorWithClarification(errorutil.Os_FailedToOpenStdErr, errors.Wrapf(err, "failed to open stderr file"))
-		return &ewc
+		return vmextension.NewErrorWithClarificationPtr(errorutil.Os_FailedToOpenStdErr, errors.Wrapf(err, "failed to open stderr file"))
 	}
 
 	_, ewc := Exec(cmd, workdir, outF, errF)

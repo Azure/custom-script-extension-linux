@@ -106,8 +106,7 @@ func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf Slee
 		return 0, nil
 	}
 
-	ewc := vmextension.NewErrorWithClarification(lastErrCode, lastErr)
-	return 0, &ewc
+	return 0, vmextension.NewErrorWithClarificationPtr(lastErrCode, lastErr)
 }
 
 func isTransientHttpStatusCode(statusCode int) bool {

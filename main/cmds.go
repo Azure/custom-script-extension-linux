@@ -64,8 +64,7 @@ func noop(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmextens
 
 func install(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmextension.ErrorWithClarification) {
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		ewc := vmextension.NewErrorWithClarification(errorutil.SystemError, errors.Wrap(err, "failed to create data dir"))
-		return "", &ewc
+		return "", vmextension.NewErrorWithClarificationPtr(errorutil.SystemError, errors.Wrap(err, "failed to create data dir"))
 	}
 
 	// If the file mrseq does not exists it is for two possible reasons.
@@ -85,8 +84,7 @@ func uninstall(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vme
 		ctx = ctx.With("path", dataDir)
 		ctx.Log("event", "removing data dir", "path", dataDir)
 		if err := os.RemoveAll(dataDir); err != nil {
-			ewc := vmextension.NewErrorWithClarification(errorutil.Os_FailedToDeleteDataDir, errors.Wrap(err, "failed to delete data directory"))
-			return "", &ewc
+			return "", vmextension.NewErrorWithClarificationPtr(errorutil.Os_FailedToDeleteDataDir, errors.Wrap(err, "failed to delete data directory"))
 		}
 		ctx.Log("event", "removed data dir")
 	}
@@ -186,8 +184,7 @@ func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) *vmextensi
 	// - create the directory if missing
 	ctx.Log("event", "creating output directory", "path", dir)
 	if err := os.MkdirAll(dir, 0700); err != nil {
-		ewc := vmextension.NewErrorWithClarification(errorutil.FileDownload_unableToCreateDownloadDirectory, errors.Wrap(err, "failed to prepare output directory"))
-		return &ewc
+		return vmextension.NewErrorWithClarificationPtr(errorutil.FileDownload_unableToCreateDownloadDirectory, errors.Wrap(err, "failed to prepare output directory"))
 	}
 	ctx.Log("event", "created output directory")
 
@@ -209,8 +206,7 @@ func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) *vmextensi
 		ctx.Log("event", "download start")
 		if ewc := downloadAndProcessURL(ctx, f, dir, &cfg); ewc != nil {
 			ctx.Log("event", "download failed", "error", ewc.Err)
-			ewc := vmextension.NewErrorWithClarification(ewc.ErrorCode, errors.Wrapf(ewc.Err, "failed to download file[%d]", i))
-			return &ewc
+			return vmextension.NewErrorWithClarificationPtr(ewc.ErrorCode, errors.Wrapf(ewc.Err, "failed to download file[%d]", i))
 		}
 		ctx.Log("event", "download complete", "output", dir)
 	}
@@ -257,8 +253,7 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (ewc *vmextension.E
 
 	if ewc != nil {
 		ctx.Log("event", "failed to execute command", "error", err, "output", dir)
-		ewc := vmextension.NewErrorWithClarification(ewc.ErrorCode, errors.Wrap(ewc.Err, "failed to execute command"))
-		return &ewc
+		return vmextension.NewErrorWithClarificationPtr(ewc.ErrorCode, errors.Wrap(ewc.Err, "failed to execute command"))
 	}
 	ctx.Log("event", "executed command", "output", dir)
 	return nil

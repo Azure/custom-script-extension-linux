@@ -26,13 +26,11 @@ import (
 func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handlerSettings) *vmextension.ErrorWithClarification {
 	fn, err := urlToFileName(url)
 	if err != nil {
-		ewc := vmextension.NewErrorWithClarification(errorutil.CustomerInput_invalidFileUris, err)
-		return &ewc
+		return vmextension.NewErrorWithClarificationPtr(errorutil.CustomerInput_invalidFileUris, err)
 	}
 
 	if !urlutil.IsValidUrl(url) {
-		ewc := vmextension.NewErrorWithClarification(errorutil.CustomerInput_invalidFileUris, fmt.Errorf("[REDACTED] is not a valid url"))
-		return &ewc
+		return vmextension.NewErrorWithClarificationPtr(errorutil.CustomerInput_invalidFileUris, fmt.Errorf("[REDACTED] is not a valid url"))
 	}
 
 	dl, ewc := getDownloaders(url, cfg.StorageAccountName, cfg.StorageAccountKey, cfg.ManagedIdentity)
@@ -51,8 +49,7 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handl
 	}
 
 	if err != nil {
-		ewc := vmextension.NewErrorWithClarification(errorutil.SystemError, errors.Wrapf(err, "failed to post-process '%s'", fn))
-		return &ewc
+		return vmextension.NewErrorWithClarificationPtr(errorutil.SystemError, errors.Wrapf(err, "failed to post-process '%s'", fn))
 	}
 
 	return nil
@@ -78,8 +75,7 @@ func getDownloaders(fileURL string, storageAccountName, storageAccountKey string
 			case managedIdentity.ClientId == "" && managedIdentity.ObjectId != "":
 				msiProvider = download.GetMsiProviderForStorageAccountsWithObjectId(fileURL, managedIdentity.ObjectId)
 			default:
-				ewc := vmextension.NewErrorWithClarification(errorutil.CustomerInput_clientIdObjectIdBothSpecified, fmt.Errorf("unexpected combination of ClientId and ObjectId found"))
-				return nil, &ewc
+				return nil, vmextension.NewErrorWithClarificationPtr(errorutil.CustomerInput_clientIdObjectIdBothSpecified, fmt.Errorf("unexpected combination of ClientId and ObjectId found"))
 			}
 			return []download.Downloader{
 				// try downloading without MSI token first, but attempt with MSI if the download fails
@@ -95,8 +91,7 @@ func getDownloaders(fileURL string, storageAccountName, storageAccountKey string
 		// this preserves old behavior
 		blob, err := blobutil.ParseBlobURL(fileURL)
 		if err != nil {
-			ewc := vmextension.NewErrorWithClarification(errorutil.CustomerInput_invalidFileUris, err)
-			return nil, &ewc
+			return nil, vmextension.NewErrorWithClarificationPtr(errorutil.CustomerInput_invalidFileUris, err)
 		}
 		return []download.Downloader{download.NewBlobDownload(
 				storageAccountName, storageAccountKey, blob)},

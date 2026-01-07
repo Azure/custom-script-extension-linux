@@ -16,16 +16,14 @@ import (
 func SaveTo(ctx *log.Context, d []Downloader, dst string, mode os.FileMode) (int64, *vmextension.ErrorWithClarification) {
 	f, err := os.OpenFile(dst, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, mode)
 	if err != nil {
-		ewc := vmextension.NewErrorWithClarification(errorutil.FileDownload_unknownError, errors.Wrap(err, "failed to open file for writing"))
-		return 0, &ewc
+		return 0, vmextension.NewErrorWithClarificationPtr(errorutil.FileDownload_unknownError, errors.Wrap(err, "failed to open file for writing"))
 
 	}
 	defer f.Close()
 
 	n, ewc := WithRetries(ctx, f, d, ActualSleep)
 	if ewc != nil {
-		ewc := vmextension.NewErrorWithClarification(ewc.ErrorCode, errors.Wrapf(ewc.Err, "failed to download response and write to file: %s", dst))
-		return n, &ewc
+		return n, vmextension.NewErrorWithClarificationPtr(ewc.ErrorCode, errors.Wrapf(ewc.Err, "failed to download response and write to file: %s", dst))
 
 	}
 

@@ -52,8 +52,7 @@ var (
 func Download(ctx *log.Context, d Downloader) (int, io.ReadCloser, *vmextension.ErrorWithClarification) {
 	req, err := d.GetRequest()
 	if err != nil {
-		ewc := vmextension.NewErrorWithClarification(errorutil.FileDownload_genericError, errors.Wrapf(err, "failed to create http request"))
-		return -1, nil, &ewc
+		return -1, nil, vmextension.NewErrorWithClarificationPtr(errorutil.FileDownload_genericError, errors.Wrapf(err, "failed to create http request"))
 	}
 	requestID := req.Header.Get(xMsClientRequestIdHeaderName)
 	if len(requestID) > 0 {
@@ -63,12 +62,10 @@ func Download(ctx *log.Context, d Downloader) (int, io.ReadCloser, *vmextension.
 	if err != nil {
 		if (err.(*url.Error)).Timeout() {
 			err = urlutil.RemoveUrlFromErr(err)
-			ewc := vmextension.NewErrorWithClarification(errorutil.FileDownload_exceededTimeout, errors.Wrapf(err, "http request timed out"))
-			return -1, nil, &ewc
+			return -1, nil, vmextension.NewErrorWithClarificationPtr(errorutil.FileDownload_exceededTimeout, errors.Wrapf(err, "http request timed out"))
 		}
 		err = urlutil.RemoveUrlFromErr(err)
-		ewc := vmextension.NewErrorWithClarification(errorutil.FileDownload_unknownError, errors.Wrapf(err, "http request failed"))
-		return -1, nil, &ewc
+		return -1, nil, vmextension.NewErrorWithClarificationPtr(errorutil.FileDownload_unknownError, errors.Wrapf(err, "http request failed"))
 	}
 
 	if resp.StatusCode == http.StatusOK {
@@ -135,6 +132,5 @@ func Download(ctx *log.Context, d Downloader) (int, io.ReadCloser, *vmextension.
 		return resp.StatusCode, nil, nil
 	}
 
-	ewc := vmextension.NewErrorWithClarification(errClarificationCode, errors.New(errString))
-	return resp.StatusCode, nil, &ewc
+	return resp.StatusCode, nil, vmextension.NewErrorWithClarificationPtr(errClarificationCode, errors.New(errString))
 }

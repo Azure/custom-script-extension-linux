@@ -53,44 +53,36 @@ func (s *handlerSettings) fileUrls() []string {
 // the schema validation.
 func (h handlerSettings) validate() *vmextension.ErrorWithClarification {
 	if h.commandToExecute() == "" && h.script() == "" {
-		ewc := vmextension.NewErrorWithClarification(errorutil.CustomerInput_commandToExecuteAndScriptNotSpecified, errCmdMissing)
-		return &ewc
+		return vmextension.NewErrorWithClarificationPtr(errorutil.CustomerInput_commandToExecuteAndScriptNotSpecified, errCmdMissing)
 	}
 	if h.publicSettings.CommandToExecute != "" && h.protectedSettings.CommandToExecute != "" {
-		ewc := vmextension.NewErrorWithClarification(errorutil.CustomerInput_commandToExecuteSpecifiedInTwoPlaces, errCmdTooMany)
-		return &ewc
+		return vmextension.NewErrorWithClarificationPtr(errorutil.CustomerInput_commandToExecuteSpecifiedInTwoPlaces, errCmdTooMany)
 	}
 
 	if h.publicSettings.Script != "" && h.protectedSettings.Script != "" {
-		ewc := vmextension.NewErrorWithClarification(errorutil.CustomerInput_scriptSpecifiedInTwoPlaces, errScriptTooMany)
-		return &ewc
+		return vmextension.NewErrorWithClarificationPtr(errorutil.CustomerInput_scriptSpecifiedInTwoPlaces, errScriptTooMany)
 	}
 
 	if (h.publicSettings.FileURLs != nil && len(h.publicSettings.FileURLs) > 0) && (h.protectedSettings.FileURLs != nil && len(h.protectedSettings.FileURLs) > 0) {
-		ewc := vmextension.NewErrorWithClarification(errorutil.CustomerInput_fileUrisSpecifiedInTwoPlaces, errFileUrisTooMany)
-		return &ewc
+		return vmextension.NewErrorWithClarificationPtr(errorutil.CustomerInput_fileUrisSpecifiedInTwoPlaces, errFileUrisTooMany)
 	}
 
 	if h.commandToExecute() != "" && h.script() != "" {
-		ewc := vmextension.NewErrorWithClarification(errorutil.CustomerInput_commandToExecuteAndScriptBothSpecified, errCmdAndScript)
-		return &ewc
+		return vmextension.NewErrorWithClarificationPtr(errorutil.CustomerInput_commandToExecuteAndScriptBothSpecified, errCmdAndScript)
 	}
 
 	if (h.protectedSettings.StorageAccountName != "") !=
 		(h.protectedSettings.StorageAccountKey != "") {
-		ewc := vmextension.NewErrorWithClarification(errorutil.CustomerInput_incompleteStorageCreds, errStoragePartialCredentials)
-		return &ewc
+		return vmextension.NewErrorWithClarificationPtr(errorutil.CustomerInput_incompleteStorageCreds, errStoragePartialCredentials)
 	}
 
 	if (h.protectedSettings.StorageAccountKey != "" || h.protectedSettings.StorageAccountName != "") && h.protectedSettings.ManagedIdentity != nil {
-		ewc := vmextension.NewErrorWithClarification(errorutil.CustomerInput_storageCredsAndMIBothSpecified, errUsingBothKeyAndMsi)
-		return &ewc
+		return vmextension.NewErrorWithClarificationPtr(errorutil.CustomerInput_storageCredsAndMIBothSpecified, errUsingBothKeyAndMsi)
 	}
 
 	if h.protectedSettings.ManagedIdentity != nil {
 		if h.protectedSettings.ManagedIdentity.ClientId != "" && h.protectedSettings.ManagedIdentity.ObjectId != "" {
-			ewc := vmextension.NewErrorWithClarification(errorutil.CustomerInput_clientIdObjectIdBothSpecified, errUsingBothClientIdAndObjectId)
-			return &ewc
+			return vmextension.NewErrorWithClarificationPtr(errorutil.CustomerInput_clientIdObjectIdBothSpecified, errUsingBothClientIdAndObjectId)
 		}
 	}
 
@@ -132,22 +124,19 @@ func parseAndValidateSettings(ctx *log.Context, configFolder string, seqNum int)
 	ctx.Log("event", "reading configuration")
 	pubJSON, protJSON, err := readSettings(configFolder, seqNum)
 	if err != nil {
-		ewc := vmextension.NewErrorWithClarification(errorutil.Internal_badConfig, err)
-		return h, &ewc
+		return h, vmextension.NewErrorWithClarificationPtr(errorutil.Internal_badConfig, err)
 	}
 	ctx.Log("event", "read configuration")
 
 	ctx.Log("event", "validating json schema")
 	if err := validateSettingsSchema(pubJSON, protJSON); err != nil {
-		ewc := vmextension.NewErrorWithClarification(errorutil.Internal_badConfig, errors.Wrap(err, "json validation error"))
-		return h, &ewc
+		return h, vmextension.NewErrorWithClarificationPtr(errorutil.Internal_badConfig, errors.Wrap(err, "json validation error"))
 	}
 	ctx.Log("event", "json schema valid")
 
 	ctx.Log("event", "parsing configuration json")
 	if err := UnmarshalHandlerSettings(pubJSON, protJSON, &h.publicSettings, &h.protectedSettings); err != nil {
-		ewc := vmextension.NewErrorWithClarification(errorutil.Internal_badConfig, errors.Wrap(err, "json parsing error"))
-		return h, &ewc
+		return h, vmextension.NewErrorWithClarificationPtr(errorutil.Internal_badConfig, errors.Wrap(err, "json parsing error"))
 	}
 	ctx.Log("event", "parsed configuration json")
 
