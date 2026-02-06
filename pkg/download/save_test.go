@@ -33,8 +33,8 @@ func TestSave(t *testing.T) {
 
 	d := download.NewURLDownload(srv.URL + "/bytes/65536")
 	path := filepath.Join(dir, "test-file")
-	n, err := download.SaveTo(nopLog(), []download.Downloader{d}, path, 0600)
-	require.Nil(t, err)
+	n, ewc := download.SaveTo(nopLog(), []download.Downloader{d}, path, 0600)
+	require.Nil(t, ewc.Err)
 	require.EqualValues(t, 65536, n)
 
 	fi, err := os.Stat(path)
@@ -52,10 +52,10 @@ func TestSave_truncates(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	path := filepath.Join(dir, "test-file")
-	_, err = download.SaveTo(nopLog(), []download.Downloader{download.NewURLDownload(srv.URL + "/bytes/65536")}, path, 0600)
-	require.Nil(t, err)
-	_, err = download.SaveTo(nopLog(), []download.Downloader{download.NewURLDownload(srv.URL + "/bytes/128")}, path, 0777)
-	require.Nil(t, err)
+	_, ewc := download.SaveTo(nopLog(), []download.Downloader{download.NewURLDownload(srv.URL + "/bytes/65536")}, path, 0600)
+	require.Nil(t, ewc.Err)
+	_, ewc = download.SaveTo(nopLog(), []download.Downloader{download.NewURLDownload(srv.URL + "/bytes/128")}, path, 0777)
+	require.Nil(t, ewc.Err)
 
 	fi, err := os.Stat(path)
 	require.Nil(t, err)
@@ -74,8 +74,8 @@ func TestSave_largeFile(t *testing.T) {
 	size := 1024 * 1024 * 128 // 128 mb
 
 	path := filepath.Join(dir, "large-file")
-	n, err := download.SaveTo(nopLog(), []download.Downloader{download.NewURLDownload(srv.URL + "/bytes/" + fmt.Sprintf("%d", size))}, path, 0600)
-	require.Nil(t, err)
+	n, ewc := download.SaveTo(nopLog(), []download.Downloader{download.NewURLDownload(srv.URL + "/bytes/" + fmt.Sprintf("%d", size))}, path, 0600)
+	require.Nil(t, ewc.Err)
 	require.EqualValues(t, size, n)
 
 	fi, err := os.Stat(path)
