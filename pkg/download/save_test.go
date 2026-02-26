@@ -24,6 +24,7 @@ func TestSaveTo_invalidDir(t *testing.T) {
 }
 
 func TestSave(t *testing.T) {
+	fmt.Println("lourdes-debugging inside of test save")
 	srv := httptest.NewServer(httpbin.GetMux())
 	defer srv.Close()
 

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"fmt"
 
 	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
 	"github.com/ahmetalpbalkan/go-httpbin"
@@ -79,14 +80,16 @@ func Test_checkAndSaveSeqNum(t *testing.T) {
 }
 
 func Test_runCmd_success(t *testing.T) {
+	fmt.Println("Lourdes debugging inside of test_runcmd_success")
 	dir, err := ioutil.TempDir("", "")
 	require.Nil(t, err)
 	defer os.RemoveAll(dir)
 
+	fmt.Println("lourdes before nil check")
 	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
 		publicSettings: publicSettings{CommandToExecute: "date"},
 	}).Err, "command should run successfully")
-
+	fmt.Println("lourdes-- i htink the above statement is casuing a null derefence (bad)")
 	// check stdout stderr files
 	_, err = os.Stat(filepath.Join(dir, "stdout"))
 	require.Nil(t, err, "stdout should exist")

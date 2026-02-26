@@ -115,6 +115,25 @@ func min(a, b int) int {
 func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmextension.ErrorWithClarification) {
 	// parse the extension handler settings (not available prior to 'enable')
 	cfg, ewc := parseAndValidateSettings(ctx, h.HandlerEnvironment.ConfigFolder, seqNum)
+
+	// Lourdes: tmp code, delete later. Try to read runtime policy file. if you're able to read it, put it in an out folder and log that you read it. YAY!
+	policyPath := filepath.Join(h.HandlerEnvironment.ConfigFolder, "waagent_runtime_policy.json")
+	ctx.Log("I am in ENABLE: ", policyPath)
+	// content, err := os.ReadFile(policyPath)
+	// if err != nil {
+	// 	ewc.Err = errors.Wrap(ewc.Err, "failed to read policy file")
+	// 	return "", ewc
+	// }
+	// fo, err := os.Create("lourdes_output.txt")
+	// defer fo.Close();
+	// Write string to file
+	// _, err = fo.WriteString(string(content))
+	// if err != nil {
+	// 	ewc.Err = errors.Wrap(ewc.Err, "lourdes: something wrong with repeating the policy file in your output")
+	// 	return "", ewc
+	// }
+
+
 	if ewc != nil {
 		ewc.Err = errors.Wrap(ewc.Err, "failed to get configuration")
 		return "", ewc
@@ -216,6 +235,7 @@ func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) *vmextensi
 // runCmd runs the command (extracted from cfg) in the given dir (assumed to exist).
 func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (ewc *vmextension.ErrorWithClarification) {
 	ctx.Log("event", "executing command", "output", dir)
+	fmt.Println("lourdes debugging-- inside runCmd")
 	var cmd string
 	var scenario string
 	var scenarioInfo string
@@ -243,11 +263,13 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (ewc *vmextension.E
 		}
 		scenario = fmt.Sprintf("protected-script;%s", scenarioInfo)
 	}
+	fmt.Println("lourdes debugging-made it through parsing without a seg fault")
 
 	begin := time.Now()
 	ewc = ExecCmdInDir(cmd, dir)
 	elapsed := time.Now().Sub(begin)
 	isSuccess := ewc == nil
+	fmt.Println("lourdes debugging-made it thorugh command a seg fault")
 
 	telemetry("scenario", scenario, isSuccess, elapsed)
 
