@@ -15,7 +15,7 @@ import (
 func TestExec_success(t *testing.T) {
 	v := new(mockFile)
 	ec, err := Exec("date", "/", v, v)
-	require.Nil(t, err.Err, "err: %v -- out: %s", err.Err, v.b.Bytes())
+	require.Nil(t, err, "err: %v -- out: %s", err, v.b.Bytes())
 	require.EqualValues(t, 0, ec)
 }
 
@@ -25,7 +25,7 @@ func TestExec_success_redirectsStdStreams_closesFds(t *testing.T) {
 	require.False(t, e.closed, "stderr open")
 
 	_, err := Exec("/bin/echo 'I am stdout!'>&1; /bin/echo 'I am stderr!'>&2", "/", o, e)
-	require.Nil(t, err, "err: %v -- stderr: %s", err.Err, e.b.Bytes())
+	require.Nil(t, err, "err: %v -- stderr: %s", err, e.b.Bytes())
 	require.Equal(t, "I am stdout!\n", string(o.b.Bytes()))
 	require.Equal(t, "I am stderr!\n", string(e.b.Bytes()))
 	require.True(t, o.closed, "stdout closed")
@@ -90,9 +90,10 @@ func TestExecCmdInDir(t *testing.T) {
 	require.EqualValues(t, 0, len(b), "stderr file must be empty")
 }
 
-func TestExecCmdInDir_cantOpenError(t *testing.T) {
+func TestExecCmdInDir_cantOpenStdOut(t *testing.T) {
 	err := ExecCmdInDir("/bin/echo 'Hello world'", "/non-existing-dir")
-	require.Equal(t, err.ErrorCode, errorutil.Os_FailedToOpenStdErr)
+	require.NotNil(t, err)
+	require.Equal(t, err.ErrorCode, errorutil.Os_FailedToOpenStdOut)
 	require.NotNil(t, err.Err)
 	require.Contains(t, err.Err.Error(), "failed to open stdout file")
 }
