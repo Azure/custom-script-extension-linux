@@ -244,13 +244,11 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (ewc *vmextension.E
 		}
 		scenario = fmt.Sprintf("protected-script;%s", scenarioInfo)
 	}
-	fmt.Println("lourdes debugging-made it through parsing without a seg fault")
 
 	begin := time.Now()
 	ewc = ExecCmdInDir(cmd, dir)
 	elapsed := time.Now().Sub(begin)
 	isSuccess := ewc == nil
-	fmt.Println("lourdes debugging-made it thorugh command a seg fault")
 
 	telemetry("scenario", scenario, isSuccess, elapsed)
 
