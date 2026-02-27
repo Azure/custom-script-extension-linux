@@ -115,6 +115,7 @@ func min(a, b int) int {
 func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmextension.ErrorWithClarification) {
 	// parse the extension handler settings (not available prior to 'enable')
 	cfg, ewc := parseAndValidateSettings(ctx, h.HandlerEnvironment.ConfigFolder, seqNum)
+
 	if ewc != nil {
 		ewc.Err = errors.Wrap(ewc.Err, "failed to get configuration")
 		return "", ewc
