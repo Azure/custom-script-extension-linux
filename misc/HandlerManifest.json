@@ -6,7 +6,6 @@
     "updateCommand": "bin/custom-script-shim update",
     "enableCommand": "bin/custom-script-shim enable",
     "disableCommand": "bin/custom-script-shim disable",
-    "supportsPolicy": true,
     "rebootAfterInstall": false,
     "reportHeartbeat": false,
     "updateMode": "UpdateWithInstall"
