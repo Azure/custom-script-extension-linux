@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Azure/azure-extension-platform/pkg/extensionpolicysettings"
+	"github.com/Azure/azure-extension-platform/pkg/logging"
 	"github.com/Azure/azure-extension-platform/pkg/utils"
 	vmextension "github.com/Azure/azure-extension-platform/vmextension"
 	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
@@ -39,6 +41,7 @@ const (
 	fullName                = "Microsoft.Azure.Extensions.CustomScript"
 	maxTailLen              = 4 * 1024 // length of max stdout/stderr to be transmitted in .status file
 	maxTelemetryTailLen int = 1800
+	policyFileName          = "waagent_runtime_policy.json"
 )
 
 var (
@@ -112,31 +115,38 @@ func min(a, b int) int {
 	return b
 }
 
+type CSEExtensionPolicySettings struct {
+	RequireSigning bool     `json:"requireSigning"`
+	FileRootCertCA string   `json:"fileRootCertCA,omitempty"` // optional field for customer that want to specify a root cert for script signature verification. This is a path to a cert file on the VM that the extension can use to verify script signatures. The customer is responsible for ensuring the cert is there and updated as needed (e.g. if the cert expires). The customer can choose to use this field or not based on their needs.
+	AllowedScripts []string `json:"allowedScripts"`
+}
+
+func (cseps CSEExtensionPolicySettings) ValidateFormat() error {
+	if cseps.RequireSigning && len(cseps.FileRootCertCA) == 0 {
+		return errors.New("invalid policy settings: if RequireSigning is true, fileRootCertCA must be provided")
+	}
+	return nil
+}
+
 func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmextension.ErrorWithClarification) {
 	// parse the extension handler settings (not available prior to 'enable')
 	cfg, ewc := parseAndValidateSettings(ctx, h.HandlerEnvironment.ConfigFolder, seqNum)
 
-	// Lourdes: tmp code, delete later. Try to read runtime policy file. if you're able to read it, put it in an out folder and log that you read it. YAY!
-	policyPath := filepath.Join(h.HandlerEnvironment.ConfigFolder, "waagent_runtime_policy.json")
-	ctx.Log("I am in ENABLE: ", policyPath)
-	// content, err := os.ReadFile(policyPath)
-	// if err != nil {
-	// 	ewc.Err = errors.Wrap(ewc.Err, "failed to read policy file")
-	// 	return "", ewc
-	// }
-	// fo, err := os.Create("lourdes_output.txt")
-	// defer fo.Close();
-	// Write string to file
-	// _, err = fo.WriteString(string(content))
-	// if err != nil {
-	// 	ewc.Err = errors.Wrap(ewc.Err, "lourdes: something wrong with repeating the policy file in your output")
-	// 	return "", ewc
-	// }
-
-
 	if ewc != nil {
 		ewc.Err = errors.Wrap(ewc.Err, "failed to get configuration")
 		return "", ewc
+	}
+
+	// Lourdes: tmp code, delete later. Try to read runtime policy file. if you're able to read it, put it in an out folder and log that you read it. YAY!
+	policyPath := filepath.Join(h.HandlerEnvironment.ConfigFolder, policyFileName)
+
+	ExtensionPolicyManagerPtr := extensionpolicysettings.NewExtensionPolicySettingsManager[CSEExtensionPolicySettings](policyPath, &logging.ExtensionLogger{})
+	err := ExtensionPolicyManagerPtr.LoadExtensionPolicySettings()
+	if err != nil {
+		ctx.Log("message", "failed to load extension policy settings", "error", err)
+	} else {
+		ctx.Log("message", "successfully loaded extension policy settings", "settings", fmt.Sprintf("%+v", ExtensionPolicyManagerPtr.GetSettings()))
+		fmt.Println("lourdes debugging-- successfully loaded extension policy settings: \n" + fmt.Sprintf("%+v", ExtensionPolicyManagerPtr.GetSettings()))
 	}
 
 	dir := filepath.Join(dataDir, downloadDir, fmt.Sprintf("%d", seqNum))
