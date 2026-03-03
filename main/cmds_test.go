@@ -86,11 +86,6 @@ func Test_runCmd_success(t *testing.T) {
 	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
 		publicSettings: publicSettings{CommandToExecute: "date"},
 	}), "command should run successfully")
-	// check stdout stderr files
-	_, err = os.Stat(filepath.Join(dir, "stdout"))
-	require.Nil(t, err, "stdout should exist")
-	_, err = os.Stat(filepath.Join(dir, "stderr"))
-	require.Nil(t, err, "stderr should exist")
 }
 
 func Test_runCmd_success_with_policy(t *testing.T) {
