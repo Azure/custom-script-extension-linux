@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/Azure/azure-extension-platform/pkg/extensionpolicysettings"
-	"github.com/Azure/azure-extension-platform/pkg/logging"
 	"github.com/Azure/azure-extension-platform/pkg/utils"
 	vmextension "github.com/Azure/azure-extension-platform/vmextension"
 	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
@@ -137,20 +136,37 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmexte
 		return "", ewc
 	}
 
-	// Lourdes: tmp code, delete later. Try to read runtime policy file. if you're able to read it, put it in an out folder and log that you read it. YAY!
+	// TODO: Lourdes--what if it doesn't exist?
+	// If policy file exists, load the policy.
+	// If the policy is invalid, we log error and exit.
+	// If the policy file does not exist, proceed as normal.
+	var ExtensionPolicyManagerPtr *extensionpolicysettings.ExtensionPolicySettingsManager[CSEExtensionPolicySettings]
 	policyPath := filepath.Join(h.HandlerEnvironment.ConfigFolder, policyFileName)
 
-	ExtensionPolicyManagerPtr := extensionpolicysettings.NewExtensionPolicySettingsManager[CSEExtensionPolicySettings](policyPath, &logging.ExtensionLogger{})
-	err := ExtensionPolicyManagerPtr.LoadExtensionPolicySettings()
-	if err != nil {
-		ctx.Log("message", "failed to load extension policy settings", "error", err)
+	if _, err := os.Stat(policyPath); err == nil {
+		ExtensionPolicyManagerPtr, err = extensionpolicysettings.NewExtensionPolicySettingsManager[CSEExtensionPolicySettings](policyPath)
+		if err != nil {
+			return "", vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_policyLoadFailed, errors.Wrap(err, "failed to create extension policy settings manager"))
+		}
+		err = ExtensionPolicyManagerPtr.LoadExtensionPolicySettings()
+		if err != nil {
+			return "", vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_policyLoadFailed, errors.Wrap(err, "failed to load extension policy settings"))
+		} else {
+			settings, err := ExtensionPolicyManagerPtr.GetSettings()
+			if err != nil {
+				return "", vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_policyLoadFailed, errors.Wrap(err, "failed to get extension policy settings"))
+			}
+			ctx.Log("message", "successfully loaded extension policy settings", "settings", fmt.Sprintf("%+v", settings))
+		}
+	} else if os.IsNotExist(err) {
+		ctx.Log("message", "extension policy settings file does not exist, proceeding with default extension behavior.", "path", policyPath)
+		ExtensionPolicyManagerPtr = nil
 	} else {
-		ctx.Log("message", "successfully loaded extension policy settings", "settings", fmt.Sprintf("%+v", ExtensionPolicyManagerPtr.GetSettings()))
-		fmt.Println("lourdes debugging-- successfully loaded extension policy settings: \n" + fmt.Sprintf("%+v", ExtensionPolicyManagerPtr.GetSettings()))
+		return "", vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_policyLoadFailed, errors.Wrap(err, "error while checking for extension policy settings file. Stat failed with an error other than file not existing"))
 	}
 
 	dir := filepath.Join(dataDir, downloadDir, fmt.Sprintf("%d", seqNum))
-	if ewc := downloadFiles(ctx, dir, cfg); ewc != nil {
+	if ewc := downloadFiles(ctx, dir, cfg, ExtensionPolicyManagerPtr); ewc != nil {
 		ewc.Err = errors.Wrap(ewc.Err, "processing file downloads failed")
 		return "", ewc
 	}
@@ -208,7 +224,8 @@ func checkAndSaveSeqNum(ctx log.Logger, seq int, mrseqPath string) (shouldExit b
 
 // downloadFiles downloads the files specified in cfg into dir (creates if does
 // not exist) and takes storage credentials specified in cfg into account.
-func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) *vmextension.ErrorWithClarification {
+// If extension policy settings is provided, they are passed on to downloadAndProcessURL for file validation.
+func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings, eps *extensionpolicysettings.ExtensionPolicySettingsManager[CSEExtensionPolicySettings]) *vmextension.ErrorWithClarification {
 	// - prepare the output directory for files and the command output
 	// - create the directory if missing
 	ctx.Log("event", "creating output directory", "path", dir)
@@ -233,7 +250,7 @@ func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) *vmextensi
 	for i, f := range cfg.fileUrls() {
 		ctx := ctx.With("file", i)
 		ctx.Log("event", "download start")
-		if ewc := downloadAndProcessURL(ctx, f, dir, &cfg); ewc != nil {
+		if ewc := downloadAndProcessURL(ctx, f, dir, &cfg, eps); ewc != nil {
 			ctx.Log("event", "download failed", "error", ewc.Err)
 			return vmextension.NewErrorWithClarificationPtr(ewc.ErrorCode, errors.Wrapf(ewc.Err, "failed to download file[%d]", i))
 		}
@@ -245,7 +262,6 @@ func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) *vmextensi
 // runCmd runs the command (extracted from cfg) in the given dir (assumed to exist).
 func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (ewc *vmextension.ErrorWithClarification) {
 	ctx.Log("event", "executing command", "output", dir)
-	fmt.Println("lourdes debugging-- inside runCmd")
 	var cmd string
 	var scenario string
 	var scenarioInfo string
@@ -273,13 +289,11 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (ewc *vmextension.E
 		}
 		scenario = fmt.Sprintf("protected-script;%s", scenarioInfo)
 	}
-	fmt.Println("lourdes debugging-made it through parsing without a seg fault")
 
 	begin := time.Now()
 	ewc = ExecCmdInDir(cmd, dir)
 	elapsed := time.Now().Sub(begin)
 	isSuccess := ewc == nil
-	fmt.Println("lourdes debugging-made it thorugh command a seg fault")
 
 	telemetry("scenario", scenario, isSuccess, elapsed)
 
