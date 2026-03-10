@@ -136,7 +136,6 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmexte
 		return "", ewc
 	}
 
-	// TODO: Lourdes--what if it doesn't exist?
 	// If policy file exists, load the policy.
 	// If the policy is invalid, we log error and exit.
 	// If the policy file does not exist, proceed as normal.
