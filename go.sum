@@ -14,6 +14,8 @@ github.com/Azure/azure-extension-platform v0.0.0-20260304193358-17aecbaff233 h1:
 github.com/Azure/azure-extension-platform v0.0.0-20260304193358-17aecbaff233/go.mod h1:0458BvQsi5ch6kn+KZtI5m88Z3L9UFXdoY1+6nKdivY=
 github.com/Azure/azure-extension-platform v0.0.0-20260305214320-4828fb38d797 h1:9YWYQi8rHmaMm1cdwVhS5FAL/ivPDzvOEyxsmHymc4w=
 github.com/Azure/azure-extension-platform v0.0.0-20260305214320-4828fb38d797/go.mod h1:0458BvQsi5ch6kn+KZtI5m88Z3L9UFXdoY1+6nKdivY=
+github.com/Azure/azure-extension-platform v0.0.0-20260312212104-6da8a253549a h1:VbxYR5y5uVJaNKQBzDnFBKoHqEjBmix+27/mPvOTqb4=
+github.com/Azure/azure-extension-platform v0.0.0-20260312212104-6da8a253549a/go.mod h1:0458BvQsi5ch6kn+KZtI5m88Z3L9UFXdoY1+6nKdivY=
 github.com/Azure/azure-sdk-for-go v63.2.0+incompatible h1:OIqkK/zTGqVUuzpEvY0B1YSYDRAFC/j+y0w2GovCggI=
 github.com/Azure/azure-sdk-for-go v63.2.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
 github.com/Azure/go-autorest v14.2.0+incompatible h1:V5VMDjClD3GiElqLWO7mz2MxNAK/vTfRHdAubSIPRgs=

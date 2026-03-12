@@ -118,6 +118,40 @@ func Test_LoadExtensionPolicySettings_PolicyFileMissing(t *testing.T) {
 	require.Error(t, err, "should not be able to load extension policy settings")
 }
 
+func Test_LoadExtensionPolicySettings_InvalidJSON(t *testing.T) {
+	require.NoError(t, setupPolicyDir(policyTestDir))
+	defer cleanupPolicyFile(policyTestPath)
+
+	invalidPolicyContent := `{
+        "requireSigning": false,
+        "allowedScripts": [}
+    }`
+	require.NoError(t, writeToFile(policyTestPath, invalidPolicyContent))
+
+	ExtensionPolicyManagerPtr, err := extensionpolicysettings.NewExtensionPolicySettingsManager[CSEExtensionPolicySettings](policyTestPath)
+	require.NoError(t, err, "should be able to create extension policy settings manager")
+
+	err = ExtensionPolicyManagerPtr.LoadExtensionPolicySettings()
+	require.Error(t, err, "invalid JSON policy should fail to load") // lourdes: be specific about the error message.
+}
+
+func Test_LoadExtensionPolicySettings_InvalidFormat_RequireSigningWithoutRootCA(t *testing.T) {
+	require.NoError(t, setupPolicyDir(policyTestDir))
+	defer cleanupPolicyFile(policyTestPath)
+
+	invalidPolicyContent := `{
+        "requireSigning": true,
+        "allowedScripts": []
+    }`
+	require.NoError(t, writeToFile(policyTestPath, invalidPolicyContent))
+
+	ExtensionPolicyManagerPtr, err := extensionpolicysettings.NewExtensionPolicySettingsManager[CSEExtensionPolicySettings](policyTestPath)
+	require.NoError(t, err, "should be able to create extension policy settings manager")
+
+	err = ExtensionPolicyManagerPtr.LoadExtensionPolicySettings()
+	require.Error(t, err, "policy requiring signing without fileRootCertCA should fail validation")
+}
+
 func Test_runCmd_success(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	require.Nil(t, err)
@@ -172,6 +206,70 @@ func Test_downloadFiles(t *testing.T) {
 
 		require.Nil(t, err, "%s is missing from download dir", fp)
 	}
+}
+
+func Test_downloadFiles_allowlistStopsOnFirstDisallowedFile(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	require.NoError(t, setupPolicyDir(policyTestDir))
+	defer cleanupPolicyFile(policyTestPath)
+
+	good1Content := "echo good1"
+	good2Content := "echo good2"
+	badContent := "echo bad"
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		files := map[string]string{
+			"/bad":   badContent,
+			"/good1": good1Content,
+			"/good2": good2Content,
+		}
+		if content, ok := files[r.URL.Path]; ok {
+			w.Header().Set("Content-Type", "application/octet-stream")
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, content)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	good1Hash, _ := extensionpolicysettings.ComputeFileHash(good1Content, extensionpolicysettings.HashTypeSHA256)
+	good2Hash, _ := extensionpolicysettings.ComputeFileHash(good2Content, extensionpolicysettings.HashTypeSHA256)
+	require.NoError(t, loadTestPolicy("valid, allowlist present", []string{good1Hash, good2Hash}))
+
+	ExtensionPolicyManagerPtr, err := extensionpolicysettings.NewExtensionPolicySettingsManager[CSEExtensionPolicySettings](policyTestPath)
+	require.NoError(t, err)
+	require.NoError(t, ExtensionPolicyManagerPtr.LoadExtensionPolicySettings())
+
+	ewc := downloadFiles(log.NewContext(log.NewNopLogger()),
+		dir,
+		handlerSettings{
+			publicSettings: publicSettings{
+				FileURLs: []string{
+					srv.URL + "/bad",   // first file is disallowed
+					srv.URL + "/good1", // should not be attempted
+					srv.URL + "/good2", // should not be attempted
+				},
+			},
+		},
+		ExtensionPolicyManagerPtr,
+	)
+
+	require.NotNil(t, ewc, "download should fail on first disallowed file")
+	require.Contains(t, ewc.Err.Error(), "bad", "error should identify disallowed script")
+
+	// "bad" is downloaded before validation, so it may exist.
+	_, err = os.Stat(filepath.Join(dir, "bad"))
+	require.NoError(t, err, "first (disallowed) file should have been downloaded before validation failure")
+
+	_, err = os.Stat(filepath.Join(dir, "good1"))
+	require.True(t, os.IsNotExist(err), "good1 should not be downloaded after first failure")
+
+	_, err = os.Stat(filepath.Join(dir, "good2"))
+	require.True(t, os.IsNotExist(err), "good2 should not be downloaded after first failure")
 }
 
 func Test_downloadFiles_goodAllowlist_SHA256(t *testing.T) {

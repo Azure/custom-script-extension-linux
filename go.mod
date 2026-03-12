@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/Azure/azure-extension-foundation v0.0.0-20250620154556-caff9e3c3c5c
-	github.com/Azure/azure-extension-platform v0.0.0-20260305214320-4828fb38d797
+	github.com/Azure/azure-extension-platform v0.0.0-20260312212104-6da8a253549a
 	github.com/Azure/azure-sdk-for-go v63.2.0+incompatible
 	github.com/ahmetalpbalkan/go-httpbin v0.0.0-20160706084156-8817b883dae1
 	github.com/go-kit/kit v0.12.0
