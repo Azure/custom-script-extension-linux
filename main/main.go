@@ -36,6 +36,7 @@ func main() {
 	ctx := log.NewContext(log.NewSyncLogger(log.NewLogfmtLogger(
 		os.Stdout))).With("time", log.DefaultTimestamp).With("version", VersionString())
 
+	ctx.Log("BRO IM IN HERE IM IN MAIN")
 	// parse command line arguments
 	cmd := parseCmd(os.Args)
 	ctx = ctx.With("operation", strings.ToLower(cmd.name))
