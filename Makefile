@@ -15,14 +15,18 @@ binary: clean
 	  echo "GOPATH is not set"; \
 	  exit 1; \
 	fi
-	GOOS=linux GOARCH=amd64 govvv build -v \
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -v \
+	  -tags "netgo osusergo" \
 	  -ldflags "-X main.Version=`grep -E -m 1 -o  '<Version>(.*)</Version>' misc/manifest.xml | awk -F">" '{print $$2}' | awk -F"<" '{print $$1}'`" \
-	  -o $(BINDIR)/$(BIN) ./main 
-	GOOS=linux GOARCH=arm64 govvv build -v \
+	  -o $(BINDIR)/$(BIN) ./main
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -v \
+	  -tags "netgo osusergo" \
 	  -ldflags "-X main.Version=`grep -E -m 1 -o  '<Version>(.*)</Version>' misc/manifest.xml | awk -F">" '{print $$2}' | awk -F"<" '{print $$1}'`" \
 	  -o $(BINDIR)/$(BIN_ARM64) ./main 
 	cp ./misc/custom-script-shim ./$(BINDIR)
+
 clean:
 	rm -rf "$(BINDIR)" "$(BUNDLEDIR)"
 
 .PHONY: clean binary
+

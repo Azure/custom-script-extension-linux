@@ -3,38 +3,39 @@ package main
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
-import "github.com/stretchr/testify/require"
 
 func Test_handlerSettingsValidate(t *testing.T) {
 	// commandToExecute not specified
 	require.Equal(t, errCmdMissing, handlerSettings{
 		publicSettings{},
 		protectedSettings{},
-	}.validate())
+	}.validate().Err)
 
 	// commandToExecute specified twice
 	require.Equal(t, errCmdTooMany, handlerSettings{
 		publicSettings{CommandToExecute: "foo"},
 		protectedSettings{CommandToExecute: "foo"},
-	}.validate())
+	}.validate().Err)
 
 	// script specified twice
 	require.Equal(t, errScriptTooMany, handlerSettings{
 		publicSettings{Script: "foo"},
 		protectedSettings{Script: "foo"},
-	}.validate())
+	}.validate().Err)
 
 	// commandToExecute and script both specified
 	require.Equal(t, errCmdAndScript, handlerSettings{
 		publicSettings{CommandToExecute: "foo"},
 		protectedSettings{Script: "foo"},
-	}.validate())
+	}.validate().Err)
 
 	require.Equal(t, errCmdAndScript, handlerSettings{
 		publicSettings{Script: "foo"},
 		protectedSettings{CommandToExecute: "foo"},
-	}.validate())
+	}.validate().Err)
 
 	// storageAccount name specified; but not key
 	require.Equal(t, errStoragePartialCredentials, handlerSettings{
@@ -42,7 +43,7 @@ func Test_handlerSettingsValidate(t *testing.T) {
 			CommandToExecute:   "date",
 			StorageAccountName: "foo",
 			StorageAccountKey:  ""},
-	}.validate())
+	}.validate().Err)
 
 	// storageAccount key specified; but not name
 	require.Equal(t, errStoragePartialCredentials, handlerSettings{
@@ -50,7 +51,7 @@ func Test_handlerSettingsValidate(t *testing.T) {
 			CommandToExecute:   "date",
 			StorageAccountName: "",
 			StorageAccountKey:  "foo"},
-	}.validate())
+	}.validate().Err)
 }
 
 func Test_commandToExecutePrivateIfNotPublic(t *testing.T) {
@@ -90,20 +91,22 @@ func Test_skipDos2UnixDefaultsToFalse(t *testing.T) {
 }
 
 func Test_managedIdentityVerification(t *testing.T) {
-	require.NoError(t, handlerSettings{publicSettings{}, protectedSettings{
+	err := handlerSettings{publicSettings{}, protectedSettings{
 		CommandToExecute: "echo hi",
 		FileURLs:         []string{"file1", "file2"},
 		ManagedIdentity: &clientOrObjectId{
 			ClientId: "31b403aa-c364-4240-a7ff-d85fb6cd7232",
 		},
-	}}.validate(), "validation failed for settings with MSI")
+	}}.validate()
+	require.Nil(t, err, "validation failed for settings with MSI")
 
-	require.NoError(t, handlerSettings{publicSettings{}, protectedSettings{
+	err = handlerSettings{publicSettings{}, protectedSettings{
 		CommandToExecute: "echo hi",
 		ManagedIdentity: &clientOrObjectId{
 			ObjectId: "31b403aa-c364-4240-a7ff-d85fb6cd7232",
 		},
-	}}.validate(), "validation failed for settings with MSI")
+	}}.validate()
+	require.Nil(t, err, "validation failed for settings with MSI")
 
 	require.Equal(t, errUsingBothKeyAndMsi,
 		handlerSettings{publicSettings{},
@@ -114,7 +117,7 @@ func Test_managedIdentityVerification(t *testing.T) {
 				ManagedIdentity: &clientOrObjectId{
 					ObjectId: "31b403aa-c364-4240-a7ff-d85fb6cd7232",
 				},
-			}}.validate(), "validation didn't fail for settings with both MSI and storage account")
+			}}.validate().Err, "validation didn't fail for settings with both MSI and storage account")
 
 	require.Equal(t, errUsingBothClientIdAndObjectId,
 		handlerSettings{publicSettings{},
@@ -124,7 +127,7 @@ func Test_managedIdentityVerification(t *testing.T) {
 					ObjectId: "31b403aa-c364-4240-a7ff-d85fb6cd7232",
 					ClientId: "31b403aa-c364-4240-a7ff-d85fb6cd7232",
 				},
-			}}.validate(), "validation didn't fail for settings with both MSI and storage account")
+			}}.validate().Err, "validation didn't fail for settings with both MSI and storage account")
 }
 
 func Test_toJSON_empty(t *testing.T) {
@@ -148,7 +151,7 @@ func Test_toJSONUmarshallForManagedIdentity(t *testing.T) {
 	require.NoError(t, err, "error while deserializing json")
 	require.Nil(t, protSettings.ManagedIdentity, "ProtectedSettings.ManagedIdentity was expected to be nil")
 	h := handlerSettings{publicSettings{}, *protSettings}
-	require.NoError(t, h.validate(), "settings should be valid")
+	require.Nil(t, h.validate(), "settings should be valid")
 
 	testString = `{"commandToExecute" : "echo hello", "fileUris":["https://a.com/file.txt"], "managedIdentity": { }}`
 	require.NoError(t, validateProtectedSettings(testString), "protected settings should be valid")
@@ -159,7 +162,7 @@ func Test_toJSONUmarshallForManagedIdentity(t *testing.T) {
 	require.Equal(t, protSettings.ManagedIdentity.ClientId, "")
 	require.Equal(t, protSettings.ManagedIdentity.ObjectId, "")
 	h = handlerSettings{publicSettings{}, *protSettings}
-	require.NoError(t, h.validate(), "settings should be valid")
+	require.Nil(t, h.validate(), "settings should be valid")
 
 	testString = `{"commandToExecute" : "echo hello", "fileUris":["https://a.com/file.txt", "https://b.com/file2.txt"], "managedIdentity": { "clientId": "31b403aa-c364-4240-a7ff-d85fb6cd7232"}}`
 	require.NoError(t, validateProtectedSettings(testString), "protected settings should be valid")
@@ -170,7 +173,7 @@ func Test_toJSONUmarshallForManagedIdentity(t *testing.T) {
 	require.Equal(t, protSettings.ManagedIdentity.ClientId, "31b403aa-c364-4240-a7ff-d85fb6cd7232")
 	require.Equal(t, protSettings.ManagedIdentity.ObjectId, "")
 	h = handlerSettings{publicSettings{}, *protSettings}
-	require.NoError(t, h.validate(), "settings should be valid")
+	require.Nil(t, h.validate(), "settings should be valid")
 
 	testString = `{"commandToExecute" : "echo hello", "fileUris":["https://a.com/file.txt"], "managedIdentity": { "objectId": "31b403aa-c364-4240-a7ff-d85fb6cd7232"}}`
 	require.NoError(t, validateProtectedSettings(testString), "protected settings should be valid")
@@ -181,7 +184,7 @@ func Test_toJSONUmarshallForManagedIdentity(t *testing.T) {
 	require.Equal(t, protSettings.ManagedIdentity.ObjectId, "31b403aa-c364-4240-a7ff-d85fb6cd7232")
 	require.Equal(t, protSettings.ManagedIdentity.ClientId, "")
 	h = handlerSettings{publicSettings{}, *protSettings}
-	require.NoError(t, h.validate(), "settings should be valid")
+	require.Nil(t, h.validate(), "settings should be valid")
 
 	testString = `{"commandToExecute" : "echo hello", "fileUris":["https://a.com/file.txt", "https://b.com/file2.txt"], "managedIdentity": { "clientId": "31b403aa-c364-4240-a7ff-d85fb6cd7232", "objectId": "41b403aa-c364-4240-a7ff-d85fb6cd7232"}}`
 	require.NoError(t, validateProtectedSettings(testString), "protected settings should be valid")

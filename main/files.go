@@ -9,48 +9,56 @@ import (
 
 	"os"
 
+	"github.com/Azure/azure-extension-platform/vmextension"
 	"github.com/Azure/custom-script-extension-linux/pkg/blobutil"
 	"github.com/Azure/custom-script-extension-linux/pkg/download"
 	"github.com/Azure/custom-script-extension-linux/pkg/preprocess"
 	"github.com/Azure/custom-script-extension-linux/pkg/urlutil"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
+
+	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
 )
 
 // downloadAndProcessURL downloads using the specified downloader and saves it to the
 // specified existing directory, which must be the path to the saved file. Then
 // it post-processes file based on heuristics.
-func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handlerSettings) error {
+func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handlerSettings) *vmextension.ErrorWithClarification {
 	fn, err := urlToFileName(url)
 	if err != nil {
-		return err
+		return vmextension.NewErrorWithClarificationPtr(errorutil.CustomerInput_invalidFileUris, err)
 	}
 
 	if !urlutil.IsValidUrl(url) {
-		return fmt.Errorf("[REDACTED] is not a valid url")
+		return vmextension.NewErrorWithClarificationPtr(errorutil.CustomerInput_invalidFileUris, fmt.Errorf("[REDACTED] is not a valid url"))
 	}
 
-	dl, err := getDownloaders(url, cfg.StorageAccountName, cfg.StorageAccountKey, cfg.ManagedIdentity)
-	if err != nil {
-		return err
+	dl, ewc := getDownloaders(url, cfg.StorageAccountName, cfg.StorageAccountKey, cfg.ManagedIdentity)
+	if ewc != nil {
+		return ewc
 	}
 
 	fp := filepath.Join(downloadDir, fn)
 	const mode = 0500 // we assume users download scripts to execute
-	if _, err := download.SaveTo(ctx, dl, fp, mode); err != nil {
-		return err
+	if _, ewc := download.SaveTo(ctx, dl, fp, mode); ewc != nil {
+		return ewc
 	}
 
 	if cfg.SkipDos2Unix == false {
 		err = postProcessFile(fp)
 	}
-	return errors.Wrapf(err, "failed to post-process '%s'", fn)
+
+	if err != nil {
+		return vmextension.NewErrorWithClarificationPtr(errorutil.SystemError, errors.Wrapf(err, "failed to post-process '%s'", fn))
+	}
+
+	return nil
 }
 
 // getDownloader returns a downloader for the given URL based on whether the
 // storage credentials are empty or not.
 func getDownloaders(fileURL string, storageAccountName, storageAccountKey string, managedIdentity *clientOrObjectId) (
-	[]download.Downloader, error) {
+	[]download.Downloader, *vmextension.ErrorWithClarification) {
 	if storageAccountName == "" || storageAccountKey == "" {
 		// storage account name and key cannot be specified with managed identity, handler settings validation won't allow that
 		// handler settings validation will also not allow storageAccountName XOR storageAccountKey == 1
@@ -67,7 +75,7 @@ func getDownloaders(fileURL string, storageAccountName, storageAccountKey string
 			case managedIdentity.ClientId == "" && managedIdentity.ObjectId != "":
 				msiProvider = download.GetMsiProviderForStorageAccountsWithObjectId(fileURL, managedIdentity.ObjectId)
 			default:
-				return nil, fmt.Errorf("unexpected combination of ClientId and ObjectId found")
+				return nil, vmextension.NewErrorWithClarificationPtr(errorutil.CustomerInput_clientIdObjectIdBothSpecified, fmt.Errorf("unexpected combination of ClientId and ObjectId found"))
 			}
 			return []download.Downloader{
 				// try downloading without MSI token first, but attempt with MSI if the download fails
@@ -83,11 +91,11 @@ func getDownloaders(fileURL string, storageAccountName, storageAccountKey string
 		// this preserves old behavior
 		blob, err := blobutil.ParseBlobURL(fileURL)
 		if err != nil {
-			return nil, err
+			return nil, vmextension.NewErrorWithClarificationPtr(errorutil.CustomerInput_invalidFileUris, err)
 		}
 		return []download.Downloader{download.NewBlobDownload(
-			storageAccountName, storageAccountKey,
-			blob)}, nil
+				storageAccountName, storageAccountKey, blob)},
+			nil
 	}
 }
 

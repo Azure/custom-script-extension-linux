@@ -18,7 +18,9 @@ func RemoveUrlFromErr(err error) error {
 }
 
 func IsValidUrl(urlstring string) bool {
-	u, parseError := url.Parse(urlstring)
+	// Remove leading and trailing quotes
+	noQuotes := strings.Trim(urlstring, `"'`)
+	u, parseError := url.Parse(noQuotes)
 	if parseError == nil && u.Scheme != "" && u.Host != "" {
 		return true
 	}

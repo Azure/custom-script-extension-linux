@@ -1,11 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
+	vmextension "github.com/Azure/azure-extension-platform/vmextension"
+	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
 	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/require"
 )
@@ -39,6 +42,23 @@ func Test_reportStatus_fileExists(t *testing.T) {
 	fakeEnv.HandlerEnvironment.StatusFolder = tmpDir
 
 	require.Nil(t, reportStatus(log.NewContext(log.NewNopLogger()), fakeEnv, 1, StatusError, cmdEnable, "FOO ERROR"))
+
+	path := filepath.Join(tmpDir, "1.status")
+	b, err := ioutil.ReadFile(path)
+	require.Nil(t, err, ".status file exists")
+	require.NotEqual(t, 0, len(b), ".status file not empty")
+}
+
+func Test_reportErrorStatus_fileExists(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	fakeEnv := HandlerEnvironment{}
+	fakeEnv.HandlerEnvironment.StatusFolder = tmpDir
+	ewc := vmextension.NewErrorWithClarificationPtr(errorutil.CommandExecution_failureExitCode, fmt.Errorf("command failed with exit code = 1"))
+
+	require.Nil(t, reportErrorStatus(log.NewContext(log.NewNopLogger()), fakeEnv, 1, StatusError, cmdEnable, ewc))
 
 	path := filepath.Join(tmpDir, "1.status")
 	b, err := ioutil.ReadFile(path)
