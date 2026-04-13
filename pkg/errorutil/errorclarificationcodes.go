@@ -49,6 +49,8 @@ const (
 	Msi_doesNotHaveRightPermissions int = 71
 	Msi_GenericRetrievalError       int = 72
 
+	ExtensionPolicySettings_invalidPolicyFileFormat int = 80
+	ExtensionPolicySettings_policyLoadFailed        int = 81
 	// No Error - used as a placeholder value
 	// when representing an "empty" ErrorWithClarification
 	// or when the error can be treated without the clarification

@@ -124,7 +124,7 @@ func Test_downloadAndProcessURL(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	cfg := handlerSettings{publicSettings{}, protectedSettings{StorageAccountName: "", StorageAccountKey: ""}}
-	ewc := downloadAndProcessURL(log.NewContext(log.NewNopLogger()), srv.URL+"/bytes/256", tmpDir, &cfg)
+	ewc := downloadAndProcessURL(log.NewContext(log.NewNopLogger()), srv.URL+"/bytes/256", tmpDir, &cfg, nil)
 	require.Nil(t, ewc)
 
 	fp := filepath.Join(tmpDir, "256")

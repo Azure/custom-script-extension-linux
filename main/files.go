@@ -9,6 +9,7 @@ import (
 
 	"os"
 
+	"github.com/Azure/azure-extension-platform/pkg/extensionpolicysettings"
 	"github.com/Azure/azure-extension-platform/vmextension"
 	"github.com/Azure/custom-script-extension-linux/pkg/blobutil"
 	"github.com/Azure/custom-script-extension-linux/pkg/download"
@@ -23,7 +24,8 @@ import (
 // downloadAndProcessURL downloads using the specified downloader and saves it to the
 // specified existing directory, which must be the path to the saved file. Then
 // it post-processes file based on heuristics.
-func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handlerSettings) *vmextension.ErrorWithClarification {
+// If extension policy settings manager is provided, the downloaded file will be validated against the policy.
+func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handlerSettings, eps *extensionpolicysettings.ExtensionPolicySettingsManager[CSEExtensionPolicySettings]) *vmextension.ErrorWithClarification {
 	fn, err := urlToFileName(url)
 	if err != nil {
 		return vmextension.NewErrorWithClarificationPtr(errorutil.CustomerInput_invalidFileUris, err)
@@ -50,6 +52,23 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handl
 
 	if err != nil {
 		return vmextension.NewErrorWithClarificationPtr(errorutil.SystemError, errors.Wrapf(err, "failed to post-process '%s'", fn))
+	}
+
+	if eps != nil {
+		settings, err := eps.GetSettings()
+		if err != nil {
+			return vmextension.NewErrorWithClarificationPtr(errorutil.SystemError, fmt.Errorf("failed to get extension policy settings: %w", err))
+		}
+		if settings == nil {
+			return vmextension.NewErrorWithClarificationPtr(errorutil.SystemError, fmt.Errorf("extension policy settings manager initialized, but settings not properly loaded."))
+		}
+
+		if len(settings.AllowedScripts) > 0 {
+			if err := extensionpolicysettings.ValidateFileHashInAllowlist(fp, settings.AllowedScripts, extensionpolicysettings.HashTypeSHA256); err != nil {
+				// TO DO: Consider whether to delete the blocked file.
+				return vmextension.NewErrorWithClarificationPtr(errorutil.SystemError, fmt.Errorf("Validation of script '%s' against policy-allowlist failed: %w.", fn, err))
+			}
+		}
 	}
 
 	return nil

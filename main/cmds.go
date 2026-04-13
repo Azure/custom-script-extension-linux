@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Azure/azure-extension-platform/pkg/extensionpolicysettings"
 	"github.com/Azure/azure-extension-platform/pkg/utils"
 	vmextension "github.com/Azure/azure-extension-platform/vmextension"
 	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
@@ -39,6 +40,7 @@ const (
 	fullName                = "Microsoft.Azure.Extensions.CustomScript"
 	maxTailLen              = 4 * 1024 // length of max stdout/stderr to be transmitted in .status file
 	maxTelemetryTailLen int = 1800
+	policyFileName          = "waagent_runtime_policy.json"
 )
 
 var (
@@ -112,6 +114,19 @@ func min(a, b int) int {
 	return b
 }
 
+type CSEExtensionPolicySettings struct {
+	RequireSigning bool     `json:"requireSigning"`
+	FileRootCertCA string   `json:"fileRootCertCA,omitempty"` // optional field for customer that want to specify a root cert for script signature verification. This is a path to a cert file on the VM that the extension can use to verify script signatures. The customer is responsible for ensuring the cert is there and updated as needed (e.g. if the cert expires). The customer can choose to use this field or not based on their needs.
+	AllowedScripts []string `json:"allowedScripts"`
+}
+
+func (cseps CSEExtensionPolicySettings) ValidateFormat() error {
+	if cseps.RequireSigning && len(cseps.FileRootCertCA) == 0 {
+		return errors.New("invalid policy settings: if RequireSigning is true, fileRootCertCA must be provided")
+	}
+	return nil
+}
+
 func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmextension.ErrorWithClarification) {
 	// parse the extension handler settings (not available prior to 'enable')
 	cfg, ewc := parseAndValidateSettings(ctx, h.HandlerEnvironment.ConfigFolder, seqNum)
@@ -121,8 +136,36 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmexte
 		return "", ewc
 	}
 
+	// If policy file exists, load the policy.
+	// If the policy is invalid, we log error and exit.
+	// If the policy file does not exist, proceed as normal.
+	var ExtensionPolicyManagerPtr *extensionpolicysettings.ExtensionPolicySettingsManager[CSEExtensionPolicySettings]
+	policyPath := filepath.Join(h.HandlerEnvironment.ConfigFolder, policyFileName)
+
+	if _, err := os.Stat(policyPath); err == nil {
+		ExtensionPolicyManagerPtr, err = extensionpolicysettings.NewExtensionPolicySettingsManager[CSEExtensionPolicySettings](policyPath)
+		if err != nil {
+			return "", vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_policyLoadFailed, errors.Wrap(err, "failed to create extension policy settings manager"))
+		}
+		err = ExtensionPolicyManagerPtr.LoadExtensionPolicySettings()
+		if err != nil {
+			return "", vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_policyLoadFailed, errors.Wrap(err, "failed to load extension policy settings"))
+		} else {
+			settings, err := ExtensionPolicyManagerPtr.GetSettings()
+			if err != nil {
+				return "", vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_policyLoadFailed, errors.Wrap(err, "failed to get extension policy settings"))
+			}
+			ctx.Log("message", "successfully loaded extension policy settings", "settings", fmt.Sprintf("%+v", settings))
+		}
+	} else if os.IsNotExist(err) {
+		ctx.Log("message", "extension policy settings file does not exist, proceeding with default extension behavior.", "path", policyPath)
+		ExtensionPolicyManagerPtr = nil
+	} else {
+		return "", vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_policyLoadFailed, errors.Wrap(err, "error while checking for extension policy settings file. Stat failed with an error other than file not existing"))
+	}
+
 	dir := filepath.Join(dataDir, downloadDir, fmt.Sprintf("%d", seqNum))
-	if ewc := downloadFiles(ctx, dir, cfg); ewc != nil {
+	if ewc := downloadFiles(ctx, dir, cfg, ExtensionPolicyManagerPtr); ewc != nil {
 		ewc.Err = errors.Wrap(ewc.Err, "processing file downloads failed")
 		return "", ewc
 	}
@@ -180,7 +223,8 @@ func checkAndSaveSeqNum(ctx log.Logger, seq int, mrseqPath string) (shouldExit b
 
 // downloadFiles downloads the files specified in cfg into dir (creates if does
 // not exist) and takes storage credentials specified in cfg into account.
-func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) *vmextension.ErrorWithClarification {
+// If extension policy settings is provided, they are passed on to downloadAndProcessURL for file validation.
+func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings, eps *extensionpolicysettings.ExtensionPolicySettingsManager[CSEExtensionPolicySettings]) *vmextension.ErrorWithClarification {
 	// - prepare the output directory for files and the command output
 	// - create the directory if missing
 	ctx.Log("event", "creating output directory", "path", dir)
@@ -205,7 +249,7 @@ func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings) *vmextensi
 	for i, f := range cfg.fileUrls() {
 		ctx := ctx.With("file", i)
 		ctx.Log("event", "download start")
-		if ewc := downloadAndProcessURL(ctx, f, dir, &cfg); ewc != nil {
+		if ewc := downloadAndProcessURL(ctx, f, dir, &cfg, eps); ewc != nil {
 			ctx.Log("event", "download failed", "error", ewc.Err)
 			return vmextension.NewErrorWithClarificationPtr(ewc.ErrorCode, errors.Wrapf(ewc.Err, "failed to download file[%d]", i))
 		}
