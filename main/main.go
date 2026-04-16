@@ -80,7 +80,7 @@ func main() {
 	// execute the subcommand
 	reportStatus(ctx, hEnv, seqNum, StatusTransitioning, cmd, "")
 	msg, ewc := cmd.f(ctx, hEnv, seqNum)
-	if ewc.Err != nil {
+	if ewc != nil && ewc.Err != nil {
 		ctx.Log("event", "failed to handle", "error", ewc.Error())
 		ewc.Err = errors.Wrap(ewc.Err, ewc.Error()+msg)
 		reportErrorStatus(ctx, hEnv, seqNum, StatusError, cmd, ewc)
