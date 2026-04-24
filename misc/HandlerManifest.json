@@ -9,6 +9,7 @@
     "supportsPolicy": true,
     "rebootAfterInstall": false,
     "reportHeartbeat": false,
-    "updateMode": "UpdateWithInstall"
+    "updateMode": "UpdateWithInstall",
+    "catalogFileName": "custom-script-extension.cat"
   }
 }]

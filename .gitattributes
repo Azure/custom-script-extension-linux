@@ -4,3 +4,25 @@
 # Declare files that will always have LF line endings on checkout.
 Makefile text eol=lf
 
+# Enforce LF line endings for script files.
+*.sh text eol=lf
+*.bash text eol=lf
+*.bats text eol=lf
+*.py text eol=lf
+
+# Shebang scripts without extensions.
+integration-test/env/fake-waagent text eol=lf
+integration-test/env/wait-for-enable text eol=lf
+misc/custom-script-shim text eol=lf
+pkg/preprocess/testdata/script_shebang text eol=lf
+pkg/preprocess/testdata/utf8_with_bom text eol=lf
+
+# Keep DOS-specific preprocess fixtures as CRLF for tests.
+pkg/preprocess/testdata/dos_with_bom.py text eol=crlf
+pkg/preprocess/testdata/dos_with_bom.sh text eol=crlf
+pkg/preprocess/testdata/dos_without_bom.py text eol=crlf
+pkg/preprocess/testdata/dos_without_bom.sh text eol=crlf
+
+# Packaging definition file requires CRLF for catalog signing
+misc/custom-script-extension.cdf text eol=crlf
+
