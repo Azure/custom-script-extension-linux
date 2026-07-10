@@ -132,7 +132,7 @@ func Test_LoadExtensionPolicySettings_InvalidJSON(t *testing.T) {
 	require.NoError(t, err, "should be able to create extension policy settings manager")
 
 	err = ExtensionPolicyManagerPtr.LoadExtensionPolicySettings()
-	require.Error(t, err, "invalid JSON policy should fail to load") // lourdes: be specific about the error message.
+	require.Error(t, err, "invalid JSON policy should fail to load")
 }
 
 func Test_LoadExtensionPolicySettings_InvalidFormat_RequireSigningWithoutRootCA(t *testing.T) {
@@ -152,8 +152,68 @@ func Test_LoadExtensionPolicySettings_InvalidFormat_RequireSigningWithoutRootCA(
 	require.Error(t, err, "policy requiring signing without fileRootCertCA should fail validation")
 }
 
+func Test_enable_invalidPolicyFile_success(t *testing.T) {
+	// For now, enable() should complete successfully even when the extension policy
+	// settings file is present but invalid. The extension logs the
+	// error and proceeds with default behavior instead of failing.
+	configFolder, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(configFolder)
+
+	// Override the global dataDir so the test does not touch the real
+	// /var/lib/waagent tree, and restore it afterwards.
+	origDataDir := dataDir
+	dataDir, err = ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer func() {
+		os.RemoveAll(dataDir)
+		dataDir = origDataDir
+	}()
+
+	seqNum := 0
+
+	// Write a valid handler settings file for this sequence number.
+	settingsContent := `{
+		"runtimeSettings": [
+			{
+				"handlerSettings": {
+					"publicSettings": {
+						"commandToExecute": "echo hello"
+					}
+				}
+			}
+		]
+	}`
+	settingsFilePath := filepath.Join(configFolder, fmt.Sprintf("%d.settings", seqNum))
+	require.Nil(t, writeToFile(settingsFilePath, settingsContent))
+
+	// Write an invalid extension policy settings file that fails to load.
+	invalidPolicyContent := `{
+		"requireSign{"
+	}`
+	policyPath := filepath.Join(configFolder, policyFileName)
+	require.Nil(t, writeToFile(policyPath, invalidPolicyContent))
+
+	h := HandlerEnvironment{}
+	h.HandlerEnvironment.ConfigFolder = configFolder
+
+	_, ewc := enable(log.NewContext(log.NewNopLogger()), h, seqNum)
+	require.Nil(t, ewc, "enable should succeed even when the policy file is invalid")
+}
+
 func Test_runCmd_success(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
+		publicSettings: publicSettings{CommandToExecute: "date"},
+	}), "command should run successfully")
+}
+
+func Test_runCmd_invalidPolicyFile_success(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+
 	require.Nil(t, err)
 	defer os.RemoveAll(dir)
 
