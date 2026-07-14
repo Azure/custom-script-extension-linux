@@ -137,35 +137,32 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmexte
 	}
 
 	// If policy file exists, load the policy.
-	// If the policy is invalid, we log error and exit.
+	// If the policy is invalid, for now we log error and apply no policy.
+	// TODO: In the future, fail the enable operation if the policy file is invalid.
 	// If the policy file does not exist, proceed as normal.
-	var ExtensionPolicyManagerPtr *extensionpolicysettings.ExtensionPolicySettingsManager[CSEExtensionPolicySettings]
+	var extensionPolicyManagerPtr *extensionpolicysettings.ExtensionPolicySettingsManager[CSEExtensionPolicySettings]
 	policyPath := filepath.Join(h.HandlerEnvironment.ConfigFolder, policyFileName)
 
 	if _, err := os.Stat(policyPath); err == nil {
-		ExtensionPolicyManagerPtr, err = extensionpolicysettings.NewExtensionPolicySettingsManager[CSEExtensionPolicySettings](policyPath)
+		extensionPolicyManagerPtr, err = extensionpolicysettings.NewExtensionPolicySettingsManager[CSEExtensionPolicySettings](policyPath)
 		if err != nil {
-			return "", vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_policyLoadFailed, errors.Wrap(err, "failed to create extension policy settings manager"))
-		}
-		err = ExtensionPolicyManagerPtr.LoadExtensionPolicySettings()
-		if err != nil {
-			return "", vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_policyLoadFailed, errors.Wrap(err, "failed to load extension policy settings"))
+			ctx.Log("error", "failed to create extension policy settings manager, proceeding with default extension behavior for now", "path", policyPath, "error", err)
+		} else if err = extensionPolicyManagerPtr.LoadExtensionPolicySettings(); err != nil {
+			ctx.Log("error", "failed to load extension policy settings into settings manager, proceeding with default extension behavior for now", "path", policyPath, "error", err)
+		} else if settings, err := extensionPolicyManagerPtr.GetSettings(); err != nil {
+			ctx.Log("error", "failed to get extension policy settings from settings manager, proceeding with default extension behavior for now", "path", policyPath, "error", err)
 		} else {
-			settings, err := ExtensionPolicyManagerPtr.GetSettings()
-			if err != nil {
-				return "", vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_policyLoadFailed, errors.Wrap(err, "failed to get extension policy settings"))
-			}
 			ctx.Log("message", "successfully loaded extension policy settings", "settings", fmt.Sprintf("%+v", settings))
 		}
 	} else if os.IsNotExist(err) {
 		ctx.Log("message", "extension policy settings file does not exist, proceeding with default extension behavior.", "path", policyPath)
-		ExtensionPolicyManagerPtr = nil
+		extensionPolicyManagerPtr = nil
 	} else {
-		return "", vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_policyLoadFailed, errors.Wrap(err, "error while checking for extension policy settings file. Stat failed with an error other than file not existing"))
+		ctx.Log("error", "error while checking for extension policy settings file, proceeding with default extension behavior for now", "path", policyPath, "error", err)
 	}
 
 	dir := filepath.Join(dataDir, downloadDir, fmt.Sprintf("%d", seqNum))
-	if ewc := downloadFiles(ctx, dir, cfg, ExtensionPolicyManagerPtr); ewc != nil {
+	if ewc := downloadFiles(ctx, dir, cfg, extensionPolicyManagerPtr); ewc != nil {
 		ewc.Err = errors.Wrap(ewc.Err, "processing file downloads failed")
 		return "", ewc
 	}
