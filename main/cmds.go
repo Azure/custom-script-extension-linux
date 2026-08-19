@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-extension-platform/pkg/extensionpolicysettings"
@@ -115,9 +116,11 @@ func min(a, b int) int {
 }
 
 type CSEExtensionPolicySettings struct {
-	RequireSigning bool     `json:"requireSigning"`
-	FileRootCertCA string   `json:"fileRootCertCA,omitempty"` // optional field for customer that want to specify a root cert for script signature verification. This is a path to a cert file on the VM that the extension can use to verify script signatures. The customer is responsible for ensuring the cert is there and updated as needed (e.g. if the cert expires). The customer can choose to use this field or not based on their needs.
-	AllowedScripts []string `json:"allowedScripts"`
+	RequireSigning          bool     `json:"requireSigning"`
+	FileRootCertCA          string   `json:"fileRootCertCA,omitempty"`
+	AllowedScripts          []string `json:"allowedScripts"`
+	AllowedCommandToExecute []string `json:"allowedCommandToExecute"`
+	AllowedProtectedScripts []string `json:"allowedProtectedScripts"`
 }
 
 func (cseps CSEExtensionPolicySettings) ValidateFormat() error {
@@ -141,6 +144,7 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmexte
 	// TODO: In the future, fail the enable operation if the policy file is invalid.
 	// If the policy file does not exist, proceed as normal.
 	var extensionPolicyManagerPtr *extensionpolicysettings.ExtensionPolicySettingsManager[CSEExtensionPolicySettings]
+	var settings *CSEExtensionPolicySettings
 	policyPath := filepath.Join(h.HandlerEnvironment.ConfigFolder, policyFileName)
 
 	if _, err := os.Stat(policyPath); err == nil {
@@ -149,7 +153,7 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmexte
 			ctx.Log("error", "failed to create extension policy settings manager, proceeding with default extension behavior for now", "path", policyPath, "error", err)
 		} else if err = extensionPolicyManagerPtr.LoadExtensionPolicySettings(); err != nil {
 			ctx.Log("error", "failed to load extension policy settings into settings manager, proceeding with default extension behavior for now", "path", policyPath, "error", err)
-		} else if settings, err := extensionPolicyManagerPtr.GetSettings(); err != nil {
+		} else if settings, err = extensionPolicyManagerPtr.GetSettings(); err != nil {
 			ctx.Log("error", "failed to get extension policy settings from settings manager, proceeding with default extension behavior for now", "path", policyPath, "error", err)
 		} else {
 			ctx.Log("message", "successfully loaded extension policy settings", "settings", fmt.Sprintf("%+v", settings))
@@ -162,13 +166,13 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmexte
 	}
 
 	dir := filepath.Join(dataDir, downloadDir, fmt.Sprintf("%d", seqNum))
-	if ewc := downloadFiles(ctx, dir, cfg, extensionPolicyManagerPtr); ewc != nil {
+	if ewc := downloadFiles(ctx, dir, cfg, settings); ewc != nil {
 		ewc.Err = errors.Wrap(ewc.Err, "processing file downloads failed")
 		return "", ewc
 	}
 
 	// execute the command, save its error
-	runErr := runCmd(ctx, dir, cfg)
+	runErr := runCmd(ctx, dir, cfg, settings)
 
 	// collect the logs if available
 	stdoutF, stderrF := logPaths(dir)
@@ -221,7 +225,7 @@ func checkAndSaveSeqNum(ctx log.Logger, seq int, mrseqPath string) (shouldExit b
 // downloadFiles downloads the files specified in cfg into dir (creates if does
 // not exist) and takes storage credentials specified in cfg into account.
 // If extension policy settings is provided, they are passed on to downloadAndProcessURL for file validation.
-func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings, eps *extensionpolicysettings.ExtensionPolicySettingsManager[CSEExtensionPolicySettings]) *vmextension.ErrorWithClarification {
+func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings, settings *CSEExtensionPolicySettings) *vmextension.ErrorWithClarification {
 	// - prepare the output directory for files and the command output
 	// - create the directory if missing
 	ctx.Log("event", "creating output directory", "path", dir)
@@ -246,7 +250,7 @@ func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings, eps *exten
 	for i, f := range cfg.fileUrls() {
 		ctx := ctx.With("file", i)
 		ctx.Log("event", "download start")
-		if ewc := downloadAndProcessURL(ctx, f, dir, &cfg, eps); ewc != nil {
+		if ewc := downloadAndProcessURL(ctx, f, dir, &cfg, settings); ewc != nil {
 			ctx.Log("event", "download failed", "error", ewc.Err)
 			return vmextension.NewErrorWithClarificationPtr(ewc.ErrorCode, errors.Wrapf(ewc.Err, "failed to download file[%d]", i))
 		}
@@ -256,7 +260,7 @@ func downloadFiles(ctx *log.Context, dir string, cfg handlerSettings, eps *exten
 }
 
 // runCmd runs the command (extracted from cfg) in the given dir (assumed to exist).
-func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (ewc *vmextension.ErrorWithClarification) {
+func runCmd(ctx log.Logger, dir string, cfg handlerSettings, settings *CSEExtensionPolicySettings) (ewc *vmextension.ErrorWithClarification) {
 	ctx.Log("event", "executing command", "output", dir)
 	var cmd string
 	var scenario string
@@ -286,6 +290,17 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (ewc *vmextension.E
 		scenario = fmt.Sprintf("protected-script;%s", scenarioInfo)
 	}
 
+	if settings != nil {
+		if strings.HasPrefix(scenario, "protected-script") {
+			ewc = validateCommandToExecuteAgainstPolicy(cmd, settings.AllowedProtectedScripts, scenario)
+		} else {
+			ewc = validateCommandToExecuteAgainstPolicy(cmd, settings.AllowedCommandToExecute, scenario)
+		}
+		if ewc != nil {
+			return ewc
+		}
+	}
+
 	begin := time.Now()
 	ewc = ExecCmdInDir(cmd, dir)
 	elapsed := time.Now().Sub(begin)
@@ -298,6 +313,23 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings) (ewc *vmextension.E
 		return vmextension.NewErrorWithClarificationPtr(ewc.ErrorCode, errors.Wrap(ewc.Err, "failed to execute command"))
 	}
 	ctx.Log("event", "executed command", "output", dir)
+	return nil
+}
+
+// While this function usually validates the 'commandToExecute' property value against the policy,
+// if the 'script' property is used instead, it will validate that against the policy.
+// Only call this function if settings is not nil.
+// Note: the comparison is case sensitive! Trailing and leading whitespace is trimmed, but case is not ignored.
+func validateCommandToExecuteAgainstPolicy(commandToExecute string, list []string, scenario string) *vmextension.ErrorWithClarification {
+	if len(list) > 0 {
+		err := extensionpolicysettings.ValidateValueInAllowlist(commandToExecute, list)
+		if err != nil {
+			if strings.HasPrefix(scenario, "protected-script") {
+				return vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_protectedScriptNotAllowed, fmt.Errorf("protected script '%s' is not in policy-allowlist: %w", commandToExecute, err))
+			}
+			return vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_commandToExecuteNotAllowed, fmt.Errorf("commandToExecute '%s' is not in policy-allowlist: %w", commandToExecute, err))
+		}
+	}
 	return nil
 }
 
