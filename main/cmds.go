@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/Azure/azure-extension-platform/pkg/extensionpolicysettings"
@@ -116,11 +115,11 @@ func min(a, b int) int {
 }
 
 type CSEExtensionPolicySettings struct {
-	RequireSigning          bool     `json:"requireSigning"`
-	FileRootCertCA          string   `json:"fileRootCertCA,omitempty"`
-	AllowedScripts          []string `json:"allowedScripts"`
-	AllowedCommandToExecute []string `json:"allowedCommandToExecute"`
-	AllowedProtectedScripts []string `json:"allowedProtectedScripts"`
+	RequireSigning           bool     `json:"requireSigning"`
+	FileRootCertCA           string   `json:"fileRootCertCA,omitempty"`
+	AllowedDownloadedScripts []string `json:"allowedDownloadedScripts"`
+	AllowedCommandToExecute  []string `json:"allowedCommandToExecute"`
+	AllowedScripts           []string `json:"allowedScripts"` // this is to restrict the 'script' property, which is a base64 encoded script, to a set of allowed scripts.
 }
 
 func (cseps CSEExtensionPolicySettings) ValidateFormat() error {
@@ -266,6 +265,7 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings, settings *CSEExtens
 	var scenario string
 	var scenarioInfo string
 	var err error
+	scriptScenario := false
 
 	// So many ways to execute a command!
 	if cfg.publicSettings.CommandToExecute != "" {
@@ -282,21 +282,18 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings, settings *CSEExtens
 			return nil
 		}
 		scenario = fmt.Sprintf("public-script;%s", scenarioInfo)
+		scriptScenario = true
 	} else if cfg.protectedSettings.Script != "" {
 		ctx.Log("event", "executing protected script", "output", dir)
 		if cmd, scenarioInfo, err = writeTempScript(cfg.protectedSettings.Script, dir, cfg.publicSettings.SkipDos2Unix); err != nil {
 			return nil
 		}
 		scenario = fmt.Sprintf("protected-script;%s", scenarioInfo)
+		scriptScenario = true
 	}
 
 	if settings != nil {
-		if strings.HasPrefix(scenario, "protected-script") {
-			ewc = validateCommandToExecuteAgainstPolicy(cmd, settings.AllowedProtectedScripts, scenario)
-		} else {
-			ewc = validateCommandToExecuteAgainstPolicy(cmd, settings.AllowedCommandToExecute, scenario)
-		}
-		if ewc != nil {
+		if ewc = validateCommandToExecuteAgainstPolicy(cmd, settings, scriptScenario); ewc != nil {
 			return ewc
 		}
 	}
@@ -320,11 +317,16 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings, settings *CSEExtens
 // if the 'script' property is used instead, it will validate that against the policy.
 // Only call this function if settings is not nil.
 // Note: the comparison is case sensitive! Trailing and leading whitespace is trimmed, but case is not ignored.
-func validateCommandToExecuteAgainstPolicy(commandToExecute string, list []string, scenario string) *vmextension.ErrorWithClarification {
+func validateCommandToExecuteAgainstPolicy(commandToExecute string, eps *CSEExtensionPolicySettings, scriptScenario bool) *vmextension.ErrorWithClarification {
+	list := eps.AllowedCommandToExecute
+	if scriptScenario {
+		list = eps.AllowedScripts
+	}
+
 	if len(list) > 0 {
 		err := extensionpolicysettings.ValidateValueInAllowlist(commandToExecute, list)
 		if err != nil {
-			if strings.HasPrefix(scenario, "protected-script") {
+			if scriptScenario {
 				return vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_protectedScriptNotAllowed, fmt.Errorf("protected script '%s' is not in policy-allowlist: %w", commandToExecute, err))
 			}
 			return vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_commandToExecuteNotAllowed, fmt.Errorf("commandToExecute '%s' is not in policy-allowlist: %w", commandToExecute, err))

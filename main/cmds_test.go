@@ -103,7 +103,7 @@ func Test_LoadExtensionPolicySettings_PolicyFileExistsValid(t *testing.T) {
 	require.NoError(t, err, "should be able to get extension policy settings")
 	require.NotNil(t, settings, "settings should not be nil")
 	require.Equal(t, false, settings.RequireSigning)
-	require.Empty(t, settings.AllowedScripts)
+	require.Empty(t, settings.AllowedDownloadedScripts)
 }
 
 func Test_LoadExtensionPolicySettings_PolicyFileMissing(t *testing.T) {
@@ -124,7 +124,7 @@ func Test_LoadExtensionPolicySettings_InvalidJSON(t *testing.T) {
 
 	invalidPolicyContent := `{
         "requireSigning": false,
-        "allowedScripts": [}
+        "allowedDownloadedScripts": [}
     }`
 	require.NoError(t, writeToFile(policyTestPath, invalidPolicyContent))
 
@@ -141,7 +141,7 @@ func Test_LoadExtensionPolicySettings_InvalidFormat_RequireSigningWithoutRootCA(
 
 	invalidPolicyContent := `{
         "requireSigning": true,
-        "allowedScripts": []
+        "allowedDownloadedScripts": []
     }`
 	require.NoError(t, writeToFile(policyTestPath, invalidPolicyContent))
 
@@ -307,11 +307,11 @@ func Test_runCmd_protectedScriptAllowedByPolicy_success(t *testing.T) {
 	require.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	// protected script is written to <dir>/script.sh, which is the value validated against AllowedProtectedScripts.
+	// protected script is written to <dir>/script.sh, which is the value validated against AllowedScripts.
 	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
 		protectedSettings: protectedSettings{Script: "ZGF0ZQ=="}, // base64 of "date"
 	}, &CSEExtensionPolicySettings{
-		AllowedProtectedScripts: []string{filepath.Join(dir, "script.sh")},
+		AllowedScripts: []string{filepath.Join(dir, "script.sh")},
 	}), "protected script should run successfully when allowed by policy")
 }
 
@@ -323,7 +323,7 @@ func Test_runCmd_protectedScriptNotAllowedByPolicy_fail(t *testing.T) {
 	ewc := runCmd(log.NewNopLogger(), dir, handlerSettings{
 		protectedSettings: protectedSettings{Script: "ZGF0ZQ=="}, // base64 of "date"
 	}, &CSEExtensionPolicySettings{
-		AllowedProtectedScripts: []string{"echo hello"},
+		AllowedScripts: []string{"echo hello"},
 	})
 	require.NotNil(t, ewc)
 	require.Equal(t, errorutil.ExtensionPolicySettings_protectedScriptNotAllowed, ewc.ErrorCode)
@@ -647,12 +647,12 @@ func Test_decodeScriptGzip(t *testing.T) {
 
 func Test_validateCommandToExecuteAgainstPolicy_commandAllowed(t *testing.T) {
 	const cmd = "echo hello"
-	require.Nil(t, validateCommandToExecuteAgainstPolicy(cmd, []string{cmd, "date"}, ""))
+	require.Nil(t, validateCommandToExecuteAgainstPolicy(cmd, &CSEExtensionPolicySettings{AllowedCommandToExecute: []string{cmd, "date"}}, false))
 }
 
 func Test_validateCommandToExecuteAgainstPolicy_commandNotAllowed(t *testing.T) {
 	const cmd = "echo hello"
-	ewc := validateCommandToExecuteAgainstPolicy(cmd, []string{"date"}, "")
+	ewc := validateCommandToExecuteAgainstPolicy(cmd, &CSEExtensionPolicySettings{AllowedCommandToExecute: []string{"date"}}, false)
 	require.NotNil(t, ewc)
 	require.Contains(t, ewc.Err.Error(), "commandToExecute")
 	require.Contains(t, ewc.Err.Error(), cmd)
@@ -660,11 +660,11 @@ func Test_validateCommandToExecuteAgainstPolicy_commandNotAllowed(t *testing.T) 
 }
 
 func Test_validateCommandToExecuteAgainstPolicy_emptyAllowlist(t *testing.T) {
-	require.Nil(t, validateCommandToExecuteAgainstPolicy("echo hello", []string{}, ""))
+	require.Nil(t, validateCommandToExecuteAgainstPolicy("echo hello", &CSEExtensionPolicySettings{AllowedCommandToExecute: []string{}}, false))
 }
 
 func Test_validateCommandToExecuteAgainstPolicy_nilAllowlist(t *testing.T) {
-	require.Nil(t, validateCommandToExecuteAgainstPolicy("echo hello", nil, ""))
+	require.Nil(t, validateCommandToExecuteAgainstPolicy("echo hello", &CSEExtensionPolicySettings{AllowedCommandToExecute: nil}, false))
 }
 
 // Helper Methods
@@ -706,14 +706,14 @@ func loadTestPolicy(scenario string, list []string) error {
 	case "valid, basic":
 		validPolicyContent = `{
 				"requireSigning": false,
-				"allowedScripts": []
+				"allowedDownloadedScripts": []
 			}`
 	case "valid, allowlist present":
 		// Convert list to JSON array string
 
 		validPolicyContent = `{
 				"requireSigning": false,
-				"allowedScripts": ` + allowlistStr + `
+				"allowedDownloadedScripts": ` + allowlistStr + `
 			}`
 	default:
 		validPolicyContent = `{}`
