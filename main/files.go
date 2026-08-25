@@ -25,7 +25,7 @@ import (
 // specified existing directory, which must be the path to the saved file. Then
 // it post-processes file based on heuristics.
 // If extension policy settings manager is provided, the downloaded file will be validated against the policy.
-func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handlerSettings, eps *extensionpolicysettings.ExtensionPolicySettingsManager[CSEExtensionPolicySettings]) *vmextension.ErrorWithClarification {
+func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handlerSettings, eps *CSEExtensionPolicySettings) *vmextension.ErrorWithClarification {
 	fn, err := urlToFileName(url)
 	if err != nil {
 		return vmextension.NewErrorWithClarificationPtr(errorutil.CustomerInput_invalidFileUris, err)
@@ -55,18 +55,10 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handl
 	}
 
 	if eps != nil {
-		settings, err := eps.GetSettings()
-		if err != nil {
-			return vmextension.NewErrorWithClarificationPtr(errorutil.SystemError, fmt.Errorf("failed to get extension policy settings: %w", err))
-		}
-		if settings == nil {
-			return vmextension.NewErrorWithClarificationPtr(errorutil.SystemError, fmt.Errorf("extension policy settings manager initialized, but settings not properly loaded."))
-		}
-
-		if len(settings.AllowedScripts) > 0 {
-			if err := extensionpolicysettings.ValidateFileHashInAllowlist(fp, settings.AllowedScripts, extensionpolicysettings.HashTypeSHA256); err != nil {
+		if len(eps.AllowedDownloadedScripts) > 0 {
+			if err := extensionpolicysettings.ValidateFileHashInAllowlist(fp, eps.AllowedDownloadedScripts, extensionpolicysettings.HashTypeSHA256); err != nil {
 				// TO DO: Consider whether to delete the blocked file.
-				return vmextension.NewErrorWithClarificationPtr(errorutil.SystemError, fmt.Errorf("Validation of script '%s' against policy-allowlist failed: %w.", fn, err))
+				return vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_downloadedScriptNotAllowed, fmt.Errorf("Validation of script '%s' against policy-allowlist failed: %w.", fn, err))
 			}
 		}
 	}

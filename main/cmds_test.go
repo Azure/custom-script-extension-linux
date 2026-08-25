@@ -103,7 +103,7 @@ func Test_LoadExtensionPolicySettings_PolicyFileExistsValid(t *testing.T) {
 	require.NoError(t, err, "should be able to get extension policy settings")
 	require.NotNil(t, settings, "settings should not be nil")
 	require.Equal(t, false, settings.RequireSigning)
-	require.Empty(t, settings.AllowedScripts)
+	require.Empty(t, settings.AllowedDownloadedScripts)
 }
 
 func Test_LoadExtensionPolicySettings_PolicyFileMissing(t *testing.T) {
@@ -124,7 +124,7 @@ func Test_LoadExtensionPolicySettings_InvalidJSON(t *testing.T) {
 
 	invalidPolicyContent := `{
         "requireSigning": false,
-        "allowedScripts": [}
+        "allowedDownloadedScripts": [}
     }`
 	require.NoError(t, writeToFile(policyTestPath, invalidPolicyContent))
 
@@ -141,7 +141,7 @@ func Test_LoadExtensionPolicySettings_InvalidFormat_RequireSigningWithoutRootCA(
 
 	invalidPolicyContent := `{
         "requireSigning": true,
-        "allowedScripts": []
+        "allowedDownloadedScripts": []
     }`
 	require.NoError(t, writeToFile(policyTestPath, invalidPolicyContent))
 
@@ -208,7 +208,7 @@ func Test_runCmd_success(t *testing.T) {
 
 	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
 		publicSettings: publicSettings{CommandToExecute: "date"},
-	}), "command should run successfully")
+	}, nil), "command should run successfully")
 }
 
 func Test_runCmd_invalidPolicyFile_success(t *testing.T) {
@@ -219,7 +219,7 @@ func Test_runCmd_invalidPolicyFile_success(t *testing.T) {
 
 	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
 		publicSettings: publicSettings{CommandToExecute: "date"},
-	}), "command should run successfully")
+	}, nil), "command should run successfully")
 }
 
 func Test_runCmd_fail(t *testing.T) {
@@ -229,10 +229,104 @@ func Test_runCmd_fail(t *testing.T) {
 
 	ewc := runCmd(log.NewNopLogger(), dir, handlerSettings{
 		publicSettings: publicSettings{CommandToExecute: "non-existing-cmd"},
-	})
+	}, nil)
 	require.Equal(t, errorutil.CommandExecution_failureExitCode, ewc.ErrorCode)
 	require.NotNil(t, ewc.Err, "command terminated with exit status")
 	require.Contains(t, ewc.Err.Error(), "failed to execute command")
+}
+
+func Test_runCmd_commandAllowedByPolicy_success(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	// commandToExecute matches an allowlist entry that differs in
+	// surrounding whitespace; matching should be trimmed.
+	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
+		publicSettings: publicSettings{CommandToExecute: "  date"},
+	}, &CSEExtensionPolicySettings{
+		AllowedCommandToExecute: []string{"date "},
+	}), "command should run successfully when allowed by policy")
+}
+
+func Test_runCmd_emptyCommandAllowlist_success(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
+		publicSettings: publicSettings{CommandToExecute: "date"},
+	}, &CSEExtensionPolicySettings{
+		AllowedCommandToExecute: []string{},
+	}), "command should run successfully when allowed by policy")
+}
+
+func Test_runCmd_commandNotAllowedByPolicy_fail(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	ewc := runCmd(log.NewNopLogger(), dir, handlerSettings{
+		publicSettings: publicSettings{CommandToExecute: "date"},
+	}, &CSEExtensionPolicySettings{
+		AllowedCommandToExecute: []string{"echo hello"},
+	})
+	require.NotNil(t, ewc)
+	require.Equal(t, errorutil.ExtensionPolicySettings_commandToExecuteNotAllowed, ewc.ErrorCode)
+}
+
+func Test_runCmd_protectedCommandAllowedByPolicy_success(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	// protected commandToExecute is validated against AllowedCommandToExecute.
+	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
+		protectedSettings: protectedSettings{CommandToExecute: "date"},
+	}, &CSEExtensionPolicySettings{
+		AllowedCommandToExecute: []string{"date"},
+	}), "protected commandToExecute should run successfully when allowed by policy")
+}
+
+func Test_runCmd_protectedCommandNotAllowedByPolicy_fail(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	ewc := runCmd(log.NewNopLogger(), dir, handlerSettings{
+		protectedSettings: protectedSettings{CommandToExecute: "date"},
+	}, &CSEExtensionPolicySettings{
+		AllowedCommandToExecute: []string{"echo hello"},
+	})
+	require.NotNil(t, ewc)
+	require.Equal(t, errorutil.ExtensionPolicySettings_commandToExecuteNotAllowed, ewc.ErrorCode)
+}
+
+func Test_runCmd_protectedScriptAllowedByPolicy_success(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	// protected script is written to <dir>/script.sh, which is the value validated against AllowedScripts.
+	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
+		protectedSettings: protectedSettings{Script: "ZGF0ZQ=="}, // base64 of "date"
+	}, &CSEExtensionPolicySettings{
+		AllowedScripts: []string{filepath.Join(dir, "script.sh")},
+	}), "protected script should run successfully when allowed by policy")
+}
+
+func Test_runCmd_protectedScriptNotAllowedByPolicy_fail(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	ewc := runCmd(log.NewNopLogger(), dir, handlerSettings{
+		protectedSettings: protectedSettings{Script: "ZGF0ZQ=="}, // base64 of "date"
+	}, &CSEExtensionPolicySettings{
+		AllowedScripts: []string{"echo hello"},
+	})
+	require.NotNil(t, ewc)
+	require.Equal(t, errorutil.ExtensionPolicySettings_protectedScriptNotAllowed, ewc.ErrorCode)
 }
 
 func Test_downloadFiles(t *testing.T) {
@@ -303,6 +397,8 @@ func Test_downloadFiles_allowlistStopsOnFirstDisallowedFile(t *testing.T) {
 	ExtensionPolicyManagerPtr, err := extensionpolicysettings.NewExtensionPolicySettingsManager[CSEExtensionPolicySettings](policyTestPath)
 	require.NoError(t, err)
 	require.NoError(t, ExtensionPolicyManagerPtr.LoadExtensionPolicySettings())
+	settings, err := ExtensionPolicyManagerPtr.GetSettings()
+	require.NoError(t, err)
 
 	ewc := downloadFiles(log.NewContext(log.NewNopLogger()),
 		dir,
@@ -315,7 +411,7 @@ func Test_downloadFiles_allowlistStopsOnFirstDisallowedFile(t *testing.T) {
 				},
 			},
 		},
-		ExtensionPolicyManagerPtr,
+		settings,
 	)
 
 	require.NotNil(t, ewc, "download should fail on first disallowed file")
@@ -377,6 +473,8 @@ func Test_downloadFiles_goodAllowlist_SHA256(t *testing.T) {
 	require.NoError(t, err, "should be able to create extension policy settings manager")
 	err = ExtensionPolicyManagerPtr.LoadExtensionPolicySettings()
 	require.NoError(t, err, "should be able to load extension policy settings")
+	settings, err := ExtensionPolicyManagerPtr.GetSettings()
+	require.NoError(t, err)
 
 	ewc := downloadFiles(log.NewContext(log.NewNopLogger()),
 		dir,
@@ -387,7 +485,7 @@ func Test_downloadFiles_goodAllowlist_SHA256(t *testing.T) {
 					srv.URL + "/file2",
 					srv.URL + "/file3",
 				}},
-		}, ExtensionPolicyManagerPtr)
+		}, settings)
 	require.Nil(t, ewc)
 
 	// check the files. All files should have passed.
@@ -449,6 +547,8 @@ func Test_downloadFiles_badAllowlist(t *testing.T) {
 	require.NoError(t, err, "should be able to create extension policy settings manager")
 	err = ExtensionPolicyManagerPtr.LoadExtensionPolicySettings()
 	require.NoError(t, err, "should be able to load extension policy settings")
+	settings, err := ExtensionPolicyManagerPtr.GetSettings()
+	require.NoError(t, err)
 
 	ewc := downloadFiles(log.NewContext(log.NewNopLogger()),
 		dir,
@@ -460,7 +560,7 @@ func Test_downloadFiles_badAllowlist(t *testing.T) {
 					srv.URL + "/file3",
 					srv.URL + "/file4", // this file is not in the allowlist. Extension should exit gracefully.
 				}},
-		}, ExtensionPolicyManagerPtr)
+		}, settings)
 	require.NotNil(t, ewc)
 	require.Contains(t, ewc.Err.Error(), "Validation of script 'file4' against policy-allowlist failed", "error should indicate that file4 failed validation")
 
@@ -503,6 +603,8 @@ func Test_downloadFiles_emptyAllowlist(t *testing.T) {
 	require.NoError(t, err, "should be able to create extension policy settings manager")
 	err = ExtensionPolicyManagerPtr.LoadExtensionPolicySettings()
 	require.NoError(t, err, "should be able to load extension policy settings")
+	settings, err := ExtensionPolicyManagerPtr.GetSettings()
+	require.NoError(t, err)
 
 	ewc := downloadFiles(log.NewContext(log.NewNopLogger()),
 		dir,
@@ -513,7 +615,7 @@ func Test_downloadFiles_emptyAllowlist(t *testing.T) {
 					srv.URL + "/bytes/100",
 					srv.URL + "/bytes/1000",
 				}},
-		}, ExtensionPolicyManagerPtr)
+		}, settings)
 	require.Nil(t, ewc)
 
 	// Check the files. All files should have passed.
@@ -541,6 +643,28 @@ func Test_decodeScriptGzip(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, info, "32;3;gzip=1")
 	require.Equal(t, s, "ls\n")
+}
+
+func Test_validateCommandToExecuteAgainstPolicy_commandAllowed(t *testing.T) {
+	const cmd = "echo hello"
+	require.Nil(t, validateCommandToExecuteAgainstPolicy(cmd, &CSEExtensionPolicySettings{AllowedCommandToExecute: []string{cmd, "date"}}, false))
+}
+
+func Test_validateCommandToExecuteAgainstPolicy_commandNotAllowed(t *testing.T) {
+	const cmd = "echo hello"
+	ewc := validateCommandToExecuteAgainstPolicy(cmd, &CSEExtensionPolicySettings{AllowedCommandToExecute: []string{"date"}}, false)
+	require.NotNil(t, ewc)
+	require.Contains(t, ewc.Err.Error(), "commandToExecute")
+	require.Contains(t, ewc.Err.Error(), cmd)
+	require.Contains(t, ewc.Err.Error(), "is not in policy-allowlist")
+}
+
+func Test_validateCommandToExecuteAgainstPolicy_emptyAllowlist(t *testing.T) {
+	require.Nil(t, validateCommandToExecuteAgainstPolicy("echo hello", &CSEExtensionPolicySettings{AllowedCommandToExecute: []string{}}, false))
+}
+
+func Test_validateCommandToExecuteAgainstPolicy_nilAllowlist(t *testing.T) {
+	require.Nil(t, validateCommandToExecuteAgainstPolicy("echo hello", &CSEExtensionPolicySettings{AllowedCommandToExecute: nil}, false))
 }
 
 // Helper Methods
@@ -582,14 +706,14 @@ func loadTestPolicy(scenario string, list []string) error {
 	case "valid, basic":
 		validPolicyContent = `{
 				"requireSigning": false,
-				"allowedScripts": []
+				"allowedDownloadedScripts": []
 			}`
 	case "valid, allowlist present":
 		// Convert list to JSON array string
 
 		validPolicyContent = `{
 				"requireSigning": false,
-				"allowedScripts": ` + allowlistStr + `
+				"allowedDownloadedScripts": ` + allowlistStr + `
 			}`
 	default:
 		validPolicyContent = `{}`
