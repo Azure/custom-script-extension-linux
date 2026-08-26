@@ -93,7 +93,7 @@ if [[ "$cmd" == "enable" ]]; then
     commandToExecute="nohup '$bin' '$cmd' &"
 fi
 
-### Retry logic to check if RunCommand binary is open for write and execute the command
+### Retry logic to check if Custom script binary is open for write and execute the command
 set -e
 retry_attempts=0
 
@@ -101,13 +101,13 @@ set -x
 
 if command -v fuser&>/dev/null; then
     while (( retry_attempts < 10 )); do
-        # Use fuser to detect if the run command binary is open for write to help detect potential conflicts like 'text file busy' errors that prevents execution of Run Command binary.
+        # Use fuser to detect if the Custom script binary is open for write to help detect potential conflicts like 'text file busy' errors that prevents execution of the Custom script binary.
         fuser_output=$(fuser -vw "$bin" 2>&1)
         fuser_status=$?
         fuser_output=$(fuser -v "$bin" 2>&1)
         fuser_return_code=$?
 
-        # Use 10 retries with 3 seconds sleep between retries to allow for any potential conflicts to resolve before executing the Run Command binary.
+        # Use 10 retries with 3 seconds sleep between retries to allow for any potential conflicts to resolve before executing the Custom script binary.
         if [ "$fuser_return_code" -eq 0 ]; then
             echo "Custom script binary $bin is open for write. Users with write access:"
             echo "$fuser_output"
@@ -121,12 +121,12 @@ if command -v fuser&>/dev/null; then
             break
         else
             echo "$fuser_output"
-            echo "Unexpected Fuser error with return code $fuser_return_code while checking if $bin is open for write.using fuser command. Proceeding with best-effort execution..."
+            echo "Unexpected Fuser error with return code $fuser_return_code while checking if $bin is open for write using fuser command. Proceeding with best-effort execution..."
             break
         fi
     done
 else
-    echo "INFO: Not an error. fuser command not found. Install 'psmic' package to use fuser for checking if the Run Command binary is open for write to detect potential conflicts like 'text file busy' errors while executing Run Command binary. Proceeding with best-effort execution..."
+    echo "INFO: Not an error. fuser command not found. Install 'psmic' package to use fuser for checking if the Custom script binary is open for write to detect potential conflicts like 'text file busy' errors while executing the Custom script binary. Proceeding with best-effort execution..."
 fi
 ### End of retry logic
 
