@@ -102,8 +102,7 @@ set -x
 if command -v fuser&>/dev/null; then
     while (( retry_attempts < 10 )); do
         # Use fuser to detect if the Custom script binary is open for write to help detect potential conflicts like 'text file busy' errors that prevents execution of the Custom script binary.
-        fuser_output=$(fuser -vw "$bin" 2>&1)
-        fuser_status=$?
+        set +e
         fuser_output=$(fuser -v "$bin" 2>&1)
         fuser_return_code=$?
 
