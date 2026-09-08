@@ -94,7 +94,7 @@ if [[ "$cmd" == "enable" ]]; then
 fi
 
 ### Retry logic to check if Custom script binary is open for write and execute the command
-set -e
+set +e
 retry_attempts=0
 
 set -x
