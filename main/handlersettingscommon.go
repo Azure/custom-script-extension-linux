@@ -126,7 +126,7 @@ func unmarshalProtectedSettings(configFolder string, hs handlerSettingsCommon, v
 	// other extension handlers depend on this package for parsing handler
 	// settings.
 
-	//using cms command to support for FIPS 140-3
+	// using cms command to support for FIPS 140-3
 	cmd := exec.Command("openssl", "cms", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
 	var bOut, bErr bytes.Buffer
 	var errMsg error
@@ -134,9 +134,9 @@ func unmarshalProtectedSettings(configFolder string, hs handlerSettingsCommon, v
 	cmd.Stdout = &bOut
 	cmd.Stderr = &bErr
 
-	//back up smime command in case cms fails
+	// fall back to smime command in case cms fails
 	if err := cmd.Run(); err != nil {
-		errMsg = fmt.Errorf("decrypting protected settings with cms command failed: error=%v stderr=%s \n now decrypting with smime command", err, bErr.String())
+		errMsg = fmt.Errorf("\ndecrypting protected settings with cms command failed: error=%v stderr=%s", err, bErr.String())
 		cmd = exec.Command("openssl", "smime", "-inform", "DER", "-decrypt", "-recip", crt, "-inkey", prv)
 		cmd.Stdin = bytes.NewReader(decoded)
 		bOut.Reset()
@@ -144,7 +144,7 @@ func unmarshalProtectedSettings(configFolder string, hs handlerSettingsCommon, v
 		cmd.Stdout = &bOut
 		cmd.Stderr = &bErr
 		if err := cmd.Run(); err != nil {
-			return errors.Wrapf(errMsg, "decrypting protected settings with smime command failed: error=%v stderr=%s", err, bErr.String())
+			return fmt.Errorf("%v\ndecrypting protected settings with smime command failed: error=%v stderr=%s", errMsg, err, bErr.String())
 		}
 	}
 
