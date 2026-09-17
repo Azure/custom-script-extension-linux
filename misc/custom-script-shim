@@ -81,18 +81,6 @@ exec &> >(tee -ia "$LOG_DIR/$LOG_FILE")
 bin="$(readlink -f "$SCRIPT_DIR/$HANDLER_BIN")"
 cmd="$1"
 
-# For commands other than 'enable', execute the handler process as a child process
-commandToExecute="$bin $cmd"
-
-if [[ "$cmd" == "enable" ]]; then
-    # for 'enable' command, write a .status file first, then double fork
-    # to detach from the  handler process tree to avoid getting terminated 
-    # after the 15-minute extension enabling timeout.
-    # & will execute the binary on the background and will not block current shell execution
-    write_status
-    commandToExecute="nohup '$bin' '$cmd' &"
-fi
-
 ### Retry logic to check if Custom script binary is open for write and execute the command
 set +e
 retry_attempts=0
@@ -130,7 +118,20 @@ fi
 ### End of retry logic
 
 echo "Starting custom-script-handler..."
-$commandToExecute
+# For commands other than 'enable', execute the handler process as a child process
+commandToExecute="$bin $cmd"
+
+if [[ "$cmd" == "enable" ]]; then
+    # for 'enable' command, write a .status file first, then double fork
+    # to detach from the  handler process tree to avoid getting terminated 
+    # after the 15-minute extension enabling timeout.
+    # & will execute the binary on the background and will not block current shell execution
+    write_status
+    nohup "$bin" "$cmd" &
+else
+    # for commands other than 'enable', execute the handler process as a child process
+    $bin $cmd
+fi
 echo "custom-script-handler finished."
 set +x
 
