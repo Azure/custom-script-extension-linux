@@ -118,8 +118,7 @@ fi
 ### End of retry logic
 
 echo "Starting custom-script-handler..."
-# For commands other than 'enable', execute the handler process as a child process
-commandToExecute="$bin $cmd"
+# For commands other than 'enable', execute the handler process as a child proces
 
 if [[ "$cmd" == "enable" ]]; then
     # for 'enable' command, write a .status file first, then double fork
@@ -130,7 +129,7 @@ if [[ "$cmd" == "enable" ]]; then
     nohup "$bin" "$cmd" &
 else
     # for commands other than 'enable', execute the handler process as a child process
-    $bin $cmd
+    "$bin" "$cmd"
 fi
 echo "custom-script-handler finished."
 set +x
