@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/Azure/azure-extension-platform/pkg/extensionpolicysettings"
+	"github.com/Azure/azure-extension-platform/pkg/hashutils"
 	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
 	"github.com/ahmetalpbalkan/go-httpbin"
 	"github.com/go-kit/kit/log"
@@ -390,8 +391,8 @@ func Test_downloadFiles_allowlistStopsOnFirstDisallowedFile(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	good1Hash, _ := extensionpolicysettings.ComputeFileHash(good1Content, extensionpolicysettings.HashTypeSHA256)
-	good2Hash, _ := extensionpolicysettings.ComputeFileHash(good2Content, extensionpolicysettings.HashTypeSHA256)
+	good1Hash := computeSHA256Hash(good1Content)
+	good2Hash := computeSHA256Hash(good2Content)
 	require.NoError(t, loadTestPolicy("valid, allowlist present", []string{good1Hash, good2Hash}))
 
 	ExtensionPolicyManagerPtr, err := extensionpolicysettings.NewExtensionPolicySettingsManager[CSEExtensionPolicySettings](policyTestPath)
@@ -456,10 +457,10 @@ func Test_downloadFiles_goodAllowlist_SHA256(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	// Compute SHA256 hashes (you can use the extensionpolicysettings.ComputeFileHash function)
-	file1Hash, _ := extensionpolicysettings.ComputeFileHash(file1Content, extensionpolicysettings.HashTypeSHA256)
-	file2Hash, _ := extensionpolicysettings.ComputeFileHash(file2Content, extensionpolicysettings.HashTypeSHA256)
-	file3Hash, _ := extensionpolicysettings.ComputeFileHash(file3Content, extensionpolicysettings.HashTypeSHA256)
+	// Compute SHA256 hashes of the served content.
+	file1Hash := computeSHA256Hash(file1Content)
+	file2Hash := computeSHA256Hash(file2Content)
+	file3Hash := computeSHA256Hash(file3Content)
 
 	// Create a hash list.
 	al := []string{file1Hash, file2Hash, file3Hash}
@@ -530,10 +531,10 @@ func Test_downloadFiles_badAllowlist(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	// Compute SHA256 hashes (you can use the extensionpolicysettings.ComputeFileHash function)
-	file1Hash, _ := extensionpolicysettings.ComputeFileHash(file1Content, extensionpolicysettings.HashTypeSHA256)
-	file2Hash, _ := extensionpolicysettings.ComputeFileHash(file2Content, extensionpolicysettings.HashTypeSHA256)
-	file3Hash, _ := extensionpolicysettings.ComputeFileHash(file3Content, extensionpolicysettings.HashTypeSHA256)
+	// Compute SHA256 hashes of the served content.
+	file1Hash := computeSHA256Hash(file1Content)
+	file2Hash := computeSHA256Hash(file2Content)
+	file3Hash := computeSHA256Hash(file3Content)
 
 	// Create a hash list.
 	al := []string{file1Hash, file2Hash, file3Hash}
@@ -668,6 +669,11 @@ func Test_validateCommandToExecuteAgainstPolicy_nilAllowlist(t *testing.T) {
 }
 
 // Helper Methods
+func computeSHA256Hash(content string) string {
+	alg, _ := hashutils.GetHashAlgorithm(hashutils.HashTypeSHA256)
+	return hashutils.ComputeHash(content, alg)
+}
+
 func writeToFile(filePath, content string) error {
 	err := os.WriteFile(filePath, []byte(content), 0644)
 	return err

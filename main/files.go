@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/Azure/azure-extension-platform/pkg/extensionpolicysettings"
+	"github.com/Azure/azure-extension-platform/pkg/hashutils"
 	"github.com/Azure/azure-extension-platform/vmextension"
 	"github.com/Azure/custom-script-extension-linux/pkg/blobutil"
 	"github.com/Azure/custom-script-extension-linux/pkg/download"
@@ -56,7 +57,7 @@ func downloadAndProcessURL(ctx *log.Context, url, downloadDir string, cfg *handl
 
 	if eps != nil {
 		if len(eps.AllowedDownloadedScripts) > 0 {
-			if err := extensionpolicysettings.ValidateFileHashInAllowlist(fp, eps.AllowedDownloadedScripts, extensionpolicysettings.HashTypeSHA256); err != nil {
+			if err := extensionpolicysettings.ValidateFileHashInAllowlist(fp, eps.AllowedDownloadedScripts, hashutils.HashTypeSHA256); err != nil {
 				// TO DO: Consider whether to delete the blocked file.
 				return vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_downloadedScriptNotAllowed, fmt.Errorf("Validation of script '%s' against policy-allowlist failed: %w.", fn, err))
 			}
