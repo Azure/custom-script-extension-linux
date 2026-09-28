@@ -60,5 +60,6 @@ const (
 	NoError int = math.MaxInt
 	// For errors that are unclassified. This should be used sparingly, and
 	// the error message should provide the necessary context.
+	// Notably, this could be either a system or user error.
 	UnclassifiedError int = math.MaxInt - 1
 )
