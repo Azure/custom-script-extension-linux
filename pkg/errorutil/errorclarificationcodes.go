@@ -57,9 +57,7 @@ const (
 	// No Error - used as a placeholder value
 	// when representing an "empty" ErrorWithClarification
 	// or when the error can be treated without the clarification
-	NoError int = math.MaxInt
-	// For errors that are unclassified. This should be used sparingly, and
-	// the error message should provide the necessary context.
-	// Notably, this could be either a system or user error.
-	UnclassifiedError int = math.MaxInt - 1
+	// or when an error is not yet classified.
+	// Could be either a system or user error.
+	UnclassifiedError int = math.MaxInt
 )
