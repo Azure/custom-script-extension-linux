@@ -278,6 +278,7 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings, settings *CSEExtens
 		ctx.Log("event", "executing protected commandToExecute", "output", dir)
 		cmd = cfg.protectedSettings.CommandToExecute
 		scenario = "protected-commandToExecute"
+
 		if err = validateCommandToExecuteAgainstPolicy(cmd, settings.AllowedCommandToExecute); err != nil {
 			return vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_commandToExecuteNotAllowed, errors.Wrap(err, "commandToExecute in protected settings not allowed by policy"))
 		}
@@ -290,6 +291,7 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings, settings *CSEExtens
 			return vmextension.NewErrorWithClarificationPtr(errorutil.UnclassifiedError, errors.Wrap(err, "failed to process inputted script from settings"))
 		}
 		scenario = fmt.Sprintf("public-script;%s", scenarioInfo)
+
 		if err = validateCommandToExecuteAgainstPolicy(cfg.publicSettings.Script, settings.AllowedScripts); err != nil {
 			return vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_scriptNotAllowed, errors.Wrap(err, "script in settings not allowed by policy"))
 		}
@@ -301,6 +303,7 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings, settings *CSEExtens
 			return vmextension.NewErrorWithClarificationPtr(errorutil.UnclassifiedError, errors.Wrap(err, "failed to process inputted script from protected settings"))
 		}
 		scenario = fmt.Sprintf("protected-script;%s", scenarioInfo)
+
 		if err = validateCommandToExecuteAgainstPolicy(cfg.protectedSettings.Script, settings.AllowedScripts); ewc != nil {
 			return vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_scriptNotAllowed, errors.Wrap(err, "script in protected settings not allowed by policy"))
 		}
