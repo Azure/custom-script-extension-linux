@@ -330,6 +330,38 @@ func Test_runCmd_protectedScriptNotAllowedByPolicy_fail(t *testing.T) {
 	require.Equal(t, errorutil.ExtensionPolicySettings_protectedScriptNotAllowed, ewc.ErrorCode)
 }
 
+func Test_runCmd_publicScriptInvalidBase64_fail(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	ewc := runCmd(log.NewNopLogger(), dir, handlerSettings{
+		publicSettings: publicSettings{Script: "!!!not-valid-base64!!!"},
+	}, nil)
+	require.NotNil(t, ewc, "runCmd should fail when the public script cannot be base64 decoded")
+	// TO-DO: for now, we are using NoError as the error code because the error string contains the actual failure reason,
+	// so we don't need further clarification. When the extension is updated to support specific error codes for all
+	// failure reasons, update this (and the test below) to use a specific error code.
+	require.Equal(t, errorutil.NoError, ewc.ErrorCode)
+	require.Contains(t, ewc.Err.Error(), "failed to decode script")
+	require.Contains(t, ewc.Err.Error(), "failed to process inputted script from settings")
+}
+
+func Test_runCmd_protectedScriptInvalidBase64_fail(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	ewc := runCmd(log.NewNopLogger(), dir, handlerSettings{
+		protectedSettings: protectedSettings{Script: "!!!not-valid-base64!!!"},
+	}, nil)
+	require.NotNil(t, ewc, "runCmd should fail when the protected script cannot be base64 decoded")
+	// TO-DO: See comment in the unit test above regarding NoError being a placeholder.
+	require.Equal(t, errorutil.NoError, ewc.ErrorCode)
+	require.Contains(t, ewc.Err.Error(), "failed to decode script")
+	require.Contains(t, ewc.Err.Error(), "failed to process inputted script from protected settings")
+}
+
 func Test_downloadFiles(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	require.Nil(t, err)
