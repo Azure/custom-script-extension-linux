@@ -265,17 +265,22 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings, settings *CSEExtens
 	var scenario string
 	var scenarioInfo string
 	var err error
-	scriptScenario := false
 
 	// So many ways to execute a command!
 	if cfg.publicSettings.CommandToExecute != "" {
 		ctx.Log("event", "executing public commandToExecute", "output", dir)
 		cmd = cfg.publicSettings.CommandToExecute
 		scenario = "public-commandToExecute"
+		if err = validateCommandToExecuteAgainstPolicy(cmd, settings.AllowedCommandToExecute); err != nil {
+			return vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_commandToExecuteNotAllowed, errors.Wrap(err, "commandToExecute in settings not allowed by policy"))
+		}
 	} else if cfg.protectedSettings.CommandToExecute != "" {
 		ctx.Log("event", "executing protected commandToExecute", "output", dir)
 		cmd = cfg.protectedSettings.CommandToExecute
 		scenario = "protected-commandToExecute"
+		if err = validateCommandToExecuteAgainstPolicy(cmd, settings.AllowedCommandToExecute); err != nil {
+			return vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_commandToExecuteNotAllowed, errors.Wrap(err, "commandToExecute in protected settings not allowed by policy"))
+		}
 	} else if cfg.publicSettings.Script != "" {
 		ctx.Log("event", "executing public script", "output", dir)
 		if cmd, scenarioInfo, err = writeTempScript(cfg.publicSettings.Script, dir, cfg.publicSettings.SkipDos2Unix); err != nil {
@@ -285,7 +290,9 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings, settings *CSEExtens
 			return vmextension.NewErrorWithClarificationPtr(errorutil.NoError, errors.Wrap(err, "failed to process inputted script from settings"))
 		}
 		scenario = fmt.Sprintf("public-script;%s", scenarioInfo)
-		scriptScenario = true
+		if err = validateCommandToExecuteAgainstPolicy(cfg.publicSettings.Script, settings.AllowedScripts); err != nil {
+			return vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_scriptNotAllowed, errors.Wrap(err, "script in settings not allowed by policy"))
+		}
 	} else if cfg.protectedSettings.Script != "" {
 		ctx.Log("event", "executing protected script", "output", dir)
 		if cmd, scenarioInfo, err = writeTempScript(cfg.protectedSettings.Script, dir, cfg.publicSettings.SkipDos2Unix); err != nil {
@@ -294,12 +301,8 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings, settings *CSEExtens
 			return vmextension.NewErrorWithClarificationPtr(errorutil.NoError, errors.Wrap(err, "failed to process inputted script from protected settings"))
 		}
 		scenario = fmt.Sprintf("protected-script;%s", scenarioInfo)
-		scriptScenario = true
-	}
-
-	if settings != nil {
-		if ewc = validateCommandToExecuteAgainstPolicy(cmd, settings, scriptScenario); ewc != nil {
-			return ewc
+		if err = validateCommandToExecuteAgainstPolicy(cfg.protectedSettings.Script, settings.AllowedScripts); ewc != nil {
+			return vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_scriptNotAllowed, errors.Wrap(err, "script in protected settings not allowed by policy"))
 		}
 	}
 
@@ -318,24 +321,12 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings, settings *CSEExtens
 	return nil
 }
 
-// While this function usually validates the 'commandToExecute' property value against the policy,
-// if the 'script' property is used instead, it will validate that against the policy.
-// Only call this function if settings is not nil.
+// This function validates a command against the provided allowlist according to the policy.
+// Only call this function if settings is not nil. If allowlist is empty, all commands are allowed.
 // Note: the comparison is case sensitive! Trailing and leading whitespace is trimmed, but case is not ignored.
-func validateCommandToExecuteAgainstPolicy(commandToExecute string, eps *CSEExtensionPolicySettings, scriptScenario bool) *vmextension.ErrorWithClarification {
-	list := eps.AllowedCommandToExecute
-	if scriptScenario {
-		list = eps.AllowedScripts
-	}
-
-	if len(list) > 0 {
-		err := extensionpolicysettings.ValidateValueInAllowlist(commandToExecute, list)
-		if err != nil {
-			if scriptScenario {
-				return vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_protectedScriptNotAllowed, fmt.Errorf("protected script '%s' is not in policy-allowlist: %w", commandToExecute, err))
-			}
-			return vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_commandToExecuteNotAllowed, fmt.Errorf("commandToExecute '%s' is not in policy-allowlist: %w", commandToExecute, err))
-		}
+func validateCommandToExecuteAgainstPolicy(command string, allowlist []string) error {
+	if len(allowlist) > 0 {
+		return extensionpolicysettings.ValidateValueInAllowlist(command, allowlist)
 	}
 	return nil
 }

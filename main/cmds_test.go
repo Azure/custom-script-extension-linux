@@ -327,7 +327,7 @@ func Test_runCmd_protectedScriptNotAllowedByPolicy_fail(t *testing.T) {
 		AllowedScripts: []string{"echo hello"},
 	})
 	require.NotNil(t, ewc)
-	require.Equal(t, errorutil.ExtensionPolicySettings_protectedScriptNotAllowed, ewc.ErrorCode)
+	require.Equal(t, errorutil.ExtensionPolicySettings_scriptNotAllowed, ewc.ErrorCode)
 }
 
 func Test_runCmd_publicScriptInvalidBase64_fail(t *testing.T) {
@@ -680,24 +680,24 @@ func Test_decodeScriptGzip(t *testing.T) {
 
 func Test_validateCommandToExecuteAgainstPolicy_commandAllowed(t *testing.T) {
 	const cmd = "echo hello"
-	require.Nil(t, validateCommandToExecuteAgainstPolicy(cmd, &CSEExtensionPolicySettings{AllowedCommandToExecute: []string{cmd, "date"}}, false))
+	require.Nil(t, validateCommandToExecuteAgainstPolicy(cmd, []string{cmd, "date"}))
 }
 
 func Test_validateCommandToExecuteAgainstPolicy_commandNotAllowed(t *testing.T) {
 	const cmd = "echo hello"
-	ewc := validateCommandToExecuteAgainstPolicy(cmd, &CSEExtensionPolicySettings{AllowedCommandToExecute: []string{"date"}}, false)
-	require.NotNil(t, ewc)
-	require.Contains(t, ewc.Err.Error(), "commandToExecute")
-	require.Contains(t, ewc.Err.Error(), cmd)
-	require.Contains(t, ewc.Err.Error(), "is not in policy-allowlist")
+	err := validateCommandToExecuteAgainstPolicy(cmd, []string{"date"})
+	require.NotNil(t, err)
+	require.Contains(t, err.Error(), "commandToExecute")
+	require.Contains(t, err.Error(), cmd)
+	require.Contains(t, err.Error(), "is not in policy-allowlist")
 }
 
 func Test_validateCommandToExecuteAgainstPolicy_emptyAllowlist(t *testing.T) {
-	require.Nil(t, validateCommandToExecuteAgainstPolicy("echo hello", &CSEExtensionPolicySettings{AllowedCommandToExecute: []string{}}, false))
+	require.Nil(t, validateCommandToExecuteAgainstPolicy("echo hello", []string{}))
 }
 
 func Test_validateCommandToExecuteAgainstPolicy_nilAllowlist(t *testing.T) {
-	require.Nil(t, validateCommandToExecuteAgainstPolicy("echo hello", &CSEExtensionPolicySettings{AllowedCommandToExecute: nil}, false))
+	require.Nil(t, validateCommandToExecuteAgainstPolicy("echo hello", nil))
 }
 
 // Helper Methods
