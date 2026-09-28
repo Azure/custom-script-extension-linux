@@ -281,6 +281,7 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings, settings *CSEExtens
 		if cmd, scenarioInfo, err = writeTempScript(cfg.publicSettings.Script, dir, cfg.publicSettings.SkipDos2Unix); err != nil {
 			// TO-DO: For now, we pass in errorutil.NoError because the error does not require a specific clarification code, since the reason is
 			// covered in the error message itself. When extension is fully onboarded to use EWC, update this to use a specific error code.
+			ctx.Log("error", "failed to write temp script", "error", err)
 			return vmextension.NewErrorWithClarificationPtr(errorutil.NoError, errors.Wrap(err, "failed to process inputted script from settings"))
 		}
 		scenario = fmt.Sprintf("public-script;%s", scenarioInfo)
@@ -288,6 +289,7 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings, settings *CSEExtens
 	} else if cfg.protectedSettings.Script != "" {
 		ctx.Log("event", "executing protected script", "output", dir)
 		if cmd, scenarioInfo, err = writeTempScript(cfg.protectedSettings.Script, dir, cfg.publicSettings.SkipDos2Unix); err != nil {
+			ctx.Log("error", "failed to write temp script", "error", err)
 			// TO-DO: see note above regarding errorutil.NoError being used.
 			return vmextension.NewErrorWithClarificationPtr(errorutil.NoError, errors.Wrap(err, "failed to process inputted script from protected settings"))
 		}
