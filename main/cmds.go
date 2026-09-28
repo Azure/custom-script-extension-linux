@@ -282,23 +282,23 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings, settings *CSEExtens
 			return vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_commandToExecuteNotAllowed, errors.Wrap(err, "commandToExecute in protected settings not allowed by policy"))
 		}
 	} else if cfg.publicSettings.Script != "" {
-		ctx.Log("event", "executing public script", "output", dir)
+		ctx.Log("event", "decoding and writing public script to temp file", "output", dir)
 		if cmd, scenarioInfo, err = writeTempScript(cfg.publicSettings.Script, dir, cfg.publicSettings.SkipDos2Unix); err != nil {
-			// TO-DO: For now, we pass in errorutil.NoError because the error does not require a specific clarification code, since the reason is
+			// TO-DO: For now, we pass in errorutil.UnclassifiedError because the error does not require a specific clarification code, since the reason is
 			// covered in the error message itself. When extension is fully onboarded to use EWC, update this to use a specific error code.
-			ctx.Log("error", "failed to write temp script", "error", err)
-			return vmextension.NewErrorWithClarificationPtr(errorutil.NoError, errors.Wrap(err, "failed to process inputted script from settings"))
+			ctx.Log("error", "failed to write script to temp file", "error", err)
+			return vmextension.NewErrorWithClarificationPtr(errorutil.UnclassifiedError, errors.Wrap(err, "failed to process inputted script from settings"))
 		}
 		scenario = fmt.Sprintf("public-script;%s", scenarioInfo)
 		if err = validateCommandToExecuteAgainstPolicy(cfg.publicSettings.Script, settings.AllowedScripts); err != nil {
 			return vmextension.NewErrorWithClarificationPtr(errorutil.ExtensionPolicySettings_scriptNotAllowed, errors.Wrap(err, "script in settings not allowed by policy"))
 		}
 	} else if cfg.protectedSettings.Script != "" {
-		ctx.Log("event", "executing protected script", "output", dir)
+		ctx.Log("event", "decoding and writing protected script to temp file", "output", dir)
 		if cmd, scenarioInfo, err = writeTempScript(cfg.protectedSettings.Script, dir, cfg.publicSettings.SkipDos2Unix); err != nil {
-			ctx.Log("error", "failed to write temp script", "error", err)
-			// TO-DO: see note above regarding errorutil.NoError being used.
-			return vmextension.NewErrorWithClarificationPtr(errorutil.NoError, errors.Wrap(err, "failed to process inputted script from protected settings"))
+			ctx.Log("error", "failed to write script to tmp file", "error", err)
+			// TO-DO: see note above regarding errorutil.UnclassifiedError being used.
+			return vmextension.NewErrorWithClarificationPtr(errorutil.UnclassifiedError, errors.Wrap(err, "failed to process inputted script from protected settings"))
 		}
 		scenario = fmt.Sprintf("protected-script;%s", scenarioInfo)
 		if err = validateCommandToExecuteAgainstPolicy(cfg.protectedSettings.Script, settings.AllowedScripts); ewc != nil {
@@ -306,6 +306,7 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings, settings *CSEExtens
 		}
 	}
 
+	ctx.Log("event", "executing command", "output", dir)
 	begin := time.Now()
 	ewc = ExecCmdInDir(cmd, dir)
 	elapsed := time.Now().Sub(begin)
