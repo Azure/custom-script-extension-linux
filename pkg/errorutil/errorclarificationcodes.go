@@ -54,8 +54,9 @@ const (
 	ExtensionPolicySettings_downloadedScriptNotAllowed int = 82
 	ExtensionPolicySettings_commandToExecuteNotAllowed int = 83
 	ExtensionPolicySettings_protectedScriptNotAllowed  int = 84
-	// No Error - used as a placeholder value
-	// when representing an "empty" ErrorWithClarification
-	// or when the error can be treated without the clarification
-	NoError int = math.MaxInt
+	// UnclassifiedError - used as a placeholder value
+	// when the error can be treated without the clarification
+	// or when an error is not yet classified.
+	// Could be either a system or user error.
+	UnclassifiedError int = math.MaxInt
 )
