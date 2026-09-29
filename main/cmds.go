@@ -40,7 +40,7 @@ const (
 	fullName                = "Microsoft.Azure.Extensions.CustomScript"
 	maxTailLen              = 4 * 1024 // length of max stdout/stderr to be transmitted in .status file
 	maxTelemetryTailLen int = 1800
-	policyFileName          = "waagent_runtime_policy.json"
+	policyFileName          = "runtime_policy.json"
 )
 
 var (
