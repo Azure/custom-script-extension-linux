@@ -266,7 +266,6 @@ func runCmd(ctx log.Logger, dir string, cfg handlerSettings, settings *CSEExtens
 	var scenarioInfo string
 	var err error
 
-	ctx.Log("event", "hello")
 	// So many ways to execute a command!
 	if cfg.publicSettings.CommandToExecute != "" {
 		ctx.Log("event", "identified public commandToExecute", "output", dir)
