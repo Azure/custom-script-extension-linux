@@ -681,23 +681,23 @@ func Test_decodeScriptGzip(t *testing.T) {
 
 func Test_validateCommandToExecuteAgainstPolicy_commandAllowed(t *testing.T) {
 	const cmd = "echo hello"
-	require.Nil(t, validateCommandToExecuteAgainstPolicy(cmd, []string{cmd, "date"}))
+	require.Nil(t, validateCommandToExecuteAgainstPolicy(log.NewContext(log.NewNopLogger()), cmd, []string{cmd, "date"}))
 }
 
 func Test_validateCommandToExecuteAgainstPolicy_commandNotAllowed(t *testing.T) {
 	const cmd = "echo hello"
-	err := validateCommandToExecuteAgainstPolicy(cmd, []string{"date"})
+	err := validateCommandToExecuteAgainstPolicy(log.NewContext(log.NewNopLogger()), cmd, []string{"date"})
 	require.NotNil(t, err)
 	// This error string is taken from azure-extension-platform/pkg/extensionerrors
 	require.Contains(t, err.Error(), "item is not in the allowlist")
 }
 
 func Test_validateCommandToExecuteAgainstPolicy_emptyAllowlist(t *testing.T) {
-	require.Nil(t, validateCommandToExecuteAgainstPolicy("echo hello", []string{}))
+	require.Nil(t, validateCommandToExecuteAgainstPolicy(log.NewContext(log.NewNopLogger()), "echo hello", []string{}))
 }
 
 func Test_validateCommandToExecuteAgainstPolicy_nilAllowlist(t *testing.T) {
-	require.Nil(t, validateCommandToExecuteAgainstPolicy("echo hello", nil))
+	require.Nil(t, validateCommandToExecuteAgainstPolicy(log.NewContext(log.NewNopLogger()), "echo hello", nil))
 }
 
 // Helper Methods
