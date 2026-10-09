@@ -212,17 +212,6 @@ func Test_runCmd_success(t *testing.T) {
 	}, nil), "command should run successfully")
 }
 
-func Test_runCmd_invalidPolicyFile_success(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
-
-	require.Nil(t, err)
-	defer os.RemoveAll(dir)
-
-	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
-		publicSettings: publicSettings{CommandToExecute: "date"},
-	}, nil), "command should run successfully")
-}
-
 func Test_runCmd_fail(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	require.Nil(t, err)
@@ -308,12 +297,24 @@ func Test_runCmd_protectedScriptAllowedByPolicy_success(t *testing.T) {
 	require.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	// protected script is written to <dir>/script.sh, which is the value validated against AllowedScripts.
 	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
 		protectedSettings: protectedSettings{Script: "ZGF0ZQ=="}, // base64 of "date"
 	}, &CSEExtensionPolicySettings{
-		AllowedScripts: []string{filepath.Join(dir, "script.sh")},
+		AllowedScripts: []string{"ZGF0ZQ=="},
 	}), "protected script should run successfully when allowed by policy")
+}
+
+func Test_runCmd_publicScriptAllowedByPolicy_success(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	// public script is written to <dir>/script.sh, but we should still be comparing the script content.
+	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
+		publicSettings: publicSettings{Script: "ZGF0ZQ=="}, // base64 of "date"
+	}, &CSEExtensionPolicySettings{
+		AllowedScripts: []string{"ZGF0ZQ=="},
+	}), "public script should run successfully when allowed by policy")
 }
 
 func Test_runCmd_protectedScriptNotAllowedByPolicy_fail(t *testing.T) {
@@ -327,7 +328,7 @@ func Test_runCmd_protectedScriptNotAllowedByPolicy_fail(t *testing.T) {
 		AllowedScripts: []string{"echo hello"},
 	})
 	require.NotNil(t, ewc)
-	require.Equal(t, errorutil.ExtensionPolicySettings_protectedScriptNotAllowed, ewc.ErrorCode)
+	require.Equal(t, errorutil.ExtensionPolicySettings_scriptNotAllowed, ewc.ErrorCode)
 }
 
 func Test_runCmd_publicScriptInvalidBase64_fail(t *testing.T) {
@@ -680,24 +681,23 @@ func Test_decodeScriptGzip(t *testing.T) {
 
 func Test_validateCommandToExecuteAgainstPolicy_commandAllowed(t *testing.T) {
 	const cmd = "echo hello"
-	require.Nil(t, validateCommandToExecuteAgainstPolicy(cmd, &CSEExtensionPolicySettings{AllowedCommandToExecute: []string{cmd, "date"}}, false))
+	require.Nil(t, validateCommandToExecuteAgainstPolicy(log.NewContext(log.NewNopLogger()), cmd, []string{cmd, "date"}))
 }
 
 func Test_validateCommandToExecuteAgainstPolicy_commandNotAllowed(t *testing.T) {
 	const cmd = "echo hello"
-	ewc := validateCommandToExecuteAgainstPolicy(cmd, &CSEExtensionPolicySettings{AllowedCommandToExecute: []string{"date"}}, false)
-	require.NotNil(t, ewc)
-	require.Contains(t, ewc.Err.Error(), "commandToExecute")
-	require.Contains(t, ewc.Err.Error(), cmd)
-	require.Contains(t, ewc.Err.Error(), "is not in policy-allowlist")
+	err := validateCommandToExecuteAgainstPolicy(log.NewContext(log.NewNopLogger()), cmd, []string{"date"})
+	require.NotNil(t, err)
+	// This error string is taken from azure-extension-platform/pkg/extensionerrors
+	require.Contains(t, err.Error(), "item is not in the allowlist")
 }
 
 func Test_validateCommandToExecuteAgainstPolicy_emptyAllowlist(t *testing.T) {
-	require.Nil(t, validateCommandToExecuteAgainstPolicy("echo hello", &CSEExtensionPolicySettings{AllowedCommandToExecute: []string{}}, false))
+	require.Nil(t, validateCommandToExecuteAgainstPolicy(log.NewContext(log.NewNopLogger()), "echo hello", []string{}))
 }
 
 func Test_validateCommandToExecuteAgainstPolicy_nilAllowlist(t *testing.T) {
-	require.Nil(t, validateCommandToExecuteAgainstPolicy("echo hello", &CSEExtensionPolicySettings{AllowedCommandToExecute: nil}, false))
+	require.Nil(t, validateCommandToExecuteAgainstPolicy(log.NewContext(log.NewNopLogger()), "echo hello", nil))
 }
 
 // Helper Methods
