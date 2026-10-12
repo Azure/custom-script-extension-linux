@@ -135,6 +135,7 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmexte
 
 	if ewc != nil {
 		ewc.Err = errors.Wrap(ewc.Err, "failed to get configuration")
+		clearRuntimePolicyFile(ctx, h)
 		return "", ewc
 	}
 
@@ -167,6 +168,7 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmexte
 	dir := filepath.Join(dataDir, downloadDir, fmt.Sprintf("%d", seqNum))
 	if ewc := downloadFiles(ctx, dir, cfg, settings); ewc != nil {
 		ewc.Err = errors.Wrap(ewc.Err, "processing file downloads failed")
+		clearRuntimePolicyFile(ctx, h)
 		return "", ewc
 	}
 
@@ -196,6 +198,7 @@ func enable(ctx *log.Context, h HandlerEnvironment, seqNum int) (string, *vmexte
 	msg := fmt.Sprintf("\n[stdout]\n%s\n[stderr]\n%s", string(stdoutTail), string(stderrTail))
 
 	clearSettingsAndScriptExceptMostRecent(seqNum, ctx, h)
+	clearRuntimePolicyFile(ctx, h)
 
 	return msg, runErr
 }
@@ -416,5 +419,14 @@ func clearSettingsAndScriptExceptMostRecent(seqNum int, ctx *log.Context, hEnv H
 		false)
 	if err != nil {
 		ctx.Log("event", "could not clear settings")
+	}
+}
+
+func clearRuntimePolicyFile(ctx *log.Context, hEnv HandlerEnvironment) {
+	policyPath := filepath.Join(hEnv.HandlerEnvironment.ConfigFolder, policyFileName)
+	ctx.Log("event", "removing runtime policy file if it exists", "path", policyPath)
+	err := os.Remove(policyPath)
+	if err != nil && !os.IsNotExist(err) {
+		ctx.Log("event", "could not clear runtime policy file")
 	}
 }
