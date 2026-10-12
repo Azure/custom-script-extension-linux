@@ -53,7 +53,7 @@ const (
 	ExtensionPolicySettings_policyLoadFailed           int = 81
 	ExtensionPolicySettings_downloadedScriptNotAllowed int = 82
 	ExtensionPolicySettings_commandToExecuteNotAllowed int = 83
-	ExtensionPolicySettings_protectedScriptNotAllowed  int = 84
+	ExtensionPolicySettings_scriptNotAllowed           int = 84
 	// UnclassifiedError - used as a placeholder value
 	// when the error can be treated without the clarification
 	// or when an error is not yet classified.
