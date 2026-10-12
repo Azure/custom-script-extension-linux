@@ -225,6 +225,74 @@ func Test_runCmd_fail(t *testing.T) {
 	require.Contains(t, ewc.Err.Error(), "failed to execute command")
 }
 
+// Test_enable_e2e_runtimePolicyFile_deletedAfterExecution_thenRunsWithoutPolicy verifies the
+// lifecycle of the runtime policy file that is probed for during enable():
+//  1. When a restrictive policy is present it is honored (a non-allowlisted script is blocked),
+//     proving scripts aren't simply always allowed.
+//  2. After execution, the runtime policy file is deleted by cleanup.
+//  3. A subsequent enablement with no policy file present does not crash and runs the same script
+//     successfully because no policy restriction applies.
+func Test_enable_e2e_runtimePolicyFile_deletedAfterExecution_thenRunsWithoutPolicy(t *testing.T) {
+	configFolder, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(configFolder)
+
+	// Override the global dataDir so the test does not touch the real
+	// /var/lib/waagent tree, and restore it afterwards.
+	origDataDir := dataDir
+	dataDir, err = ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer func() {
+		os.RemoveAll(dataDir)
+		dataDir = origDataDir
+	}()
+
+	seqNum := 0
+
+	// Write a valid handler settings file whose commandToExecute will be blocked
+	// by the restrictive policy below.
+	settingsContent := `{
+		"runtimeSettings": [
+			{
+				"handlerSettings": {
+					"publicSettings": {
+						"commandToExecute": "echo hello"
+					}
+				}
+			}
+		]
+	}`
+	settingsFilePath := filepath.Join(configFolder, fmt.Sprintf("%d.settings", seqNum))
+	require.Nil(t, writeToFile(settingsFilePath, settingsContent))
+
+	// Write a restrictive runtime policy file that only allows "date", so the
+	// configured "echo hello" command is not allowlisted.
+	restrictivePolicyContent := `{
+		"requireSigning": false,
+		"allowedDownloadedScripts": [],
+		"allowedCommandToExecute": ["date"]
+	}`
+	policyPath := filepath.Join(configFolder, policyFileName)
+	require.Nil(t, writeToFile(policyPath, restrictivePolicyContent))
+
+	h := HandlerEnvironment{}
+	h.HandlerEnvironment.ConfigFolder = configFolder
+
+	// 1. Restrictive policy is honored: the non-allowlisted command is blocked.
+	_, ewc := enable(log.NewContext(log.NewNopLogger()), h, seqNum)
+	require.NotNil(t, ewc, "enable should fail when the command is not allowed by policy")
+	require.Equal(t, errorutil.ExtensionPolicySettings_commandToExecuteNotAllowed, ewc.ErrorCode)
+
+	// 2. After execution, the runtime policy file is deleted by cleanup.
+	_, err = os.Stat(policyPath)
+	require.True(t, os.IsNotExist(err), "runtime policy file should be deleted after execution")
+
+	// 3. A subsequent enablement with no policy file present runs the same script
+	//    successfully because no policy restriction applies.
+	_, ewc = enable(log.NewContext(log.NewNopLogger()), h, seqNum)
+	require.Nil(t, ewc, "enable should succeed when no policy file is present")
+}
+
 func Test_runCmd_commandAllowedByPolicy_success(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	require.Nil(t, err)
