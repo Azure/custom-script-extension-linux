@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/Azure/azure-extension-platform/pkg/extensionpolicysettings"
+	"github.com/Azure/azure-extension-platform/pkg/hashutils"
 	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
 	"github.com/ahmetalpbalkan/go-httpbin"
 	"github.com/go-kit/kit/log"
@@ -211,17 +212,6 @@ func Test_runCmd_success(t *testing.T) {
 	}, nil), "command should run successfully")
 }
 
-func Test_runCmd_invalidPolicyFile_success(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
-
-	require.Nil(t, err)
-	defer os.RemoveAll(dir)
-
-	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
-		publicSettings: publicSettings{CommandToExecute: "date"},
-	}, nil), "command should run successfully")
-}
-
 func Test_runCmd_fail(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	require.Nil(t, err)
@@ -233,6 +223,74 @@ func Test_runCmd_fail(t *testing.T) {
 	require.Equal(t, errorutil.CommandExecution_failureExitCode, ewc.ErrorCode)
 	require.NotNil(t, ewc.Err, "command terminated with exit status")
 	require.Contains(t, ewc.Err.Error(), "failed to execute command")
+}
+
+// Test_enable_e2e_runtimePolicyFile_deletedAfterExecution_thenRunsWithoutPolicy verifies the
+// lifecycle of the runtime policy file that is probed for during enable():
+//  1. When a restrictive policy is present it is honored (a non-allowlisted script is blocked),
+//     proving scripts aren't simply always allowed.
+//  2. After execution, the runtime policy file is deleted by cleanup.
+//  3. A subsequent enablement with no policy file present does not crash and runs the same script
+//     successfully because no policy restriction applies.
+func Test_enable_e2e_runtimePolicyFile_deletedAfterExecution_thenRunsWithoutPolicy(t *testing.T) {
+	configFolder, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(configFolder)
+
+	// Override the global dataDir so the test does not touch the real
+	// /var/lib/waagent tree, and restore it afterwards.
+	origDataDir := dataDir
+	dataDir, err = ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer func() {
+		os.RemoveAll(dataDir)
+		dataDir = origDataDir
+	}()
+
+	seqNum := 0
+
+	// Write a valid handler settings file whose commandToExecute will be blocked
+	// by the restrictive policy below.
+	settingsContent := `{
+		"runtimeSettings": [
+			{
+				"handlerSettings": {
+					"publicSettings": {
+						"commandToExecute": "echo hello"
+					}
+				}
+			}
+		]
+	}`
+	settingsFilePath := filepath.Join(configFolder, fmt.Sprintf("%d.settings", seqNum))
+	require.Nil(t, writeToFile(settingsFilePath, settingsContent))
+
+	// Write a restrictive runtime policy file that only allows "date", so the
+	// configured "echo hello" command is not allowlisted.
+	restrictivePolicyContent := `{
+		"requireSigning": false,
+		"allowedDownloadedScripts": [],
+		"allowedCommandToExecute": ["date"]
+	}`
+	policyPath := filepath.Join(configFolder, policyFileName)
+	require.Nil(t, writeToFile(policyPath, restrictivePolicyContent))
+
+	h := HandlerEnvironment{}
+	h.HandlerEnvironment.ConfigFolder = configFolder
+
+	// 1. Restrictive policy is honored: the non-allowlisted command is blocked.
+	_, ewc := enable(log.NewContext(log.NewNopLogger()), h, seqNum)
+	require.NotNil(t, ewc, "enable should fail when the command is not allowed by policy")
+	require.Equal(t, errorutil.ExtensionPolicySettings_commandToExecuteNotAllowed, ewc.ErrorCode)
+
+	// 2. After execution, the runtime policy file is deleted by cleanup.
+	_, err = os.Stat(policyPath)
+	require.True(t, os.IsNotExist(err), "runtime policy file should be deleted after execution")
+
+	// 3. A subsequent enablement with no policy file present runs the same script
+	//    successfully because no policy restriction applies.
+	_, ewc = enable(log.NewContext(log.NewNopLogger()), h, seqNum)
+	require.Nil(t, ewc, "enable should succeed when no policy file is present")
 }
 
 func Test_runCmd_commandAllowedByPolicy_success(t *testing.T) {
@@ -307,12 +365,24 @@ func Test_runCmd_protectedScriptAllowedByPolicy_success(t *testing.T) {
 	require.Nil(t, err)
 	defer os.RemoveAll(dir)
 
-	// protected script is written to <dir>/script.sh, which is the value validated against AllowedScripts.
 	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
 		protectedSettings: protectedSettings{Script: "ZGF0ZQ=="}, // base64 of "date"
 	}, &CSEExtensionPolicySettings{
-		AllowedScripts: []string{filepath.Join(dir, "script.sh")},
+		AllowedScripts: []string{"ZGF0ZQ=="},
 	}), "protected script should run successfully when allowed by policy")
+}
+
+func Test_runCmd_publicScriptAllowedByPolicy_success(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	// public script is written to <dir>/script.sh, but we should still be comparing the script content.
+	require.Nil(t, runCmd(log.NewNopLogger(), dir, handlerSettings{
+		publicSettings: publicSettings{Script: "ZGF0ZQ=="}, // base64 of "date"
+	}, &CSEExtensionPolicySettings{
+		AllowedScripts: []string{"ZGF0ZQ=="},
+	}), "public script should run successfully when allowed by policy")
 }
 
 func Test_runCmd_protectedScriptNotAllowedByPolicy_fail(t *testing.T) {
@@ -326,7 +396,39 @@ func Test_runCmd_protectedScriptNotAllowedByPolicy_fail(t *testing.T) {
 		AllowedScripts: []string{"echo hello"},
 	})
 	require.NotNil(t, ewc)
-	require.Equal(t, errorutil.ExtensionPolicySettings_protectedScriptNotAllowed, ewc.ErrorCode)
+	require.Equal(t, errorutil.ExtensionPolicySettings_scriptNotAllowed, ewc.ErrorCode)
+}
+
+func Test_runCmd_publicScriptInvalidBase64_fail(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	ewc := runCmd(log.NewNopLogger(), dir, handlerSettings{
+		publicSettings: publicSettings{Script: "!!!not-valid-base64!!!"},
+	}, nil)
+	require.NotNil(t, ewc, "runCmd should fail when the public script cannot be base64 decoded")
+	// TO-DO: for now, we are using UnclassifiedError as the error code because the error string contains the actual failure reason,
+	// so we don't need further clarification. When the extension is updated to support specific error codes for all
+	// failure reasons, update this (and the test below) to use a specific error code.
+	require.Equal(t, errorutil.UnclassifiedError, ewc.ErrorCode)
+	require.Contains(t, ewc.Err.Error(), "failed to decode script")
+	require.Contains(t, ewc.Err.Error(), "failed to process inputted script from settings")
+}
+
+func Test_runCmd_protectedScriptInvalidBase64_fail(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(dir)
+
+	ewc := runCmd(log.NewNopLogger(), dir, handlerSettings{
+		protectedSettings: protectedSettings{Script: "!!!not-valid-base64!!!"},
+	}, nil)
+	require.NotNil(t, ewc, "runCmd should fail when the protected script cannot be base64 decoded")
+	// TO-DO: See comment in the unit test above regarding UnclassifiedError being a placeholder.
+	require.Equal(t, errorutil.UnclassifiedError, ewc.ErrorCode)
+	require.Contains(t, ewc.Err.Error(), "failed to decode script")
+	require.Contains(t, ewc.Err.Error(), "failed to process inputted script from protected settings")
 }
 
 func Test_downloadFiles(t *testing.T) {
@@ -390,8 +492,8 @@ func Test_downloadFiles_allowlistStopsOnFirstDisallowedFile(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	good1Hash, _ := extensionpolicysettings.ComputeFileHash(good1Content, extensionpolicysettings.HashTypeSHA256)
-	good2Hash, _ := extensionpolicysettings.ComputeFileHash(good2Content, extensionpolicysettings.HashTypeSHA256)
+	good1Hash := computeSHA256Hash(good1Content)
+	good2Hash := computeSHA256Hash(good2Content)
 	require.NoError(t, loadTestPolicy("valid, allowlist present", []string{good1Hash, good2Hash}))
 
 	ExtensionPolicyManagerPtr, err := extensionpolicysettings.NewExtensionPolicySettingsManager[CSEExtensionPolicySettings](policyTestPath)
@@ -456,10 +558,10 @@ func Test_downloadFiles_goodAllowlist_SHA256(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	// Compute SHA256 hashes (you can use the extensionpolicysettings.ComputeFileHash function)
-	file1Hash, _ := extensionpolicysettings.ComputeFileHash(file1Content, extensionpolicysettings.HashTypeSHA256)
-	file2Hash, _ := extensionpolicysettings.ComputeFileHash(file2Content, extensionpolicysettings.HashTypeSHA256)
-	file3Hash, _ := extensionpolicysettings.ComputeFileHash(file3Content, extensionpolicysettings.HashTypeSHA256)
+	// Compute SHA256 hashes of the served content.
+	file1Hash := computeSHA256Hash(file1Content)
+	file2Hash := computeSHA256Hash(file2Content)
+	file3Hash := computeSHA256Hash(file3Content)
 
 	// Create a hash list.
 	al := []string{file1Hash, file2Hash, file3Hash}
@@ -530,10 +632,10 @@ func Test_downloadFiles_badAllowlist(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	// Compute SHA256 hashes (you can use the extensionpolicysettings.ComputeFileHash function)
-	file1Hash, _ := extensionpolicysettings.ComputeFileHash(file1Content, extensionpolicysettings.HashTypeSHA256)
-	file2Hash, _ := extensionpolicysettings.ComputeFileHash(file2Content, extensionpolicysettings.HashTypeSHA256)
-	file3Hash, _ := extensionpolicysettings.ComputeFileHash(file3Content, extensionpolicysettings.HashTypeSHA256)
+	// Compute SHA256 hashes of the served content.
+	file1Hash := computeSHA256Hash(file1Content)
+	file2Hash := computeSHA256Hash(file2Content)
+	file3Hash := computeSHA256Hash(file3Content)
 
 	// Create a hash list.
 	al := []string{file1Hash, file2Hash, file3Hash}
@@ -647,27 +749,31 @@ func Test_decodeScriptGzip(t *testing.T) {
 
 func Test_validateCommandToExecuteAgainstPolicy_commandAllowed(t *testing.T) {
 	const cmd = "echo hello"
-	require.Nil(t, validateCommandToExecuteAgainstPolicy(cmd, &CSEExtensionPolicySettings{AllowedCommandToExecute: []string{cmd, "date"}}, false))
+	require.Nil(t, validateCommandToExecuteAgainstPolicy(log.NewContext(log.NewNopLogger()), cmd, []string{cmd, "date"}))
 }
 
 func Test_validateCommandToExecuteAgainstPolicy_commandNotAllowed(t *testing.T) {
 	const cmd = "echo hello"
-	ewc := validateCommandToExecuteAgainstPolicy(cmd, &CSEExtensionPolicySettings{AllowedCommandToExecute: []string{"date"}}, false)
-	require.NotNil(t, ewc)
-	require.Contains(t, ewc.Err.Error(), "commandToExecute")
-	require.Contains(t, ewc.Err.Error(), cmd)
-	require.Contains(t, ewc.Err.Error(), "is not in policy-allowlist")
+	err := validateCommandToExecuteAgainstPolicy(log.NewContext(log.NewNopLogger()), cmd, []string{"date"})
+	require.NotNil(t, err)
+	// This error string is taken from azure-extension-platform/pkg/extensionerrors
+	require.Contains(t, err.Error(), "item is not in the allowlist")
 }
 
 func Test_validateCommandToExecuteAgainstPolicy_emptyAllowlist(t *testing.T) {
-	require.Nil(t, validateCommandToExecuteAgainstPolicy("echo hello", &CSEExtensionPolicySettings{AllowedCommandToExecute: []string{}}, false))
+	require.Nil(t, validateCommandToExecuteAgainstPolicy(log.NewContext(log.NewNopLogger()), "echo hello", []string{}))
 }
 
 func Test_validateCommandToExecuteAgainstPolicy_nilAllowlist(t *testing.T) {
-	require.Nil(t, validateCommandToExecuteAgainstPolicy("echo hello", &CSEExtensionPolicySettings{AllowedCommandToExecute: nil}, false))
+	require.Nil(t, validateCommandToExecuteAgainstPolicy(log.NewContext(log.NewNopLogger()), "echo hello", nil))
 }
 
 // Helper Methods
+func computeSHA256Hash(content string) string {
+	alg, _ := hashutils.GetHashAlgorithm(hashutils.HashTypeSHA256)
+	return hashutils.ComputeHash(content, alg)
+}
+
 func writeToFile(filePath, content string) error {
 	err := os.WriteFile(filePath, []byte(content), 0644)
 	return err
