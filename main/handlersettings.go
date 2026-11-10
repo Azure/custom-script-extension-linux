@@ -141,7 +141,7 @@ func parseAndValidateSettings(ctx *log.Context, configFolder string, seqNum int)
 	ctx.Log("event", "parsed configuration json")
 
 	ctx.Log("event", "validating configuration logically")
-	if ewc := h.validate(); err != nil {
+	if ewc := h.validate(); ewc != nil {
 		ewc.Err = errors.Wrap(ewc.Err, "invalid configuration")
 		return h, ewc
 	}

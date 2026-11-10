@@ -131,6 +131,10 @@ settings.
 The extension will reject any configuration where the above values are
 set in both public and protected settings.
 
+Exactly one of `commandToExecute` or `script` must be set. Specifying both
+is invalid, even when one is in public settings and the other is in protected
+settings.
+
 The following values can only be set in **public** settings.
 
 * `skipDos2Unix`

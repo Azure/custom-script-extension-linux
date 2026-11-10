@@ -34,6 +34,7 @@ const (
 // WithRetries retrieves a response body using the specified downloader. Any
 // error returned from d will be retried (and retrieved response bodies will be
 // closed on failures). If the retries do not succeed, the last error is returned.
+// If resetting the destination after a failed copy fails, it returns immediately.
 //
 // It sleeps in exponentially increasing durations between retries.
 func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf SleepFunc) (int64, *vmextension.ErrorWithClarification) {
@@ -65,7 +66,14 @@ func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf Slee
 					// mark status as -1 so that we retry
 					status = -1
 					// clear out the contents of the file so as to not leave a partial file
-					f.Truncate(0)
+					if err := f.Truncate(0); err != nil {
+						out.Close()
+						return 0, vmextension.NewErrorWithClarificationPtr(errorutil.FileDownload_failedToTruncateFile, fmt.Errorf("failed to truncate partial download: %w", err))
+					}
+					if _, err := f.Seek(0, io.SeekStart); err != nil {
+						out.Close()
+						return 0, vmextension.NewErrorWithClarificationPtr(errorutil.FileDownload_failedToSeekFile, fmt.Errorf("failed to seek to start of download file: %w", err))
+					}
 					// cache the inner error
 					lastErrCode = errorutil.FileDownload_genericError
 					lastErr = innerErr
