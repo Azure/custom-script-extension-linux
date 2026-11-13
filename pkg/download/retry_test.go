@@ -13,6 +13,7 @@ import (
 
 	"github.com/Azure/azure-extension-foundation/msi"
 	"github.com/Azure/custom-script-extension-linux/pkg/download"
+	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
 	"github.com/ahmetalpbalkan/go-httpbin"
 	"github.com/go-kit/kit/log"
 	"github.com/stretchr/testify/require"
@@ -105,6 +106,59 @@ func TestWithRetries_healingServer(t *testing.T) {
 	require.Equal(t, sleepSchedule[:3], []time.Duration(*sr))
 }
 
+func TestWithRetries_interruptedDownload(t *testing.T) {
+	dir, file := CreateTestFile(t)
+	defer file.Close()
+
+	const content = "#!/bin/sh\necho fixture\n"
+	requests := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		w.Header().Set("Content-Length", fmt.Sprint(len(content)))
+		if requests == 1 {
+			fmt.Fprint(w, content[:5])
+			return
+		}
+		fmt.Fprint(w, content)
+	}))
+	defer srv.Close()
+
+	sr := new(sleepRecorder)
+	n, ewc := download.WithRetries(nopLog(), file, []download.Downloader{download.NewURLDownload(srv.URL)}, sr.Sleep)
+	require.Nil(t, ewc)
+	require.EqualValues(t, len(content), n)
+	require.Equal(t, 2, requests)
+	require.Equal(t, sleepSchedule[:1], []time.Duration(*sr))
+
+	data, err := os.ReadFile(filepath.Join(dir, "test-file"))
+	require.NoError(t, err)
+	require.Equal(t, content, string(data))
+}
+
+func TestWithRetries_truncateFailure(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "read-only")
+	require.NoError(t, os.WriteFile(path, nil, 0600))
+	file, err := os.Open(path)
+	require.NoError(t, err)
+	defer file.Close()
+
+	requests := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		fmt.Fprint(w, "fixture")
+	}))
+	defer srv.Close()
+
+	sr := new(sleepRecorder)
+	n, ewc := download.WithRetries(nopLog(), file, []download.Downloader{download.NewURLDownload(srv.URL)}, sr.Sleep)
+	require.NotNil(t, ewc)
+	require.Equal(t, errorutil.FileDownload_failedToTruncateFile, ewc.ErrorCode)
+	require.Contains(t, ewc.Err.Error(), "failed to truncate partial download")
+	require.EqualValues(t, 0, n)
+	require.Equal(t, 1, requests)
+	require.Empty(t, *sr)
+}
+
 func TestRetriesWith_SwitchDownloaderOn404(t *testing.T) {
 	dir, file := CreateTestFile(t)
 	defer file.Close()
@@ -178,8 +232,7 @@ func TestRetriesWith_LargeFileThatTimesOutWhileDownloading(t *testing.T) {
 }
 
 func CreateTestFile(t *testing.T) (string, *os.File) {
-	dir := os.TempDir()
-	// require.Nil(t, err)
+	dir := t.TempDir()
 
 	path := filepath.Join(dir, "test-file")
 

@@ -6,8 +6,10 @@ import (
 
 const (
 	// System errors
-	FileDownload_badRequest   int = -41
-	FileDownload_unknownError int = -40
+	FileDownload_badRequest           int = -41
+	FileDownload_unknownError         int = -40
+	FileDownload_failedToTruncateFile int = -42
+	FileDownload_failedToSeekFile     int = -43
 
 	Imds_internalMsiError int = -30
 

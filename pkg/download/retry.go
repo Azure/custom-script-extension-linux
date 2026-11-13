@@ -34,6 +34,7 @@ const (
 // WithRetries retrieves a response body using the specified downloader. Any
 // error returned from d will be retried (and retrieved response bodies will be
 // closed on failures). If the retries do not succeed, the last error is returned.
+// If resetting the destination after a failed copy fails, it returns immediately.
 //
 // It sleeps in exponentially increasing durations between retries.
 func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf SleepFunc) (int64, *vmextension.ErrorWithClarification) {
@@ -52,10 +53,10 @@ func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf Slee
 				// server returned status code 200 OK
 				// we have a response body, copy it to the file
 				nBytes, innerErr := io.CopyBuffer(f, out, make([]byte, writeBufSize))
+				out.Close()
 				if innerErr == nil {
 					// we are done, close the response body, log time taken to download the file
 					// and return the number of bytes written
-					out.Close()
 					end := time.Since(start)
 					ctx.Log("info", fmt.Sprintf("file download sucessful: downloaded and saved %d bytes in %d milliseconds", nBytes, end.Milliseconds()))
 					return nBytes, nil
@@ -65,7 +66,12 @@ func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf Slee
 					// mark status as -1 so that we retry
 					status = -1
 					// clear out the contents of the file so as to not leave a partial file
-					f.Truncate(0)
+					if err := f.Truncate(0); err != nil {
+						return 0, vmextension.NewErrorWithClarificationPtr(errorutil.FileDownload_failedToTruncateFile, fmt.Errorf("failed to truncate partial download: %w", err))
+					}
+					if _, err := f.Seek(0, io.SeekStart); err != nil {
+						return 0, vmextension.NewErrorWithClarificationPtr(errorutil.FileDownload_failedToSeekFile, fmt.Errorf("failed to seek to start of download file: %w", err))
+					}
 					// cache the inner error
 					lastErrCode = errorutil.FileDownload_genericError
 					lastErr = innerErr
@@ -82,10 +88,6 @@ func WithRetries(ctx *log.Context, f *os.File, downloaders []Downloader, sf Slee
 			end := time.Since(start)
 
 			ctx.Log("error", fmt.Sprintf("file download failed with error '%s' : downloaded and saved %d bytes in %d milliseconds", lastErr, 0, end.Milliseconds()))
-
-			if out != nil { // we are not going to read this response body
-				out.Close()
-			}
 
 			// status == -1 the value when there was no http request
 			if status != -1 && !isTransientHttpStatusCode(status) {

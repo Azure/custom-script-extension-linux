@@ -2,8 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/Azure/custom-script-extension-linux/pkg/errorutil"
+	"github.com/go-kit/kit/log"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,17 +31,6 @@ func Test_handlerSettingsValidate(t *testing.T) {
 		protectedSettings{Script: "foo"},
 	}.validate().Err)
 
-	// commandToExecute and script both specified
-	require.Equal(t, errCmdAndScript, handlerSettings{
-		publicSettings{CommandToExecute: "foo"},
-		protectedSettings{Script: "foo"},
-	}.validate().Err)
-
-	require.Equal(t, errCmdAndScript, handlerSettings{
-		publicSettings{Script: "foo"},
-		protectedSettings{CommandToExecute: "foo"},
-	}.validate().Err)
-
 	// storageAccount name specified; but not key
 	require.Equal(t, errStoragePartialCredentials, handlerSettings{
 		protectedSettings: protectedSettings{
@@ -52,6 +46,126 @@ func Test_handlerSettingsValidate(t *testing.T) {
 			StorageAccountName: "",
 			StorageAccountKey:  "foo"},
 	}.validate().Err)
+}
+
+func Test_handlerSettingsValidate_commandAndScript(t *testing.T) {
+	tests := []struct {
+		name     string
+		settings handlerSettings
+		conflict bool
+	}{
+		{
+			name:     "both public",
+			settings: handlerSettings{publicSettings: publicSettings{CommandToExecute: "date", Script: "ZGF0ZQ=="}},
+			conflict: true,
+		},
+		{
+			name:     "both protected",
+			settings: handlerSettings{protectedSettings: protectedSettings{CommandToExecute: "date", Script: "ZGF0ZQ=="}},
+			conflict: true,
+		},
+		{
+			name: "public command and protected script",
+			settings: handlerSettings{
+				publicSettings:    publicSettings{CommandToExecute: "date"},
+				protectedSettings: protectedSettings{Script: "ZGF0ZQ=="},
+			},
+			conflict: true,
+		},
+		{
+			name: "protected command and public script",
+			settings: handlerSettings{
+				publicSettings:    publicSettings{Script: "ZGF0ZQ=="},
+				protectedSettings: protectedSettings{CommandToExecute: "date"},
+			},
+			conflict: true,
+		},
+		{
+			name:     "public command only",
+			settings: handlerSettings{publicSettings: publicSettings{CommandToExecute: "date"}},
+		},
+		{
+			name:     "protected command only",
+			settings: handlerSettings{protectedSettings: protectedSettings{CommandToExecute: "date"}},
+		},
+		{
+			name:     "public script only",
+			settings: handlerSettings{publicSettings: publicSettings{Script: "ZGF0ZQ=="}},
+		},
+		{
+			name:     "protected script only",
+			settings: handlerSettings{protectedSettings: protectedSettings{Script: "ZGF0ZQ=="}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ewc := tt.settings.validate()
+			if !tt.conflict {
+				require.Nil(t, ewc)
+				return
+			}
+			require.NotNil(t, ewc)
+			require.Equal(t, errCmdAndScript, ewc.Err)
+			require.Equal(t, errorutil.CustomerInput_commandToExecuteAndScriptBothSpecified, ewc.ErrorCode)
+		})
+	}
+}
+
+func Test_parseAndValidateSettings_logicalValidation(t *testing.T) {
+	tests := []struct {
+		name     string
+		settings publicSettings
+		err      error
+		code     int
+	}{
+		{
+			name:     "command and script",
+			settings: publicSettings{CommandToExecute: "date", Script: "ZGF0ZQ=="},
+			err:      errCmdAndScript,
+			code:     errorutil.CustomerInput_commandToExecuteAndScriptBothSpecified,
+		},
+		{
+			name: "neither command nor script",
+			err:  errCmdMissing,
+			code: errorutil.CustomerInput_commandToExecuteAndScriptNotSpecified,
+		},
+		{
+			name:     "command only",
+			settings: publicSettings{CommandToExecute: "date"},
+		},
+		{
+			name:     "script only",
+			settings: publicSettings{Script: "ZGF0ZQ=="},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			tt.settings.FileURLs = []string{}
+			data, err := json.Marshal(map[string]interface{}{
+				"runtimeSettings": []interface{}{
+					map[string]interface{}{
+						"handlerSettings": map[string]interface{}{"publicSettings": tt.settings},
+					},
+				},
+			})
+			require.NoError(t, err)
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "0.settings"), data, 0600))
+
+			settings, ewc := parseAndValidateSettings(log.NewContext(log.NewNopLogger()), dir, 0)
+			if tt.err == nil {
+				require.Nil(t, ewc)
+				require.Equal(t, tt.settings, settings.publicSettings)
+				return
+			}
+			require.NotNil(t, ewc)
+			require.Equal(t, tt.err, errors.Cause(ewc.Err))
+			require.Equal(t, tt.code, ewc.ErrorCode)
+			require.Contains(t, ewc.Err.Error(), "invalid configuration")
+		})
+	}
 }
 
 func Test_commandToExecutePrivateIfNotPublic(t *testing.T) {
