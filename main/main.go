@@ -82,7 +82,9 @@ func main() {
 	msg, ewc := cmd.f(ctx, hEnv, seqNum)
 	if ewc != nil && ewc.Err != nil {
 		ctx.Log("event", "failed to handle", "error", ewc.Error())
-		ewc.Err = errors.Wrap(ewc.Err, ewc.Error()+msg)
+		if msg != "" {
+			ewc.Err = errors.Wrap(ewc.Err, msg)
+		}
 		reportErrorStatus(ctx, hEnv, seqNum, StatusError, cmd, ewc)
 		os.Exit(cmd.failExitCode)
 	}
